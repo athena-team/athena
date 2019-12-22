@@ -3,6 +3,7 @@
   "num_epochs":100,
   "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/mpc",
+  "summary_dir":"examples/asr/hkust/ckpts/mpc/event",
   "solver_gpu":[0],
   "solver_config":{
     "clip_norm":100,
