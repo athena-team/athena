@@ -1,0 +1,71 @@
+{
+  "batch_size":32,
+  "num_epochs":15,
+  "sorta_epoch":1,
+  "ckpt":"examples/asr/aishell/ckpts/mtl_transformer_ctc/",
+  "summary_dir":"examples/asr/aishell/ckpts/mtl_transformer_ctc/event",
+
+  "solver_gpu":[2],
+  "solver_config":{
+    "clip_norm":100,
+    "log_interval":10,
+    "enable_tf_function":true
+  },
+
+  "model":"mtl_transformer_ctc",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "model":"speech_transformer",
+    "model_config":{
+      "return_encoder_output":true,
+      "num_filters":512,
+      "d_model":512,
+      "num_heads":8,
+      "num_encoder_layers":12,
+      "num_decoder_layers":6,
+      "dff":1280,
+      "rate":0.1,
+      "label_smoothing_rate":0.0,
+      "schedual_sampling_rate":0.9
+    },
+    "mtl_weight":0.5
+  },
+
+  "decode_config":{
+    "beam_search":true,
+    "beam_size":4,
+    "ctc_weight":0.3,
+    "lm_weight":0.1,
+    "lm_path":"examples/asr/aishell/data/lm.bin"
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":3500,
+    "k":0.7,
+    "decay_steps": 100000,
+    "decay_rate": 0.1
+  },
+
+  "dataset_builder": "speech_recognition_dataset",
+  "dataset_config":{
+    "audio_config":{
+      "type":"Fbank",
+      "filterbank_channel_count":40,
+      "local_cmvn":false
+      },
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "text_config": {
+      "type":"vocab",
+      "model":"examples/asr/aishell/data/vocab"
+    },
+    "input_length_range":[10, 8000],
+    "speed_permutation": [0.9, 1.0, 1.1]
+  },
+  "num_data_threads": 1,
+  "train_csv":"examples/asr/aishell/data/train.csv",
+  "dev_csv":"examples/asr/aishell/data/dev.csv",
+  "test_csv":"examples/asr/aishell/data/test.csv"
+}

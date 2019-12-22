@@ -1,0 +1,49 @@
+{
+  "batch_size":16,
+  "num_epochs":50,
+  "sorta_epoch":2,
+  "ckpt":"examples/asr/librispeech/ckpts/debug",
+  "solver_gpu":[0],
+  "solver_config":{
+    "clip_norm":100.0,
+    "log_interval":1
+  },
+
+  "model":"speech_transformer",
+  "model_config":{
+    "return_encoder_output":false,
+    "num_filters":512,
+    "d_model":512,
+    "num_heads":8,
+    "num_encoder_layers":12,
+    "num_decoder_layers":6,
+    "dff":1280,
+    "rate":0.1,
+    "label_smoothing_rate":0.0,
+    "schedual_sampling_rate":0.9
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":8000,
+    "k":0.5
+  },
+
+  "trainset_config":{
+    "data_csv":"/tmp-data/dataset/opensource/librispeech/wav/train-clean-100.csv",
+    "audio_config":{
+      "type":"Fbank",
+      "filterbank_channel_count":40,
+      "local_cmvn":false
+      },
+    "vocab_file":"examples/asr/hkust/data/librispeech_unigram5000.model",
+    "subword":true,
+    "audio_min_length":10,
+    "audio_max_length":10000,
+    "force_process":false
+  },
+  "cmvn_file":"examples/asr/librispeech/data/cmvn",
+  "dev_csv":"/tmp-data/dataset/opensource/librispeech/wav/dev-clean.csv",
+  "test_csv":"/tmp-data/dataset/opensource/librispeech/wav/test-clean.csv"
+}
