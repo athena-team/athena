@@ -15,7 +15,7 @@
 # limitations under the License.
 # ==============================================================================
 # Only support tensorflow 2.0
-# pylint: disable=invalid-name, no-member, wildcard-import, unused-wildcard-import
+# pylint: disable=invalid-name, no-member, wildcard-import, unused-wildcard-import, redefined-outer-name
 """ a sample implementation of LAS for HKUST """
 import sys
 import json
@@ -58,12 +58,11 @@ DEFAULT_CONFIGS = {
     "pretrained_model": None,
     "optimizer": "warmup_adam",
     "optimizer_config": None,
-    "dataset_builder": "speech_recognition_dataset",
-    "dataset_config": None,
     "num_data_threads": 1,
-    "train_csv": None,
-    "dev_csv": None,
-    "test_csv": None,
+    "dataset_builder": "speech_recognition_dataset",
+    "trainset_config": None,
+    "devset_config": None,
+    "testset_config": None,
     "decode_config": None,
 }
 
@@ -73,7 +72,7 @@ def parse_config(config):
     logging.info("hparams: {}".format(p))
     return p
 
-def build_model_from_jsonfile(jsonfile, rank=0, pre_run=True):
+def build_model_from_jsonfile(jsonfile, pre_run=True):
     """ creates model using configurations in json, load from checkpoint
     if previous models exist in checkpoint dir
     """
@@ -81,9 +80,10 @@ def build_model_from_jsonfile(jsonfile, rank=0, pre_run=True):
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
-    dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.dataset_config)
 
-    # models
+    dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
+    if p.trainset_config is None and p.num_classes is None:
+        raise ValueError("trainset_config and num_classes can not both be null")
     model = SUPPORTED_MODEL[p.model](
         num_classes=p.num_classes
         if p.num_classes is not None
@@ -104,13 +104,9 @@ def build_model_from_jsonfile(jsonfile, rank=0, pre_run=True):
             optimizer,
             sample_signature=dataset_builder.sample_signature
         )
-        if p.dev_csv is None:
-            raise ValueError("we currently need a dev_csv for pre-load")
-        dataset = dataset_builder.load_csv(p.dev_csv).as_dataset(p.batch_size)
+        dataset = dataset_builder.as_dataset(p.batch_size)
         solver.evaluate_step(model.prepare_samples(iter(dataset).next()))
-    if rank == 0:
-        set_default_summary_writer(p.summary_dir)
-    return p, model, optimizer, checkpointer, dataset_builder
+    return p, model, optimizer, checkpointer
 
 
 def train(jsonfile, Solver, rank_size=1, rank=0):
@@ -121,40 +117,45 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 	:param rank_size: total number of workers, 1 if using single gpu
 	:param rank: rank of current worker, 0 if using single gpu
 	"""
-    p, model, optimizer, checkpointer, dataset_builder \
-        = build_model_from_jsonfile(jsonfile, rank)
+    p, model, optimizer, checkpointer = build_model_from_jsonfile(jsonfile)
     epoch = checkpointer.save_counter
     if p.pretrained_model is not None and epoch == 0:
-        p2, pretrained_model, _, _, _ \
-            = build_model_from_jsonfile(p.pretrained_model, rank)
+        p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
         model.restore_from_pretrained_model(pretrained_model, p2.model)
 
+    if rank == 0:
+        set_default_summary_writer(p.summary_dir)
+
     # for cmvn
-    dataset_builder.load_csv(p.train_csv).compute_cmvn_if_necessary(rank == 0)
+    trainset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
+    trainset_builder.compute_cmvn_if_necessary(rank == 0)
 
     # train
     solver = Solver(
         model,
         optimizer,
-        sample_signature=dataset_builder.sample_signature,
+        sample_signature=trainset_builder.sample_signature,
         config=p.solver_config,
     )
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
-        dataset_builder.load_csv(p.train_csv).shard(rank_size, rank)
+        trainset_builder.shard(rank_size, rank)
         if epoch >= p.sorta_epoch:
-            dataset_builder.batch_wise_shuffle(p.batch_size)
-        dataset = dataset_builder.as_dataset(p.batch_size, p.num_data_threads)
+            trainset_builder.batch_wise_shuffle(p.batch_size)
+        dataset = trainset_builder.as_dataset(p.batch_size, p.num_data_threads)
         solver.train(dataset)
 
         if rank == 0:
             logging.info(">>>>> start evaluate in epoch %d" % epoch)
-        dataset = dataset_builder.load_csv(p.dev_csv).as_dataset(p.batch_size, p.num_data_threads)
+        devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
+        dataset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
         loss = solver.evaluate(dataset, epoch)
-        epoch = epoch + 1
+
         if rank == 0:
             checkpointer(loss)
+
+        epoch = epoch + 1
 
 
 if __name__ == "__main__":

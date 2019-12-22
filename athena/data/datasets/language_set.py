@@ -29,13 +29,16 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
         "input_text_config": None,
         "output_text_config": None,
         "input_length_range": [1, 1000],
-        "output_length_range": [1, 1000]
+        "output_length_range": [1, 1000],
+        "data_csv": None
     }
     def __init__(self, config=None):
         super().__init__()
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
         self.input_text_featurizer = TextFeaturizer(self.hparams.input_text_config)
         self.output_text_featurizer = TextFeaturizer(self.hparams.output_text_config)
+        if self.hparams.data_csv is not None:
+            self.load_csv(self.hparams.data_csv)
 
     def load_csv(self, file_path):
         """ load csv file """

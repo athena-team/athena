@@ -32,16 +32,17 @@
   },
 
   "dataset_builder":"speech_dataset",
-  "dataset_config":{
-    "audio_config":{
-      "type":"Fbank",
-      "filterbank_channel_count":40,
-      "local_cmvn":false
-      },
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/asr/hkust/data/train.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/hkust/data/cmvn",
     "input_length_range":[10, 8000]
   },
-  "num_data_threads": 1,
-  "train_csv":"examples/asr/hkust/data/train.csv",
-  "dev_csv":"examples/asr/hkust/data/dev.csv"
+  "devset_config":{
+    "data_csv": "examples/asr/hkust/data/train.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/hkust/data/cmvn",
+    "input_length_range":[10, 8000]
+  }
 }

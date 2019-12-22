@@ -15,7 +15,7 @@
 # limitations under the License.
 # ==============================================================================
 # Only support tensorflow 2.0
-# pylint: disable=invalid-name, no-member
+# pylint: disable=invalid-name, no-member, redefined-outer-name
 r""" a sample implementation of LAS for HKUST """
 import sys
 import json
@@ -31,13 +31,12 @@ from athena.main import (
 
 def decode(jsonfile):
     """ entry point for model decoding, do some preparation work """
-    p, model, _, checkpointer, _ = build_model_from_jsonfile(jsonfile, 0)
-    if "speed_permutation" in p.dataset_config:
-        p.dataset_config['speed_permutation'] = [1.0]
-    dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.dataset_config)
+    p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
     checkpointer.restore_from_best()
     solver = DecoderSolver(model, config=p.decode_config)
-    dataset_builder = dataset_builder.load_csv(p.test_csv).compute_cmvn_if_necessary(True)
+    assert p.testset_config is not None
+    dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
+    dataset_builder = dataset_builder.compute_cmvn_if_necessary(True)
     solver.decode(dataset_builder.as_dataset(batch_size=1))
 
 
@@ -52,5 +51,6 @@ if __name__ == "__main__":
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
+
     DecoderSolver.initialize_devices(p.solver_gpu)
     decode(jsonfile)

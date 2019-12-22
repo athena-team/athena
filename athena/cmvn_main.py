@@ -19,7 +19,6 @@
 r""" a sample implementation of LAS for HKUST """
 import sys
 import json
-import tensorflow as tf
 from absl import logging
 from athena.main import parse_config, SUPPORTED_DATASET_BUILDER
 
@@ -28,14 +27,12 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         logging.warning('Usage: python {} config_json_file data_csv_file'.format(sys.argv[0]))
         sys.exit()
-    tf.random.set_seed(1)
+    jsonfile, csv_file = sys.argv[1], sys.argv[2]
 
-    jsonfile = sys.argv[1]
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
-    if "speed_permutation" in p.dataset_config:
+    if "speed_permutation" in p.trainset_config:
         p.dataset_config['speed_permutation'] = [1.0]
-    csv_file = sys.argv[2]
-    dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.dataset_config)
+    dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
     dataset_builder.load_csv(csv_file).compute_cmvn_if_necessary(True)
