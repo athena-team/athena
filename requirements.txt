@@ -1,0 +1,12 @@
+tensorflow==2.0.0
+sox
+absl-py
+yapf
+pylint
+flake8
+horovod
+tqdm
+sentencepiece
+librosa
+kenlm
+jieba

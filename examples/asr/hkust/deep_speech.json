@@ -1,0 +1,47 @@
+{
+  "batch_size":32,
+  "num_epochs":20,
+  "sorta_epoch":1,
+  "ckpt":"examples/asr/hkust/ckpts/deep_speech",
+  "solver_gpu":[2],
+  "solver_config":{
+    "clip_norm":100.0,
+    "log_interval":1
+  },
+
+  "model":"deep_speech",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "conv_filters":64,
+    "rnn_hidden_size":1680,
+    "rnn_type":"cudnngru",
+    "num_rnn_layers":6
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":8000,
+    "k":0.5
+  },
+
+  "dataset_builder": "speech_recognition_dataset",
+  "dataset_config":{
+    "audio_config":{
+      "type":"Fbank",
+      "filterbank_channel_count":40,
+      "local_cmvn":false
+    },
+    "cmvn_file":"examples/asr/hkust/data/cmvn",
+    "text_config": {
+      "type":"vocab",
+      "model":"examples/asr/hkust/data/vocab"
+    },
+    "input_length_range":[10, 8000]
+  },
+  "num_data_threads": 1,
+  "train_csv":"examples/asr/hkust/data/train.csv",
+  "dev_csv":"examples/asr/hkust/data/dev.csv",
+  "test_csv":"examples/asr/hkust/data/dev.csv"
+}

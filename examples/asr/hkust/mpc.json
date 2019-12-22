@@ -1,0 +1,47 @@
+{
+  "batch_size":64,
+  "num_epochs":100,
+  "sorta_epoch":1,
+  "ckpt":"examples/asr/hkust/ckpts/mpc",
+  "solver_gpu":[0],
+  "solver_config":{
+    "clip_norm":100,
+    "log_interval":10,
+    "enable_tf_function":true
+  },
+
+  "model": "mpc",
+  "num_classes": 40,
+  "model_config":{
+    "return_encoder_output":false,
+    "num_filters":512,
+    "d_model":512,
+    "num_heads":8,
+    "num_encoder_layers":12,
+    "dff":1280,
+    "rate":0.1,
+    "chunk_size":1,
+    "keep_probability":0.8
+  },
+
+  "optimizer": "warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":2000,
+    "k":0.3
+  },
+
+  "dataset_builder":"speech_dataset",
+  "dataset_config":{
+    "audio_config":{
+      "type":"Fbank",
+      "filterbank_channel_count":40,
+      "local_cmvn":false
+      },
+    "cmvn_file":"examples/asr/hkust/data/cmvn",
+    "input_length_range":[10, 8000]
+  },
+  "num_data_threads": 1,
+  "train_csv":"examples/asr/hkust/data/train.csv",
+  "dev_csv":"examples/asr/hkust/data/dev.csv"
+}
