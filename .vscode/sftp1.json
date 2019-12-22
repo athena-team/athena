@@ -1,0 +1,16 @@
+{
+    "name": "Luban1",
+    "host": "10.178.2.42",
+    "protocol": "sftp",
+    "port": 8022,
+    "username": "luban",
+    "password": "Z7vOzzp8",
+    "remotePath": "/tmp-data/lixg/athena",
+    "uploadOnSave": true,
+    "ignore": [
+        ".vscode",
+        ".git",
+        ".DS_Store",
+        "*/__pycache__/*"
+    ]
+}
