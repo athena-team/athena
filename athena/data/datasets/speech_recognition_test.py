@@ -22,9 +22,9 @@ from athena import SpeechRecognitionDatasetBuilder
 
 def test():
     ''' test the speed of dataset '''
-    data_csv = "/tmp-data/dataset/opensource/hkust/train.csv"
     dataset_builder = SpeechRecognitionDatasetBuilder(
         {
+            "data_csv": "examples/asr/aishell/data/train.csv",
             "audio_config": {
                 "type": "Fbank",
                 "filterbank_channel_count": 40,
@@ -35,7 +35,7 @@ def test():
             "vocab_file": "examples/asr/hkust/data/vocab"
         }
     )
-    dataset = dataset_builder.load_csv(data_csv).as_dataset(16, 4)
+    dataset = dataset_builder.as_dataset(16, 4)
     start = time.time()
     for _ in tqdm.tqdm(dataset, total=len(dataset_builder)//16):
         pass

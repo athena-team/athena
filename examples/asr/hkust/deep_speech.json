@@ -27,21 +27,25 @@
   },
 
   "dataset_builder": "speech_recognition_dataset",
-  "dataset_config":{
-    "audio_config":{
-      "type":"Fbank",
-      "filterbank_channel_count":40,
-      "local_cmvn":false
-    },
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/asr/hkust/data/train.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/hkust/data/cmvn",
-    "text_config": {
-      "type":"vocab",
-      "model":"examples/asr/hkust/data/vocab"
-    },
+    "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
     "input_length_range":[10, 8000]
   },
-  "num_data_threads": 1,
-  "train_csv":"examples/asr/hkust/data/train.csv",
-  "dev_csv":"examples/asr/hkust/data/dev.csv",
-  "test_csv":"examples/asr/hkust/data/dev.csv"
+  "devset_config":{
+    "data_csv": "examples/asr/hkust/data/dev.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/hkust/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
+    "input_length_range":[10, 8000]
+  },
+  "testset_config":{
+    "data_csv": "examples/asr/hkust/data/dev.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/hkust/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"}
+  }
 }

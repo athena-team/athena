@@ -53,7 +53,8 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
     default_config = {
         "audio_config": {"type": "Fbank"},
         "cmvn_file": None,
-        "input_length_range": [20, 50000]
+        "input_length_range": [20, 50000],
+        "data_csv": None
     }
 
     def __init__(self, config=None):
@@ -65,8 +66,8 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
-        # self.file_path = self.hparams.data_csv
-        # self.preprocess_data()
+        if self.hparams.data_csv is not None:
+            self.load_csv(self.hparams.data_csv)
 
     def reload_config(self, config):
         """ reload the config """
