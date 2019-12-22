@@ -27,12 +27,15 @@ from athena.main import parse_config, train
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
+    if len(sys.argv) < 2:
+        logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))
+        sys.exit()
     tf.random.set_seed(1)
 
-    JSON_FILE = sys.argv[1]
-    CONFIG = None
-    with open(JSON_FILE) as f:
-        CONFIG = json.load(f)
-    PARAMS = parse_config(CONFIG)
+    json_file = sys.argv[1]
+    config = None
+    with open(json_file) as f:
+        config = json.load(f)
+    p = parse_config(config)
     HorovodSolver.initialize_devices()
-    train(JSON_FILE, HorovodSolver, hvd.size(), hvd.local_rank())
+    train(json_file, HorovodSolver, hvd.size(), hvd.local_rank())

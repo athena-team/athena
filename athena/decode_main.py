@@ -43,6 +43,9 @@ def decode(jsonfile):
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
+    if len(sys.argv) < 2:
+        logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))
+        sys.exit()
     tf.random.set_seed(1)
 
     jsonfile = sys.argv[1]

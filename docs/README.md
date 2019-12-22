@@ -7,7 +7,6 @@ Our vision is to empower both industrial application and academic research on en
 
 All of our models are implemented in Tensorflow>=2.0.0.
 
-
 ## Table of Contents
 
 - [Athena](#athena)
@@ -74,6 +73,7 @@ All of our training/ inference configurations are written in config.json. Below 
     "enable_tf_function":true
   },
 
+
   "model":"speech_transformer",
   "num_classes": null,
   "pretrained_model": null,
@@ -102,14 +102,18 @@ All of our training/ inference configurations are written in config.json. Below 
       "type":"Fbank",
       "filterbank_channel_count":40,
       "local_cmvn":false
-      },
+    },
+    "text_config": {
+      "type":"vocab",
+      "model":"examples/asr/hkust/data/vocab"
+    },
     "cmvn_file":"examples/asr/hkust/data/cmvn",
-    "vocab_file":"examples/asr/hkust/data/vocab",
     "input_length_range":[10, 5000]
   },
-  "train_csv":"/tmp-data/dataset/opensource/hkust/train.csv",
-  "dev_csv":"/tmp-data/dataset/opensource/hkust/dev.csv",
-  "test_csv":"/tmp-data/dataset/opensource/hkust/dev.csv"
+  "num_data_threads": 1,
+  "train_csv":"examples/asr/hkust/data/train.csv",
+  "dev_csv":"examples/asr/hkust/data/dev.csv",
+  "test_csv":"examples/asr/hkust/data/dev.csv"
 }
 ```
 
