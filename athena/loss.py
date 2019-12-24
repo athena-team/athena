@@ -94,6 +94,6 @@ class MPCLoss(tf.keras.losses.Loss):
         seq_mask = tf.sequence_mask(logit_length, shape[1], dtype=loss.dtype)
         seq_mask = tf.tile(seq_mask[:, :, tf.newaxis], [1, 1, shape[2]])
         loss *= seq_mask
-        loss = tf.reduce_sum(tf.abs(loss, name="L1_loss"), 2)
+        loss = tf.reduce_sum(tf.abs(loss, name="L1_loss"), axis=-1)
         loss = tf.reduce_mean(loss)
         return loss

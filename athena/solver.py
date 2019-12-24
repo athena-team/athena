@@ -22,7 +22,7 @@ import time
 import tensorflow as tf
 from absl import logging
 import horovod.tensorflow as hvd
-from .utils import hparam
+from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
@@ -42,12 +42,7 @@ class BaseSolver(tf.keras.Model):
         self.optimizer = optimizer
         self.metric_checker = MetricChecker(self.optimizer)
         self.sample_signature = sample_signature
-
-        self.hparams = hparam.HParams(cls=self.__class__)
-        for keys in self.default_config:
-            self.hparams.add_hparam(keys, self.default_config[keys])
-        if config is not None:
-            self.hparams.override_from_dict(config)
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
     @staticmethod
     def initialize_devices(visible_gpu_idx=None):
@@ -195,22 +190,18 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
-        "beam_search":True,
-        "beam_size":4,
-        "ctc_weight":0.0,
-        "lm_weight":0.1,
-        "lm_path":"examples/asr/hkust/data/lm.bin"
+        "beam_search": True,
+        "beam_size": 4,
+        "ctc_weight": 0.0,
+        "lm_weight": 0.1,
+        "lm_path": None
     }
 
     # pylint: disable=super-init-not-called
     def __init__(self, model, config=None):
         super().__init__(model, None, None)
         self.model = model
-        self.hparams = hparam.HParams(cls=self.__class__)
-        for keys in self.default_config:
-            self.hparams.add_hparam(keys, self.default_config[keys])
-        if config is not None:
-            self.hparams.override_from_dict(config)
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
     def decode(self, dataset):
         """ decode the model """

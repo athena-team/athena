@@ -30,20 +30,26 @@
     "k":0.5
   },
 
+  "dataset_builder": "speech_recognition_dataset",
+  "num_data_threads": 1,
   "trainset_config":{
-    "data_csv":"/tmp-data/dataset/opensource/librispeech/wav/train-clean-100.csv",
-    "audio_config":{
-      "type":"Fbank",
-      "filterbank_channel_count":40,
-      "local_cmvn":false
-      },
-    "vocab_file":"examples/asr/hkust/data/librispeech_unigram5000.model",
-    "subword":true,
-    "audio_min_length":10,
-    "audio_max_length":10000,
-    "force_process":false
+    "data_csv": "examples/asr/librispeech/data/train-all.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/librispeech/data/cmvn",
+    "text_config": {"type":"spm", "model":"examples/asr/librispeech/data/librispeech_unigram5000.model"},
+    "input_length_range":[10, 8000]
   },
-  "cmvn_file":"examples/asr/librispeech/data/cmvn",
-  "dev_csv":"/tmp-data/dataset/opensource/librispeech/wav/dev-clean.csv",
-  "test_csv":"/tmp-data/dataset/opensource/librispeech/wav/test-clean.csv"
+  "devset_config":{
+    "data_csv": "examples/asr/librispeech/data/dev.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/librispeech/data/cmvn",
+    "text_config": {"type":"spm", "model":"examples/asr/librispeech/data/librispeech_unigram5000.model"},
+    "input_length_range":[10, 8000]
+  },
+  "testset_config":{
+    "data_csv": "examples/asr/librispeech/data/dev.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/librispeech/data/cmvn",
+    "text_config": {"type":"spm", "model":"examples/asr/librispeech/data/librispeech_unigram5000.model"}
+  }
 }
