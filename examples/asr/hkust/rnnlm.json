@@ -32,18 +32,15 @@
   },
 
   "dataset_builder": "language_dataset",
-  "dataset_config":{
-    "input_text_config":{
-      "type":"vocab",
-      "model":"examples/asr/hkust/data/vocab"
-    },
-    "output_text_config":{
-      "type":"vocab",
-      "model":"examples/asr/hkust/data/vocab"
-    }
-  },
   "num_data_threads": 1,
-  "train_csv":"examples/asr/hkust/data/train.trans.csv",
-  "dev_csv":"examples/asr/hkust/data/dev.trans.csv",
-  "test_csv":"examples/asr/hkust/data/dev.trans.csv"
+  "trainset_config":{
+    "data_csv":"examples/asr/hkust/data/train.trans.csv",
+    "input_text_config":{"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
+    "output_text_config":{"type":"vocab", "model":"examples/asr/hkust/data/vocab"}
+  },
+  "devset_config":{
+    "data_csv":"examples/asr/hkust/data/dev.trans.csv",
+    "input_text_config":{"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
+    "output_text_config":{"type":"vocab", "model":"examples/asr/hkust/data/vocab"}
+  }
 }

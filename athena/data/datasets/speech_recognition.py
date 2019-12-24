@@ -55,6 +55,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
+        "data_csv": None
     }
 
     def __init__(self, config=None):
@@ -67,6 +68,8 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
+        if self.hparams.data_csv is not None:
+            self.load_csv(self.hparams.data_csv)
 
     def reload_config(self, config):
         """ reload the config """
