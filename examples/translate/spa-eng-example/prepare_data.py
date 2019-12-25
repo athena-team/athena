@@ -10,7 +10,6 @@ import unicodedata
 import pandas
 import tensorflow as tf
 from absl import logging
-from athena import LanguageDatasetBuilder
 
 
 def preprocess_sentence(w):

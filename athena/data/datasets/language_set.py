@@ -93,6 +93,11 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
         return len(self.output_text_featurizer)
 
     @property
+    def input_vocab_size(self):
+        """ return the input vocab size """
+        return len(self.input_text_featurizer)
+
+    @property
     def sample_type(self):
         return {
             "input": tf.int32,
