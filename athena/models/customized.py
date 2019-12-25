@@ -52,14 +52,17 @@ class CustomizedModel(BaseModel):
     default_config = {
         "topo": [{}]
     }
-    def __init__(self, num_classes, sample_shape, config=None):
+    def __init__(self, data_descriptions, config=None):
         super().__init__()
         self.hparams = register_and_parse_hparams(self.default_config, config)
 
         logging.info(f"Network topology config: {self.hparams.topo}")
-        input_feature = tf.keras.layers.Input(shape=sample_shape["input"], dtype=tf.float32)
+        input_feature = tf.keras.layers.Input(
+            shape=data_descriptions.sample_shape["input"],
+            dtype=tf.float32
+        )
         inner = build_layer(input_feature, self.hparams.topo)
-        inner = tf.keras.layers.Dense(num_classes)(inner)
+        inner = tf.keras.layers.Dense(data_descriptions.num_classes)(inner)
         self.model = tf.keras.Model(inputs=input_feature, outputs=inner)
         logging.info(self.model.summary())
 

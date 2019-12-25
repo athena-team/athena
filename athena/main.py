@@ -85,10 +85,7 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
     if p.trainset_config is None and p.num_classes is None:
         raise ValueError("trainset_config and num_classes can not both be null")
     model = SUPPORTED_MODEL[p.model](
-        num_classes=p.num_classes
-        if p.num_classes is not None
-        else dataset_builder.num_class,
-        sample_shape=dataset_builder.sample_shape,
+        data_descriptions=dataset_builder,
         config=p.model_config,
     )
     optimizer = SUPPORTED_OPTIMIZER[p.optimizer](p.optimizer_config)
@@ -129,6 +126,8 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     # for cmvn
     trainset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
     trainset_builder.compute_cmvn_if_necessary(rank == 0)
+    trainset_builder.shard(rank_size, rank)
+    devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
 
     # train
     solver = Solver(
@@ -140,17 +139,13 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
-        trainset_builder.shard(rank_size, rank)
         if epoch >= p.sorta_epoch:
             trainset_builder.batch_wise_shuffle(p.batch_size)
-        dataset = trainset_builder.as_dataset(p.batch_size, p.num_data_threads)
-        solver.train(dataset)
+        solver.train(trainset_builder.as_dataset(p.batch_size, p.num_data_threads))
 
         if rank == 0:
             logging.info(">>>>> start evaluate in epoch %d" % epoch)
-        devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
-        dataset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-        loss = solver.evaluate(dataset, epoch)
+        loss = solver.evaluate(devset_builder.as_dataset(p.batch_size, p.num_data_threads), epoch)
 
         if rank == 0:
             checkpointer(loss)
