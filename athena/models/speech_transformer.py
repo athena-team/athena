@@ -50,11 +50,11 @@ class SpeechTransformer(BaseModel):
         "label_smoothing_rate": 0.0
     }
 
-    def __init__(self, num_classes, sample_shape, config=None):
+    def __init__(self, data_descriptions, config=None):
         super().__init__()
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
-        self.num_classes = num_classes + 1
+        self.num_classes = data_descriptions.num_classes + 1
         self.sos = self.num_classes - 1
         self.eos = self.num_classes - 1
         ls_rate = self.hparams.label_smoothing_rate
@@ -67,7 +67,7 @@ class SpeechTransformer(BaseModel):
         num_filters = self.hparams.num_filters
         d_model = self.hparams.d_model
         layers = tf.keras.layers
-        input_features = layers.Input(shape=sample_shape["input"], dtype=tf.float32)
+        input_features = layers.Input(shape=data_descriptions.sample_shape["input"], dtype=tf.float32)
         inner = layers.Conv2D(
             filters=num_filters,
             kernel_size=(3, 3),
@@ -98,7 +98,7 @@ class SpeechTransformer(BaseModel):
         print(self.x_net.summary())
 
         # y_net for target
-        input_labels = layers.Input(shape=sample_shape["output"], dtype=tf.int32)
+        input_labels = layers.Input(shape=data_descriptions.sample_shape["output"], dtype=tf.int32)
         inner = layers.Embedding(self.num_classes, d_model)(input_labels)
         inner = PositionalEncoding(d_model, scale=True)(inner)
         inner = layers.Dropout(self.hparams.rate)(inner)
