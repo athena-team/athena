@@ -35,7 +35,8 @@ SUPPORTED_MODEL = {
     "speech_transformer2": SpeechTransformer2,
     "mtl_transformer_ctc": MtlTransformerCtc,
     "mpc": MaskedPredictCoding,
-    "rnnlm": RNNLM
+    "rnnlm": RNNLM,
+    "translate_transformer": NeuralTranslateTransformer,
 }
 
 SUPPORTED_OPTIMIZER = {
@@ -127,7 +128,6 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     trainset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
     trainset_builder.compute_cmvn_if_necessary(rank == 0)
     trainset_builder.shard(rank_size, rank)
-    devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
 
     # train
     solver = Solver(
@@ -136,6 +136,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
         sample_signature=trainset_builder.sample_signature,
         config=p.solver_config,
     )
+    loss = 0.0
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
@@ -143,9 +144,12 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
             trainset_builder.batch_wise_shuffle(p.batch_size)
         solver.train(trainset_builder.as_dataset(p.batch_size, p.num_data_threads))
 
-        if rank == 0:
-            logging.info(">>>>> start evaluate in epoch %d" % epoch)
-        loss = solver.evaluate(devset_builder.as_dataset(p.batch_size, p.num_data_threads), epoch)
+        if p.devset_config is not None:
+            if rank == 0:
+                logging.info(">>>>> start evaluate in epoch %d" % epoch)
+            devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
+            devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
+            loss = solver.evaluate(devset, epoch)
 
         if rank == 0:
             checkpointer(loss)
