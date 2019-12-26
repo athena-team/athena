@@ -56,7 +56,7 @@ class NeuralTranslateTransformer(BaseModel):
 
         layers = tf.keras.layers
         input_labels = layers.Input(shape=data_descriptions.sample_shape["input"], dtype=tf.int32)
-        inner = layers.Embedding(data_descriptions.input_vocab_size + 1, p.d_model)(input_labels)
+        inner = layers.Embedding(data_descriptions.input_vocab_size, p.d_model)(input_labels)
         inner = PositionalEncoding(p.d_model, scale=True)(inner)
         inner = layers.Dropout(p.rate)(inner)
         self.x_net = tf.keras.Model(inputs=input_labels, outputs=inner, name="x_net")
