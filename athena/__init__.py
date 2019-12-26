@@ -46,7 +46,7 @@ from .models.masked_pc import MaskedPredictCoding
 from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
-from .models.seq2seq import NeuralTranslateTransformer
+from .models.translate_transformer import NeuralTranslateTransformer
 
 # solver & loss & accuracy
 from .solver import BaseSolver
