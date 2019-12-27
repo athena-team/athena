@@ -87,7 +87,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         self.entries = [tuple(line) for line in lines]
 
         self.speakers = []
-        if "speaker" not in headers.split("\t"):
+        if "speakers" not in headers.split("\t"):
             entries = self.entries
             self.entries = []
             if self.text_featurizer.model_type == "text":

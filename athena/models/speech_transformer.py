@@ -30,7 +30,7 @@ from ..layers.commons import PositionalEncoding
 from ..layers.transformer import Transformer
 from ..utils.hparam import register_and_parse_hparams
 from ..tools.beam_search import BeamSearchDecoder
-from ..tools.lm_scorer import NGramScorer
+from ..tools.lm_scorer import NGramScorer, RNNScorer
 
 
 class SpeechTransformer(BaseModel):
@@ -195,7 +195,7 @@ class SpeechTransformer(BaseModel):
         history_logits = history_logits.write(step - 1, logits)
         return logits, history_logits, step
 
-    def decode(self, samples, hparams, return_encoder=False):
+    def decode(self, samples, hparams, lm_model=None, return_encoder=False):
         """ beam search decoding """
         x0 = samples["input"]
         batch = tf.shape(x0)[0]
@@ -223,13 +223,18 @@ class SpeechTransformer(BaseModel):
         if hparams.lm_weight != 0:
             if hparams.lm_path is None:
                 raise ValueError("lm path should not be none")
-            lm_scorer = NGramScorer(
-                hparams.lm_path,
-                self.sos,
-                self.eos,
-                self.num_classes,
-                lm_weight=hparams.lm_weight,
-            )
+            if hparams.lm_type == "ngram":
+                lm_scorer = NGramScorer(
+                    hparams.lm_path,
+                    self.sos,
+                    self.eos,
+                    self.num_classes,
+                    lm_weight=hparams.lm_weight,
+                )
+            elif hparams.lm_type == "rnn":
+                lm_scorer = RNNScorer(
+                    lm_model,
+                    lm_weight=hparams.lm_weight)
             beam_search_decoder.add_scorer(lm_scorer)
         predictions = beam_search_decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
