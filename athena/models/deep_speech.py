@@ -36,7 +36,7 @@ class DeepSpeechModel(BaseModel):
     }
     def __init__(self, data_descriptions, config=None):
         super().__init__()
-        self.num_classes = data_descriptions.num_classes + 1
+        self.num_classes = data_descriptions.num_class + 1
         self.loss_function = CTCLoss(blank_index=-1)
         self.metric = CTCAccuracy()
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
