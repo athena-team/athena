@@ -44,12 +44,11 @@ class NeuralTranslateTransformer(BaseModel):
         super().__init__()
         p = register_and_parse_hparams(self.default_config, config)
 
-        self.num_classes = data_descriptions.num_classes + 1
-        self.sos = self.num_classes - 1
-        self.eos = self.num_classes - 1
+        self.sos = data_descriptions.num_class
+        self.eos = data_descriptions.num_class
 
         self.loss_function = Seq2SeqSparseCategoricalCrossentropy(
-            num_classes=self.num_classes,
+            num_classes=data_descriptions.num_class + 1,
             eos=self.eos,
             label_smoothing=p.label_smoothing_rate
         )
@@ -63,7 +62,7 @@ class NeuralTranslateTransformer(BaseModel):
         self.x_net = tf.keras.Model(inputs=input_labels, outputs=inner, name="x_net")
 
         output_labels = layers.Input(shape=data_descriptions.sample_shape["output"], dtype=tf.int32)
-        inner = layers.Embedding(self.num_classes, p.d_model)(output_labels)
+        inner = layers.Embedding(data_descriptions.num_class + 1, p.d_model)(output_labels)
         inner = PositionalEncoding(p.d_model, scale=True)(inner)
         inner = layers.Dropout(p.rate)(inner)
         self.y_net = tf.keras.Model(inputs=output_labels, outputs=inner, name="y_net")
@@ -76,7 +75,7 @@ class NeuralTranslateTransformer(BaseModel):
             p.num_decoder_layers,
             p.dff,
             p.rate)
-        self.final_layer = tf.keras.layers.Dense(self.num_classes)
+        self.final_layer = tf.keras.layers.Dense(data_descriptions.num_class + 1)
 
     def call(self, samples, training=None):
         x = samples["input"]
