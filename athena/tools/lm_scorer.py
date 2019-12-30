@@ -1,3 +1,4 @@
+import tensorflow as tf
 import numpy as np
 import kenlm
 
@@ -77,3 +78,34 @@ class NGramScorer(object):
                 new_states[i, sym] = out_state
         self.cand_kenlm_states = new_states
         return scores
+
+
+class RNNScorer(object):
+    """
+    RNN language model
+    """
+
+    def __init__(self, lm_model, lm_weight=0.1):
+        """
+        Basic params will be initialized
+        Args:
+            lm_model: the loaded rnn language model
+        """
+        self.lang_model = lm_model
+        self.lm_weight = lm_weight
+
+    def score(self, candidate_holder, new_scores):
+        """
+        Call this function to compute the score of the next prediction
+        based on historical predictions, the scoring function shares a common interface
+        Args:
+            candidate_holder:
+        Returns:
+            score: the weighted score
+            cand_states:
+        """
+        cand_seqs = candidate_holder.cand_seqs
+        score = self.lang_model.rnnlm(cand_seqs, training=False)
+        score = score[:, -1, :]
+        score = self.lm_weight * tf.math.log(tf.nn.softmax(score))
+        return score, candidate_holder.cand_states
