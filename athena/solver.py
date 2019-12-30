@@ -194,11 +194,12 @@ class DecoderSolver(BaseSolver):
         "beam_size": 4,
         "ctc_weight": 0.0,
         "lm_weight": 0.1,
+        "lm_type": "",
         "lm_path": None
     }
 
     # pylint: disable=super-init-not-called
-    def __init__(self, model, config=None):
+    def __init__(self, model, config=None, lm_model=None):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
@@ -211,7 +212,7 @@ class DecoderSolver(BaseSolver):
         for _, samples in enumerate(dataset):
             begin = time.time()
             samples = self.model.prepare_samples(samples)
-            predictions = self.model.decode(samples, self.hparams)
+            predictions = self.model.decode(samples, self.hparams, lm_model=self.lm_model)
             validated_preds = validate_seqs(predictions, self.model.eos)[0]
             validated_preds = tf.cast(validated_preds, tf.int64)
             num_errs, _ = metric.update_state(validated_preds, samples)
