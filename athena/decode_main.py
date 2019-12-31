@@ -32,8 +32,11 @@ from athena.main import (
 def decode(jsonfile):
     """ entry point for model decoding, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
+    if 'lm_type' in p.decode_config and p.decode_config['lm_type'] == "rnn":
+        _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(p.decode_config['lm_path'])
+        lm_checkpointer.restore_from_best()
     checkpointer.restore_from_best()
-    solver = DecoderSolver(model, config=p.decode_config)
+    solver = DecoderSolver(model, config=p.decode_config, lm_model=lm_model)
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
     dataset_builder = dataset_builder.compute_cmvn_if_necessary(True)

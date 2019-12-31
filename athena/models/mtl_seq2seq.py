@@ -28,7 +28,7 @@ from .speech_transformer import SpeechTransformer, SpeechTransformer2
 from ..utils.hparam import register_and_parse_hparams
 from ..tools.beam_search import BeamSearchDecoder
 from ..tools.ctc_scorer import CTCPrefixScorer
-from ..tools.lm_scorer import NGramScorer
+from ..tools.lm_scorer import NGramScorer, RNNScorer
 
 
 class MtlTransformerCtc(BaseModel):
@@ -98,7 +98,7 @@ class MtlTransformerCtc(BaseModel):
 	    """
         self.model.restore_from_pretrained_model(pretrained_model, model_type)
 
-    def decode(self, samples, hparams):
+    def decode(self, samples, hparams, lm_model=None):
         """ beam search decoding """
         encoder_output, input_mask = self.model.decode(samples, hparams, return_encoder=True)
         # init op
@@ -129,13 +129,18 @@ class MtlTransformerCtc(BaseModel):
         if hparams.lm_weight != 0:
             if hparams.lm_path is None:
                 raise ValueError("lm path should not be none")
-            lm_scorer = NGramScorer(
-                hparams.lm_path,
-                self.sos,
-                self.eos,
-                self.num_classes,
-                lm_weight=hparams.lm_weight,
-            )
+            if hparams.lm_type == "ngram":
+                lm_scorer = NGramScorer(
+                    hparams.lm_path,
+                    self.sos,
+                    self.eos,
+                    self.num_classes,
+                    lm_weight=hparams.lm_weight,
+                )
+            elif hparams.lm_type == "rnn":
+                lm_scorer = RNNScorer(
+                    lm_model,
+                    lm_weight=hparams.lm_weight)
             beam_search_decoder.add_scorer(lm_scorer)
         predictions = beam_search_decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
