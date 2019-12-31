@@ -37,7 +37,8 @@
     "beam_size":4,
     "ctc_weight":0.3,
     "lm_weight":0.1,
-    "lm_path":"examples/asr/aishell/data/lm.bin"
+    "lm_type": "rnn",
+    "lm_path":"examples/asr/aishell/rnnlm.json"
   },
 
   "optimizer":"warmup_adam",
