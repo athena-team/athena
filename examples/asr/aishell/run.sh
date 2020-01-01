@@ -68,32 +68,3 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "running decode ..."
     python athena/decode_main.py examples/asr/hkust/mtl_transformer_sp.json
 fi
-
-
-
-
-
-
-
-
-
-
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    # decoding stage
-    echo "Decoding"
-    # prepare language model
-    tail -n +2 examples/asr/hkust/data/train.csv | cut -f 3 > examples/asr/hkust/data/text
-    python examples/asr/hkust/local/segment_word.py examples/asr/hkust/data/vocab \
-       examples/asr/hkust/data/text > examples/asr/hkust/data/text.seg
-    tools/kenlm/build/bin/lmplz -o 4 < examples/asr/hkust/data/text.seg > examples/asr/hkust/data/4gram.arpa
-
-    python athena/decode_main.py examples/asr/hkust/mtl_transformer.json
-fi
-
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    echo "training rnnlm"
-    tail -n +2 examples/asr/hkust/data/train.csv | awk '{print $3"\t"$3}' > examples/asr/hkust/data/train.trans.csv
-    tail -n +2 examples/asr/hkust/data/dev.csv | awk '{print $3"\t"$3}' > examples/asr/hkust/data/dev.trans.csv
-    python athena/main.py examples/asr/hkust/rnnlm.json
-fi
-
