@@ -66,5 +66,5 @@ fi
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # decoding stage
     echo "running decode ..."
-    python athena/decode_main.py examples/asr/hkust/mtl_transformer_sp.json
+    python athena/decode_main.py examples/asr/aishell/mtl_transformer_sp.json
 fi
