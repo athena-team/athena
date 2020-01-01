@@ -35,6 +35,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # cal cmvn
     cat examples/asr/hkust/data/train.csv > examples/asr/hkust/data/all.csv
     tail -n +2 examples/asr/hkust/data/dev.csv >> examples/asr/hkust/data/all.csv
+    tail -n +2 examples/asr/hkust/data/test.csv >> examples/asr/hkust/data/all.csv
     python athena/cmvn_main.py examples/asr/hkust/mpc.json examples/asr/hkust/data/all.csv
 fi
 
