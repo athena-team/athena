@@ -23,7 +23,7 @@ from .base import BaseModel
 from ..utils.misc import insert_eos_in_labels, insert_sos_in_labels
 from ..utils.hparam import register_and_parse_hparams
 from ..layers.commons import SUPPORTED_RNNS
-#xxx
+
 class RNNLM(BaseModel):
     """Standard implementation of a RNNLM. Model mainly consists of embeding layer,
     rnn layers(with dropout), and the full connection layer, which are all incuded
