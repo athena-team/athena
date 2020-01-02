@@ -56,7 +56,7 @@ class MaskedPredictCoding(BaseModel):
     def __init__(self, data_descriptions, config=None):
         super().__init__()
         self.downsample_scale = 4
-        self.num_classes = data_descriptions.num_classes * self.downsample_scale
+        self.num_class = data_descriptions.num_class * self.downsample_scale
 
         # default settings
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
@@ -113,7 +113,7 @@ class MaskedPredictCoding(BaseModel):
             for _ in range(self.hparams.num_encoder_layers)
         ]
         self.encoder = TransformerEncoder(encoder_layers)
-        self.final_layer = layers.Dense(self.num_classes, input_shape=(d_model,))
+        self.final_layer = layers.Dense(self.num_class, input_shape=(d_model,))
         self.randomizer = tf.random_uniform_initializer(0, 1)
 
     def call(self, samples, training: bool = None):
