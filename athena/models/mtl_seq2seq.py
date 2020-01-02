@@ -49,9 +49,9 @@ class MtlTransformerCtc(BaseModel):
 
     def __init__(self, data_descriptions, config=None):
         super().__init__()
-        self.num_classes = data_descriptions.num_classes + 1
-        self.sos = self.num_classes - 1
-        self.eos = self.num_classes - 1
+        self.num_class = data_descriptions.num_class + 1
+        self.sos = self.num_class - 1
+        self.eos = self.num_class - 1
 
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
@@ -60,7 +60,7 @@ class MtlTransformerCtc(BaseModel):
         self.model = self.SUPPORTED_MODEL[self.hparams.model](
             data_descriptions, self.hparams.model_config
         )
-        self.decoder = Dense(self.num_classes)
+        self.decoder = Dense(self.num_class)
         self.ctc_logits = None
 
     def call(self, samples, training=None):
@@ -112,14 +112,14 @@ class MtlTransformerCtc(BaseModel):
         step = 0
         beam_size = 1 if not hparams.beam_search else hparams.beam_size
         beam_search_decoder = BeamSearchDecoder(
-            self.num_classes, self.sos, self.eos, beam_size=beam_size
+            self.num_class, self.sos, self.eos, beam_size=beam_size
         )
         beam_search_decoder.build(self.model.time_propagate)
         if hparams.beam_search and hparams.ctc_weight != 0:
             ctc_scorer = CTCPrefixScorer(
                 self.eos,
                 ctc_beam=hparams.beam_size*2,
-                num_classes=self.num_classes,
+                num_classes=self.num_class,
                 ctc_weight=hparams.ctc_weight,
             )
             ctc_logits = self.decoder(encoder_output, training=False)
@@ -134,7 +134,7 @@ class MtlTransformerCtc(BaseModel):
                     hparams.lm_path,
                     self.sos,
                     self.eos,
-                    self.num_classes,
+                    self.num_class,
                     lm_weight=hparams.lm_weight,
                 )
             elif hparams.lm_type == "rnn":
