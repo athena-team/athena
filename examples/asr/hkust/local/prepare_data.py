@@ -51,23 +51,24 @@ def normalize_hkust_trans(trans):
     return norm_trans
 
 
-def convert_audio_and_split_transcript(directory, subset, out_csv_file):
+def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output_dir):
     """Convert SPH to WAV and split the transcript.
 
   Args:
-    directory: the directory which holds the input dataset.
-    subset: the name of the specified dataset. e.g. dev
-    out_csv_file: the resulting output csv file
+    dataset_dir  : the directory which holds the input dataset.
+    subset       : the name of the specified dataset. e.g. dev.
+    out_csv_file : the resulting output csv file.
+    output_dir   : Athena working directory.
   """
     gfile = tf.compat.v1.gfile
-    sph2pip = os.path.join(os.path.dirname(__file__), "../../../../athena/tools/sph2pipe")
+    sph2pip = os.path.join(os.path.dirname(__file__), "../../../../tools/sph2pipe/sph2pipe")
     text_featurizer = TextFeaturizer()
 
     logging.info("Processing audio and transcript for %s" % subset)
-    audio_dir = os.path.join(directory, "LDC2005S15/")
-    trans_dir = os.path.join(directory, "LDC2005T32/")
+    audio_dir = os.path.join(dataset_dir, "LDC2005S15/")
+    trans_dir = os.path.join(dataset_dir, "LDC2005T32/")
 
-    output_wav_dir = os.path.join(directory, subset + "/wav")
+    output_wav_dir = os.path.join(output_dir, subset + "/wav")
     if not gfile.Exists(output_wav_dir):
         gfile.MakeDirs(output_wav_dir)
 
@@ -84,7 +85,7 @@ def convert_audio_and_split_transcript(directory, subset, out_csv_file):
 
     # Convert all SPH file into WAV format.
     # Generate the JSON file and char dict file.
-    with TemporaryDirectory(dir="/tmp-data/tmp/") as output_tmp_wav_dir:
+    with TemporaryDirectory(dir=output_dir) as output_tmp_wav_dir:
         for root, _, filenames in gfile.Walk(trans_dir):
             if not re.match('.*/' + subset + '.*', root):
                 continue
@@ -178,26 +179,28 @@ def convert_audio_and_split_transcript(directory, subset, out_csv_file):
     logging.info("Successfully generated csv file {}".format(out_csv_file))
 
 
-def processor(dircetory, subset, force_process):
+def processor(dataset_dir, subset, force_process, output_dir):
     """ download and process """
     if subset not in SUBSETS:
         raise ValueError(subset, "is not in HKUST")
 
-    subset_csv = os.path.join(dircetory, subset + ".csv")
+    subset_csv = os.path.join(output_dir, subset + ".csv")
     if not force_process and os.path.exists(subset_csv):
         return subset_csv
-    logging.info("Processing the HKUST subset {} in {}".format(subset, dircetory))
-    convert_audio_and_split_transcript(dircetory, subset, subset_csv)
+    logging.info("Processing the HKUST subset {} in {}".format(subset, dataset_dir))
+    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv, output_dir)
     logging.info("Finished processing HKUST subset {}".format(subset))
     return subset_csv
 
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
-    if len(sys.argv) < 2:
-        print('Usage: python {} data_dir (data_dir should contain audio and text '
-              'directory: LDC2005S15 and LDC2005T32)'.format(sys.argv[0]))
+    if len(sys.argv) < 3:
+        print('Usage: python {} dataset_dir output_dir\n'
+              '    dataset_dir : directory contains LDC2005S15 and LDC2005T32\n'
+              '    output_dir  : Athena working directory'.format(sys.argv[0]))
         exit(1)
-    DIR = sys.argv[1]
+    DATASET_DIR = sys.argv[1]
+    OUTPUT_DIR = sys.argv[2]
     for SUBSET in SUBSETS:
-        processor(DIR, SUBSET, True)
+        processor(DATASET_DIR, SUBSET, True, OUTPUT_DIR)
