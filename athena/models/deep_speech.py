@@ -52,6 +52,7 @@ class DeepSpeechModel(BaseModel):
             strides=(2, 2),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(input_feature)
         inner = layers.BatchNormalization()(inner)
         inner = tf.nn.relu6(inner)
@@ -61,6 +62,7 @@ class DeepSpeechModel(BaseModel):
             strides=(2, 1),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(inner)
         inner = layers.BatchNormalization()(inner)
         inner = tf.nn.relu6(inner)
