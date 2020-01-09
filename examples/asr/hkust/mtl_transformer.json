@@ -38,7 +38,7 @@
     "ctc_weight":0.5,
     "lm_type":"ngram",
     "lm_weight":0.3,
-    "lm_path":"examples/asr/hkust/data/lm.bin"
+    "lm_path":"examples/asr/hkust/data/4gram.arpa"
   },
 
   "optimizer":"warmup_adam",
@@ -58,7 +58,6 @@
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/hkust/data/cmvn",
     "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
-    "speed_permutation": [0.9, 1.0, 1.1],
     "input_length_range":[10, 8000]
   },
   "devset_config":{
