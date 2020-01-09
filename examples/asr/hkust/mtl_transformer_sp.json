@@ -2,8 +2,8 @@
   "batch_size":32,
   "num_epochs":8,
   "sorta_epoch":2,
-  "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc/",
-  "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc/event",
+  "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/",
+  "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/event",
 
   "solver_gpu":[0],
   "solver_config":{
