@@ -1,6 +1,6 @@
 {
   "batch_size":32,
-  "num_epochs":8,
+  "num_epochs":13,
   "sorta_epoch":2,
   "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc/",
   "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc/event",
@@ -34,10 +34,9 @@
 
   "decode_config":{
     "beam_search":true,
-    "beam_size":10,
-    "ctc_weight":0.5,
-    "lm_type":"ngram",
-    "lm_weight":0.3,
+    "beam_size":4,
+    "ctc_weight":0.3,
+    "lm_weight":0.1,
     "lm_path":"examples/asr/hkust/data/4gram.arpa"
   },
 
@@ -46,8 +45,8 @@
     "d_model":512,
     "warmup_steps":8000,
     "k":0.5,
-    "decay_steps":22000,
-    "decay_rate":0.1
+    "decay_steps": 50000,
+    "decay_rate": 0.1
   },
 
 
