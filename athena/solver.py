@@ -203,6 +203,7 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.lm_model = lm_model
 
     def decode(self, dataset):
         """ decode the model """
