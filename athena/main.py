@@ -116,7 +116,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 	:param rank: rank of current worker, 0 if using single gpu
 	"""
     p, model, optimizer, checkpointer = build_model_from_jsonfile(jsonfile)
-    epoch = checkpointer.save_counter
+    epoch = int(checkpointer.save_counter)
     if p.pretrained_model is not None and epoch == 0:
         p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
         model.restore_from_pretrained_model(pretrained_model, p2.model)
