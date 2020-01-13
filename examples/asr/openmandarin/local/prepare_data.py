@@ -4,12 +4,59 @@ import codecs
 import pandas
 from absl import logging
 
+import tempfile
+import tarfile
+import urllib
+
 import tensorflow as tf
 from athena import get_wave_file_length
 
 
 SUBSETS = ['train', 'dev', 'test']
 DATASETS = ['aidatatang', 'magic_data', 'primewords', 'ST-CMDS']
+
+DATASETS_URL = {
+    'aidatatang' : 'http://www.openslr.org/resources/62/aidatatang_200zh.tgz',
+    'magic_data' : {'train':'http://www.openslr.org/resources/68/train_set.tar.gz',
+                    'dev':'http://www.openslr.org/resources/68/dev_set.tar.gz',
+                    'test':'http://www.openslr.org/resources/68/test_set.tar.gz'},
+    'primewords' : 'http://www.openslr.org/resources/47/primewords_md_2018_set1.tar.gz',
+    'ST-CMDS' : 'http://www.openslr.org/resources/38/ST-CMDS-20170001_1-OS.tar.gz'
+}
+
+def download_and_extract(directory, url):
+    """Download and extract the given split of dataset.
+    Args:
+        directory: the directory where to extract the tarball.
+        url: the url to download the data file.
+    """
+    gfile = tf.compat.v1.gfile
+    if not gfile.Exists(directory):
+        gfile.MakeDirs(directory)
+
+    _, tar_filepath = tempfile.mkstemp(suffix=".tar.gz")
+
+    try:
+        logging.info("Downloading %s to %s" % (url, tar_filepath))
+
+        def _progress(count, block_size, total_size):
+            sys.stdout.write(
+                "\r>> Downloading {} {:.1f}%".format(
+                    tar_filepath, 100.0 * count * block_size / total_size
+                )
+            )
+            sys.stdout.flush()
+
+        urllib.request.urlretrieve(url, tar_filepath, _progress)
+        statinfo = os.stat(tar_filepath)
+        logging.info(
+            "Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size)
+        )
+        with tarfile.open(tar_filepath, "r") as tar:
+            tar.extractall(directory)
+    finally:
+        gfile.Remove(tar_filepath)
+
 def convert_audio_and_split_transcript(directory, subset, out_csv_file, DATASET):
     if DATASET not in DATASETS:
         raise ValueError(DATASET, 'is not in DATASETS')
@@ -168,14 +215,22 @@ if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
     DIR = sys.argv[1]
     for DATASET in DATASETS:
-        if DATASET == 'aidatatang':
+        dataset_dir = os.path.join(DIR, DATASET)
+        logging.info("Downloading and process the {} in {}".format(DATASET, dataset_dir))
+        if DATASET == 'aidatatang' or DATASET == 'magic_data':
             SUBSETS = ['train', 'dev', 'test']
-        elif DATASET == 'magic_data':
-            SUBSETS = ['train', 'dev']
         else:
             # Primewords and ST-CDMS dataset don't split train dev test
             SUBSETS = ['train']
+
+        if DATASET == 'magic_data':
+            for subset in SUBSETS:
+                download_and_extract(dataset_dir, DATASETS_URL[DATASET][subset])
+        else:
+            download_and_extract(dataset_dir, DATASETS_URL[DATASET])
+
         for SUBSET in SUBSETS:
             processor(DIR, SUBSET, True, DATASET)
+
 
     # TODO Need merge all csv to one
