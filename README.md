@@ -32,7 +32,7 @@ All of our models are implemented in Tensorflow>=2.0.0.
 This project has only been tested on Python 3. We recommend creating a virtual environment and installing the python requirements there.
 
 ```bash
-git clone https://github.com/didi/athena.git
+git clone https://github.com/athena-team/athena.git
 cd athena
 pip install -r requirements.txt
 python setup.py bdist_wheel sdist
