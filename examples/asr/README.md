@@ -26,5 +26,6 @@ bash examples/asr/$task_name/run.sh
 | :-------------: | :----------: | :-----------: |
 |  HKUST          | 24.07        | 23.77         |
 | AISEHLL         | 7.00         |               |
-| Librispeech     |              |               | |
+| Librispeech     |              |               |
+| switchboard_fisher |           |               |
 
