@@ -17,8 +17,9 @@
 import tensorflow.compat.v1 as tf
 from absl import logging
 
-so_lib_file = tf.io.gfile.glob(tf.resource_loader.get_data_files_path()
-                               + "/x_ops*.so")[0].split("/")[-1]
+so_lib_file = tf.io.gfile.glob(tf.resource_loader.get_data_files_path() + "/x_ops*.so")[
+    0
+].split("/")[-1]
 path = tf.resource_loader.get_path_to_datafile(so_lib_file)
 logging.info("x_ops*.so path:{}".format(path))
 

@@ -45,7 +45,7 @@ class Framepow(BaseFrontend):
 
         window_length = 0.025
         frame_length = 0.010
-        snip_edges = True
+        snip_edges = 1
         remove_dc_offset = True
 
         hparams = HParams(cls=cls)

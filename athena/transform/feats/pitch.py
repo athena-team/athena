@@ -83,34 +83,6 @@ class Pitch(BaseFrontend):
                                             (float, default = 10)
               --upsample-filter-width     : Integer that determines filter width when upsampling
                                             NCCF. (int, default = 5)
-              --add-delta-pitch           : If true, time derivative of log-pitch is added to
-                                            output features. (bool, default = true)
-              --add-pov-feature           : If true, the warped NCCF is added to output features.
-                                            (bool, default = true)
-              --add-raw-log-pitch         : If true, log(pitch) is added to output features.
-                                            (bool, default = false)
-              --delay                     : Number of frames by which the pitch information is
-                                            delayed. (int, default = 0)
-              --delta-pitch-noise-stddev  : Standard deviation for noise we add to the delta
-                                            log-pitch (before scaling); should be about the same as
-                                            delta-pitch option to pitch creation.  The purpose is
-                                            to get rid of peaks in the delta-pitch caused by
-                                            discretization of pitch values. (float, default = 0.005)
-              --delta-pitch-scale         : Term to scale the final delta log-pitch feature.
-                                            (float, default = 10)
-              --delta-window              : Number of frames on each side of central frame,
-                                            to use for delta window. (int, default = 2)
-              --normalization-left-context : Left-context (in frames) for moving window
-                                            normalization. (int, default = 75)
-              --normalization-right-context : Right-context (in frames) for moving window
-                                            normalization. (int, default = 75)
-              --pitch-scale               : Scaling factor for the final normalized log-pitch
-                                            value. (float, default = 2)
-              --pov-offset                : This can be used to add an offset to the POV feature.
-                                            Intended for use in online decoding as a substitute
-                                            for  CMN. (float, default = 0)
-              --pov-scale                 : Scaling factor for final POV (probability of voicing)
-                                            feature. (float, default = 2)
         :return: An object of class HParams, which is a set of hyperparameters as name-value pairs.
         """
 
@@ -118,6 +90,7 @@ class Pitch(BaseFrontend):
 
         window_length = 0.025
         frame_length = 0.010
+        sample_rate = 16000
         snip_edges = True
         preemph_coeff = 0.0
         min_f0 = 50.0
@@ -136,55 +109,26 @@ class Pitch(BaseFrontend):
         recompute_frame = 500
         nccf_ballast_online = False
 
-        pitch_scale = 2.0
-        pov_scale = 2.0
-        pov_offset = 0.0
-        delta_pitch_scale = 10.0
-        delta_pitch_noise_stddev = 0.005
-        normalization_left_context = 75
-        normalization_right_context = 75
-        delta_window = 2
-        delay = 0
-        add_pov_feature = True
-        add_normalized_log_pitch = True
-        add_delta_pitch = True
-        add_raw_log_pitch = False
-
-        hparams.add_hparam('window_length', window_length)
-        hparams.add_hparam('frame_length', frame_length)
-        hparams.add_hparam('snip_edges', snip_edges)
-        hparams.add_hparam('preemph_coeff', preemph_coeff)
-        hparams.add_hparam('min_f0', min_f0)
-        hparams.add_hparam('max_f0', max_f0)
-        hparams.add_hparam('soft_min_f0', soft_min_f0)
-        hparams.add_hparam('penalty_factor', penalty_factor)
-        hparams.add_hparam('lowpass_cutoff', lowpass_cutoff)
-        hparams.add_hparam('resample_freq', resample_freq)
-        hparams.add_hparam('delta_pitch', delta_pitch)
-        hparams.add_hparam('nccf_ballast', nccf_ballast)
-        hparams.add_hparam('lowpass_filter_width', lowpass_filter_width)
-        hparams.add_hparam('upsample_filter_width', upsample_filter_width)
-        hparams.add_hparam('max_frames_latency', max_frames_latency)
-        hparams.add_hparam('frames_per_chunk', frames_per_chunk)
-        hparams.add_hparam('simulate_first_pass_online',
-                           simulate_first_pass_online)
-        hparams.add_hparam('recompute_frame', recompute_frame)
-        hparams.add_hparam('nccf_ballast_online', nccf_ballast_online)
-
-        hparams.add_hparam('pitch_scale', pitch_scale)
-        hparams.add_hparam('pov_offset', pov_offset)
-        hparams.add_hparam('pov_scale', pov_scale)
-        hparams.add_hparam('delta_pitch_scale', delta_pitch_scale)
-        hparams.add_hparam('delta_pitch_noise_stddev', delta_pitch_noise_stddev)
-        hparams.add_hparam('normalization_left_context', normalization_left_context)
-        hparams.add_hparam('normalization_right_context', normalization_right_context)
-        hparams.add_hparam('delta_window', delta_window)
-        hparams.add_hparam('delay', delay)
-        hparams.add_hparam('add_pov_feature', add_pov_feature)
-        hparams.add_hparam('add_normalized_log_pitch',
-                           add_normalized_log_pitch)
-        hparams.add_hparam('add_delta_pitch', add_delta_pitch)
-        hparams.add_hparam('add_raw_log_pitch', add_raw_log_pitch)
+        hparams.add_hparam("window_length", window_length)
+        hparams.add_hparam("frame_length", frame_length)
+        hparams.add_hparam("sample_rate", sample_rate)
+        hparams.add_hparam("snip_edges", snip_edges)
+        hparams.add_hparam("preemph_coeff", preemph_coeff)
+        hparams.add_hparam("min_f0", min_f0)
+        hparams.add_hparam("max_f0", max_f0)
+        hparams.add_hparam("soft_min_f0", soft_min_f0)
+        hparams.add_hparam("penalty_factor", penalty_factor)
+        hparams.add_hparam("lowpass_cutoff", lowpass_cutoff)
+        hparams.add_hparam("resample_freq", resample_freq)
+        hparams.add_hparam("delta_pitch", delta_pitch)
+        hparams.add_hparam("nccf_ballast", nccf_ballast)
+        hparams.add_hparam("lowpass_filter_width", lowpass_filter_width)
+        hparams.add_hparam("upsample_filter_width", upsample_filter_width)
+        hparams.add_hparam("max_frames_latency", max_frames_latency)
+        hparams.add_hparam("frames_per_chunk", frames_per_chunk)
+        hparams.add_hparam("simulate_first_pass_online", simulate_first_pass_online)
+        hparams.add_hparam("recompute_frame", recompute_frame)
+        hparams.add_hparam("nccf_ballast_online", nccf_ballast_online)
 
         if config is not None:
             hparams.parse(config, True)
@@ -203,43 +147,28 @@ class Pitch(BaseFrontend):
         p = self.config
 
         with tf.name_scope('pitch'):
-
             sample_rate = tf.cast(sample_rate, dtype=tf.int32)
-            pitch = py_x_ops.pitch(
-                audio_data,
-                sample_rate,
-                window_length=p.window_length,
-                frame_length=p.frame_length,
-                snip_edges=p.snip_edges,
-                preemph_coeff=p.preemph_coeff,
-                min_f0=p.min_f0,
-                max_f0=p.max_f0,
-                soft_min_f0=p.soft_min_f0,
-                penalty_factor=p.penalty_factor,
-                lowpass_cutoff=p.lowpass_cutoff,
-                resample_freq=p.resample_freq,
-                delta_pitch=p.delta_pitch,
-                nccf_ballast=p.nccf_ballast,
-                lowpass_filter_width=p.lowpass_filter_width,
-                upsample_filter_width=p.upsample_filter_width,
-                max_frames_latency=p.max_frames_latency,
-                frames_per_chunk=p.frames_per_chunk,
-                simulate_first_pass_online=p.simulate_first_pass_online,
-                recompute_frame=p.recompute_frame,
-                nccf_ballast_online=p.nccf_ballast_online,
-                pitch_scale=p.pitch_scale,
-                pov_scale=p.pov_scale,
-                pov_offset=p.pov_offset,
-                delta_pitch_scale=p.delta_pitch_scale,
-                delta_pitch_noise_stddev=p.delta_pitch_noise_stddev,
-                normalization_left_context=p.normalization_left_context,
-                normalization_right_context=p.normalization_right_context,
-                delta_window=p.delta_window,
-                delay=p.delay,
-                add_pov_feature=p.add_pov_feature,
-                add_normalized_log_pitch=p.add_normalized_log_pitch,
-                add_delta_pitch=p.add_delta_pitch,
-                add_raw_log_pitch=p.add_raw_log_pitch)
+            pitch = py_x_ops.pitch(audio_data,
+                                   sample_rate,
+                                   window_length=p.window_length,
+                                   frame_length=p.frame_length,
+                                   snip_edges=p.snip_edges,
+                                   preemph_coeff=p.preemph_coeff,
+                                   min_f0=p.min_f0,
+                                   max_f0=p.max_f0,
+                                   soft_min_f0=p.soft_min_f0,
+                                   penalty_factor=p.penalty_factor,
+                                   lowpass_cutoff=p.lowpass_cutoff,
+                                   resample_freq=p.resample_freq,
+                                   delta_pitch=p.delta_pitch,
+                                   nccf_ballast=p.nccf_ballast,
+                                   lowpass_filter_width=p.lowpass_filter_width,
+                                   upsample_filter_width=p.upsample_filter_width,
+                                   max_frames_latency=p.max_frames_latency,
+                                   frames_per_chunk=p.frames_per_chunk,
+                                   simulate_first_pass_online=p.simulate_first_pass_online,
+                                   recompute_frame=p.recompute_frame,
+                                   nccf_ballast_online=p.nccf_ballast_online)
 
             return pitch
 

@@ -24,13 +24,12 @@ limitations under the License.
 #include <stdlib.h>
 #include <vector>
 #include <assert.h>
-
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/platform/logging.h"
-using namespace tensorflow;  // NOLINT
-
-using namespace std;
 #include "kernels/support_functions.h"
+
+using namespace tensorflow;  // NOLINT
+using namespace std;
 
 namespace delta {
 
