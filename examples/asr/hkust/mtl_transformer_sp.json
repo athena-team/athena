@@ -1,7 +1,7 @@
 {
   "batch_size":32,
-  "num_epochs":8,
-  "sorta_epoch":2,
+  "num_epochs":7,
+  "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/",
   "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/event",
 
@@ -38,7 +38,7 @@
     "ctc_weight":0.5,
     "lm_type":"ngram",
     "lm_weight":0.3,
-    "lm_path":"examples/asr/hkust/data/4gram.arpa"
+    "lm_path":"examples/asr/hkust/data/5gram.arpa"
   },
 
   "optimizer":"warmup_adam",
