@@ -164,9 +164,11 @@ Below is the basic directory structure for Athena
 |-- docs  # docs
 |-- examples  # example scripts for ASR, TTS, etc
 |   |-- asr  # each subdirectory contains a data preparation scripts and a run script for the task
-|       |-- aishell
-|       |-- hkust
-|       |-- librispeech
-|       |-- switchboard_fisher
+|   |   |-- aishell
+|   |   |-- hkust
+|   |   |-- librispeech
+|   |   |-- switchboard_fisher
+|   |-- translate # examples for translate
+|   |   |-- spa-eng-example
 |-- tools  # need to source env.sh before training
 ```
