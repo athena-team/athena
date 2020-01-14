@@ -43,13 +43,13 @@ fi
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # pretrain stage
     echo "Pretraining"
-    python athena/main.py examples/asr/hkust/mpc.json || exit 1
+    python horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/asr/hkust/mpc.json || exit 1
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # finetuning stage
     echo "Fine-tuning"
-    python athena/main.py examples/asr/hkust/mtl_transformer_sp.json || exit 1
+    python horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/asr/hkust/mtl_transformer_sp.json || exit 1
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
