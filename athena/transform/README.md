@@ -59,7 +59,7 @@ spectrum_feats = spectrum(input_data, sample_rate)
 ```python
 "window_length"       : "Window length in seconds. (float, default = 0.025)"
 "frame_length"        : "Hop length in seconds. (float, default = 0.010)"
-"snip_edges"          : "If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)"
+"snip_edges"          : "If True, the last frame (shorter than window_length) will be cutoff. If False, 1 // 2 frame_length data will be padded to data. (bool, default = True)"
 "raw_energy"          : "If 1, compute frame energy before preemphasis and windowing. If 2, compute frame energy after preemphasis and windowing. (int, default = 1)"
 "preEph_coeff"        : "Coefficient for use in frame-signal preemphasis. (float, default = 0.97)"
 "window_type"         : "Type of window ('hamm'|'hann'|'povey'|'rect'|'blac'|'tria'). (string, default='povey')"
@@ -89,7 +89,7 @@ fbank_feats = fbank(input_data, sample_rate)
 ```python
 "window_length"         : "Window length in seconds. (float, default = 0.025)"
 "frame_length"          : "Hop length in seconds. (float, default = 0.010)"
-"snip_edges"            : "If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)"
+"snip_edges"            : "If True, the last frame (shorter than window_length) will be cutoff. If False, 1 // 2 frame_length data will be padded to data. (bool, default = True)"
 "raw_energy"            : "If 1, compute frame energy before preemphasis and windowing. If 2, compute frame energy after preemphasis and windowing. (int, default = 1)"
 "preEph_coeff"          : "Coefficient for use in frame-signal preemphasis. (float, default = 0.97)"
 "window_type"           : "Type of window ('hamm'|'hann'|'povey'|'rect'|'blac'|'tria'). (string, default='povey')"
@@ -164,7 +164,7 @@ mfcc_test = mfcc(input_data, sample_rate)
 ```python
 "window_length"              : "Window length in seconds. (float, default = 0.025)"
 "frame_length"               : "Hop length in seconds. (float, default = 0.010)"
-"snip_edges"                 : "If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)"
+"snip_edges"                 : "If True, the last frame (shorter than window_length) will be cutoff. If False, 1 // 2 frame_length data will be padded to data. (bool, default = True)"
 "-raw_energy"                : "If 1, compute frame energy before preemphasis and windowing. If 2, compute frame energy after preemphasis and windowing. (int, default = 1)"
 "preEph_coeff"               : "Coefficient for use in frame-signal preemphasis. (float, default = 0.97)"
 "window_type"                : "Type of window ('hamm'|'hann'|'povey'|'rect'|'blac'|'tria'). (string, default='povey')"
@@ -197,7 +197,7 @@ mfcc_test = fbank_pitch(input_data, sample_rate)
 ```python
 "window_length"		          : Window length in seconds. (float, default = 0.025)
 "frame_length"			      : Hop length in seconds. (float, default = 0.010)
-"snip_edges"			      : If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)
+"snip_edges"			      : If True, the last frame (shorter than window_length) will be cutoff. If False, 1 // 2 frame_length data will be padded to data. (bool, default = True)
 "raw_energy"				  : If 1, compute frame energy before preemphasis and windowing. If 2,  compute frame energy after preemphasis and windowing. (int, default = 1)
 "preEph_coeff"			      : Coefficient for use in frame-signal preemphasis. (float, default = 0.97)
 "window_type"				  : Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria"). (string, default = "povey")

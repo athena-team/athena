@@ -38,34 +38,34 @@ class Spectrum(BaseFrontend):
         """
         Set params.
         :param config: contains nine optional parameters：
-              --window_length		: Window length in seconds. (float, default = 0.025)
-              --frame_length		: Hop length in seconds. (float, default = 0.010)
-              --snip_edges			: If 1, the last frame (shorter than window_length)
-                                      will be cutoff. If 2, 1 // 2 frame_length data will
-                                      be padded to data. (int, default = 1)
-              ---raw_energy			: If 1, compute frame energy before preemphasis and windowing.
-                                      If 2,  compute frame energy after preemphasis and windowing.
-                                      (int, default = 1)
-              --preEph_coeff		: Coefficient for use in frame-signal preemphasis.
-                                     (float, default = 0.97)
-              --window_type			: Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
-                                      (string, default = "povey")
-              --remove_dc_offset	: Subtract mean from waveform on each frame.
-                                     (bool, default = true)
-              --is_fbank			: If true, compute power spetrum without frame energy.
-                                      If false, using the frame energy instead of the square of the
-                                      constant component of the signal. (bool, default = false)
-              --output_type			: If 1, return power spectrum. If 2, return log-power spectrum.
-                                      (int, default = 2)
-              --dither		        : Dithering constant (0.0 means no dither).
-                                     (float, default = 1) [add robust to training]
+          --window_length		: Window length in seconds. (float, default = 0.025)
+          --frame_length		: Hop length in seconds. (float, default = 0.010)
+          --snip_edges		    : If True, the last frame (shorter than window_length)
+                                  will be cutoff. If 2, 1 // 2 frame_length data will
+                                  be padded to data. (int, default = 1)
+          ---raw_energy			: If 1, compute frame energy before preemphasis and windowing.
+                                  If 2,  compute frame energy after preemphasis and windowing.
+                                  (int, default = 1)
+          --preEph_coeff		: Coefficient for use in frame-signal preemphasis.
+                                 (float, default = 0.97)
+          --window_type			: Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
+                                  (string, default = "povey")
+          --remove_dc_offset	: Subtract mean from waveform on each frame.
+                                 (bool, default = true)
+          --is_fbank			: If true, compute power spetrum without frame energy.
+                                  If false, using the frame energy instead of the square of the
+                                  constant component of the signal. (bool, default = false)
+          --output_type			: If 1, return power spectrum. If 2, return log-power spectrum.
+                                  (int, default = 2)
+          --dither		        : Dithering constant (0.0 means no dither).
+                                 (float, default = 1) [add robust to training]
         :return: An object of class HParams, which is a set of hyperparameters as name-value pairs.
         """
 
         window_length = 0.025
         frame_length = 0.010
         output_type = 2
-        snip_edges = 1
+        snip_edges = True
         raw_energy = 1
         preEph_coeff = 0.97
         window_type = "povey"

@@ -26,24 +26,31 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 class FbankPitchTest(tf.test.TestCase):
     """
-    Fbank && Pitch extraction test.
+    Fbank&&Pitch extraction test.
     """
-    def test_FbankPitch(self):
-        wav_path = str(Path(os.environ['MAIN_ROOT']).joinpath('examples/sm1_cln.wav'))
+    def test_fbank_pitch(self):
+        wav_path = str(
+            Path(os.environ['MAIN_ROOT']).joinpath('examples/sm1_cln.wav'))
 
         with self.session():
             read_wav = ReadWav.params().instantiate()
             input_data, sample_rate = read_wav(wav_path)
-            config = {'window_length': 0.025, 'output_type': 1, 'frame_length': 0.010, 'dither': 0.0}
+            config = {
+                'window_length': 0.025,
+                'output_type': 1,
+                'frame_length': 0.010,
+                'dither': 0.0
+            }
             fbank_pitch = FbankPitch.params(config).instantiate()
             fbank_pitch_test = fbank_pitch(input_data, sample_rate)
+            print(fbank_pitch.dim())
 
             if tf.executing_eagerly():
                 self.assertEqual(tf.rank(fbank_pitch_test).numpy(), 3)
-                print(fbank_pitch_test.numpy()[0:2, :, 0])
+                print(fbank_pitch_test.numpy()[0:5, :, 0])
             else:
                 self.assertEqual(tf.rank(fbank_pitch_test).eval(), 3)
-                print(fbank_pitch_test.eval()[0:2, :, 0])
+                print(fbank_pitch_test.eval()[0:5, :, 0])
 
 if __name__ == '__main__':
 

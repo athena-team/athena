@@ -55,6 +55,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
+        "vocab_file": "examples/asr/hkust/data/vocab",
         "data_csv": None
     }
 
