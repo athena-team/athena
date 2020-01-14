@@ -1,4 +1,4 @@
-mples for ASR Tasks
+# Examples for ASR Tasks
 
 Currently supported ASR tasks are HKUST and AISHELL. An example script for Librispeech will be released shortly. To perform the full procedure of ASR experiments, simply run:
 ```bash
@@ -6,7 +6,7 @@ source env.sh
 bash examples/asr/$task_name/run.sh
 ```
 
-A complete run of ASR experiment can be broken down into following stages:
+## A complete run of ASR experiment can be broken down into following stages:
 
 1) Data preparation: Before you run `examples/asr/$task_name/run.sh`, you should download the coorsponding dataset and store it in `/nfs/project/datasets/opensource_data/$task_name`. The script `examples/asr/$task_name/local/prepare_data.py` would generate the desired csv file decripting the dataset
 
@@ -20,10 +20,10 @@ A complete run of ASR experiment can be broken down into following stages:
 
 6) Decoding: Currently, we provide a simple but not so effective way for decoding mtl_transformer_ctc model. To use it, run `python athena/decode_main.py examples/asr/$task_name/mtl_transformer.json` 
 
-# Results for ASR Tasks
+## Results for ASR Tasks
 
-|                       |     without MPC     |     with MPC   |
+| Error Rate (CER for Mandarin, WER for English)  |  without MPC/%     |     with MPC/%   |
 | :-------------: | :----------: | :-----------: |
-|  HKUST         | 24.07   | 23.77|
-| AISEHLL        | 7.0       |         | |
+|  HKUST          | 24.07        | 23.77         |
+| AISEHLL         | 7.00         |               | |
 
