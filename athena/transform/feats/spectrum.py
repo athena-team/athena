@@ -40,7 +40,7 @@ class Spectrum(BaseFrontend):
         :param config: contains nine optional parameters：
               --window_length		: Window length in seconds. (float, default = 0.025)
               --frame_length		: Hop length in seconds. (float, default = 0.010)
-              --snip_edges			: If 1, the last frame (shorter than window_length)
+              --snip_edges			: If True, the last frame (shorter than window_length)
                                       will be cutoff. If 2, 1 // 2 frame_length data will
                                       be padded to data. (int, default = 1)
               ---raw_energy			: If 1, compute frame energy before preemphasis and windowing.
@@ -65,7 +65,7 @@ class Spectrum(BaseFrontend):
         window_length = 0.025
         frame_length = 0.010
         output_type = 2
-        snip_edges = 1
+        snip_edges = True
         raw_energy = 1
         preEph_coeff = 0.97
         window_type = "povey"

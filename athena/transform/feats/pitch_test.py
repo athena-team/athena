@@ -25,26 +25,23 @@ from athena.transform.feats.pitch import Pitch
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-class SpectrumTest(tf.test.TestCase):
+class PitchTest(tf.test.TestCase):
     """
     Pitch extraction test.
     """
-    def test_spectrum(self):
+    def test_pitch(self):
         wav_path_16k = str(
-            Path(os.environ["MAIN_ROOT"]).joinpath("examples/sm1_cln.wav")
-        )
-        wav_path_8k = str(
-            Path(os.environ["MAIN_ROOT"]).joinpath("examples/english.wav")
-        )
+            Path(os.environ['MAIN_ROOT']).joinpath('examples/sm1_cln.wav'))
 
         with self.session():
             for wav_file in [wav_path_16k]:
                 read_wav = ReadWav.params().instantiate()
                 input_data, sample_rate = read_wav(wav_file)
 
-                pitch = Pitch.params(
-                    {"window_length": 0.025, "soft_min_f0": 10.0}
-                ).instantiate()
+                pitch = Pitch.params({
+                    'window_length': 0.025,
+                    'soft_min_f0': 10.0
+                }).instantiate()
                 pitch_test = pitch(input_data, sample_rate)
 
                 if tf.executing_eagerly():
@@ -52,33 +49,32 @@ class SpectrumTest(tf.test.TestCase):
                 else:
                     self.assertEqual(tf.rank(pitch_test).eval(), 2)
 
-                output_true = [
-                    [-0.1366025, 143.8855],
-                    [-0.0226383, 143.8855],
-                    [-0.08464742, 143.8855],
-                    [-0.08458386, 143.8855],
-                    [-0.1208689, 143.8855],
-                ]
+                output_true = np.array(
+                    [
+                        [0.03881124, 0.3000031, - 0.02324523],
+                        [0.006756478, 0.3000097, 0.01047742],
+                        [0.02455365, 0.3000154, 0.00695902],
+                        [0.02453586, 0.3000221, 0.008448198],
+                        [0.03455311, 0.3000307, - 0.07547269],
+                        [0.04293294, 0.3000422, - 0.04193667]
+                    ]
+                )
 
                 if wav_file == wav_path_16k:
                     if tf.executing_eagerly():
-                        print("Transform: ", pitch_test.numpy()[0:5, :])
-                        print("kaldi:", output_true)
-                        self.assertAllClose(
-                            pitch_test.numpy()[0:5, :],
-                            output_true,
-                            rtol=1e-05,
-                            atol=1e-05,
-                        )
+                        print('Transform: ', pitch_test.numpy()[0:6, :])
+                        print('kaldi:', output_true)
+                        self.assertAllClose(pitch_test.numpy()[0:6, :],
+                                            output_true,
+                                            rtol=1e-05,
+                                            atol=1e-05)
                     else:
-                        print("Transform: ", pitch_test.eval())
-                        print("kaldi:", output_true)
-                        self.assertAllClose(
-                            pitch_test.eval()[0:5, :],
-                            output_true,
-                            rtol=1e-05,
-                            atol=1e-05,
-                        )
+                        print('Transform: ', pitch_test.eval())
+                        print('kaldi:', output_true)
+                        self.assertAllClose(pitch_test.eval()[0:6, :],
+                                            output_true,
+                                            rtol=1e-05,
+                                            atol=1e-05)
 
 
 if __name__ == "__main__":
