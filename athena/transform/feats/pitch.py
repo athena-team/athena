@@ -244,4 +244,4 @@ class Pitch(BaseFrontend):
             return pitch
 
     def dim(self):
-        return 2
+        return 3
