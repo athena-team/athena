@@ -49,9 +49,9 @@ class MtlTransformerCtc(BaseModel):
 
     def __init__(self, data_descriptions, config=None):
         super().__init__()
-        self.num_classes = data_descriptions.num_classes + 1
-        self.sos = self.num_classes - 1
-        self.eos = self.num_classes - 1
+        self.num_class = data_descriptions.num_class + 1
+        self.sos = self.num_class - 1
+        self.eos = self.num_class - 1
 
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
@@ -60,7 +60,7 @@ class MtlTransformerCtc(BaseModel):
         self.model = self.SUPPORTED_MODEL[self.hparams.model](
             data_descriptions, self.hparams.model_config
         )
-        self.decoder = Dense(self.num_classes)
+        self.decoder = Dense(self.num_class)
         self.ctc_logits = None
         self.lm_model = None
         self.lm_scorer = None

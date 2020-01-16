@@ -32,6 +32,7 @@ from athena.main import (
 def decode(jsonfile):
     """ entry point for model decoding, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
+    lm_model = None
     if 'lm_type' in p.decode_config and p.decode_config['lm_type'] == "rnn":
         _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(p.decode_config['lm_path'])
         lm_checkpointer.restore_from_best()

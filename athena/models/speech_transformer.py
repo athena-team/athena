@@ -55,12 +55,12 @@ class SpeechTransformer(BaseModel):
         super().__init__()
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
-        self.num_classes = data_descriptions.num_classes + 1
-        self.sos = self.num_classes - 1
-        self.eos = self.num_classes - 1
+        self.num_class = data_descriptions.num_class + 1
+        self.sos = self.num_class - 1
+        self.eos = self.num_class - 1
         ls_rate = self.hparams.label_smoothing_rate
         self.loss_function = Seq2SeqSparseCategoricalCrossentropy(
-            num_classes=self.num_classes, eos=self.eos, label_smoothing=ls_rate
+            num_classes=self.num_class, eos=self.eos, label_smoothing=ls_rate
         )
         self.metric = Seq2SeqSparseCategoricalAccuracy(eos=self.eos, name="Accuracy")
 
@@ -75,6 +75,7 @@ class SpeechTransformer(BaseModel):
             strides=(2, 2),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(input_features)
         inner = layers.BatchNormalization()(inner)
         inner = tf.nn.relu6(inner)
@@ -84,6 +85,7 @@ class SpeechTransformer(BaseModel):
             strides=(2, 2),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(inner)
         inner = layers.BatchNormalization()(inner)
 
@@ -100,7 +102,7 @@ class SpeechTransformer(BaseModel):
 
         # y_net for target
         input_labels = layers.Input(shape=data_descriptions.sample_shape["output"], dtype=tf.int32)
-        inner = layers.Embedding(self.num_classes, d_model)(input_labels)
+        inner = layers.Embedding(self.num_class, d_model)(input_labels)
         inner = PositionalEncoding(d_model, scale=True)(inner)
         inner = layers.Dropout(self.hparams.rate)(inner)
         self.y_net = tf.keras.Model(inputs=input_labels, outputs=inner, name="y_net")
@@ -117,7 +119,7 @@ class SpeechTransformer(BaseModel):
         )
 
         # last layer for output
-        self.final_layer = layers.Dense(self.num_classes, input_shape=(d_model,))
+        self.final_layer = layers.Dense(self.num_class, input_shape=(d_model,))
 
         # some temp function
         self.random_num = tf.random_uniform_initializer(0, 1)
