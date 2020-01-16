@@ -203,6 +203,7 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.model.init_decoder(self.hparams, lm_model)
 
     def decode(self, dataset):
         """ decode the model """
@@ -212,7 +213,7 @@ class DecoderSolver(BaseSolver):
         for _, samples in enumerate(dataset):
             begin = time.time()
             samples = self.model.prepare_samples(samples)
-            predictions = self.model.decode(samples, self.hparams, lm_model=self.lm_model)
+            predictions = self.model.decode(samples, self.hparams)
             validated_preds = validate_seqs(predictions, self.model.eos)[0]
             validated_preds = tf.cast(validated_preds, tf.int64)
             num_errs, _ = metric.update_state(validated_preds, samples)

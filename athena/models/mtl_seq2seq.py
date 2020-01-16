@@ -62,6 +62,43 @@ class MtlTransformerCtc(BaseModel):
         )
         self.decoder = Dense(self.num_classes)
         self.ctc_logits = None
+        self.lm_model = None
+        self.lm_scorer = None
+        self.ctc_scorer = None
+        self.beam_search_decoder = None
+
+    def init_decoder(self, hparams, lm_model=None):
+        beam_size = 1 if not hparams.beam_search else hparams.beam_size
+        self.beam_search_decoder = BeamSearchDecoder(
+            self.num_classes, self.sos, self.eos, beam_size=beam_size
+        )
+        self.beam_search_decoder.build(self.model.time_propagate)
+        if hparams.beam_search and hparams.ctc_weight != 0:
+            ctc_scorer = CTCPrefixScorer(
+                self.eos,
+                ctc_beam=hparams.beam_size*2,
+                num_classes=self.num_classes,
+                ctc_weight=hparams.ctc_weight,
+            )
+            self.ctc_scorer = ctc_scorer
+            self.beam_search_decoder.add_scorer(self.ctc_scorer)
+        if hparams.lm_weight != 0:
+            self.lm_model = lm_model
+            if hparams.lm_type == "ngram":
+                if hparams.lm_path is None:
+                    raise ValueError("lm path should not be none")
+                self.lm_scorer = NGramScorer(
+                    hparams.lm_path,
+                    self.sos,
+                    self.eos,
+                    self.num_classes,
+                    lm_weight=hparams.lm_weight,
+                )
+            elif hparams.lm_type == "rnn":
+                self.lm_scorer = RNNScorer(
+                    self.lm_model,
+                    lm_weight=hparams.lm_weight)
+            self.beam_search_decoder.add_scorer(self.lm_scorer)
 
     def call(self, samples, training=None):
         """ call function in keras layers """
@@ -110,39 +147,11 @@ class MtlTransformerCtc(BaseModel):
         history_predictions = history_predictions.stack()
         init_cand_states = [history_predictions]
         step = 0
-        beam_size = 1 if not hparams.beam_search else hparams.beam_size
-        beam_search_decoder = BeamSearchDecoder(
-            self.num_classes, self.sos, self.eos, beam_size=beam_size
-        )
-        beam_search_decoder.build(self.model.time_propagate)
         if hparams.beam_search and hparams.ctc_weight != 0:
-            ctc_scorer = CTCPrefixScorer(
-                self.eos,
-                ctc_beam=hparams.beam_size*2,
-                num_classes=self.num_classes,
-                ctc_weight=hparams.ctc_weight,
-            )
             ctc_logits = self.decoder(encoder_output, training=False)
             ctc_logits = tf.math.log(tf.nn.softmax(ctc_logits))
-            init_cand_states = ctc_scorer.initial_state(init_cand_states, ctc_logits)
-            beam_search_decoder.add_scorer(ctc_scorer)
-        if hparams.lm_weight != 0:
-            if hparams.lm_path is None:
-                raise ValueError("lm path should not be none")
-            if hparams.lm_type == "ngram":
-                lm_scorer = NGramScorer(
-                    hparams.lm_path,
-                    self.sos,
-                    self.eos,
-                    self.num_classes,
-                    lm_weight=hparams.lm_weight,
-                )
-            elif hparams.lm_type == "rnn":
-                lm_scorer = RNNScorer(
-                    lm_model,
-                    lm_weight=hparams.lm_weight)
-            beam_search_decoder.add_scorer(lm_scorer)
-        predictions = beam_search_decoder(
+            init_cand_states = self.ctc_scorer.initial_state(init_cand_states, ctc_logits)
+        predictions = self.beam_search_decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions
