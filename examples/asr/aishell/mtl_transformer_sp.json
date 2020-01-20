@@ -1,11 +1,11 @@
 {
   "batch_size":32,
-  "num_epochs":15,
+  "num_epochs":6,
   "sorta_epoch":1,
   "ckpt":"examples/asr/aishell/ckpts/mtl_transformer_ctc/",
   "summary_dir":"examples/asr/aishell/ckpts/mtl_transformer_ctc/event",
 
-  "solver_gpu":[2],
+  "solver_gpu":[3],
   "solver_config":{
     "clip_norm":100,
     "log_interval":10,
@@ -46,7 +46,7 @@
     "d_model":512,
     "warmup_steps":3500,
     "k":0.7,
-    "decay_steps": 100000,
+    "decay_steps": 45000,
     "decay_rate": 0.1
   },
 
