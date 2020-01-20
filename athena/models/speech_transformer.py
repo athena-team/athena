@@ -303,7 +303,7 @@ class SpeechTransformer2(SpeechTransformer):
                 last_predictions = tf.argmax(logits, axis=1, output_type=tf.int32)
                 eos_list = tf.logical_or(eos_list, last_predictions == self.eos)
                 if (tf.reduce_sum(tf.cast(eos_list, tf.int32)) >= batch) or (
-                    step > 100):
+                        step > 100):
                     break
         y = tf.transpose(history_logits.stack(), [1, 0, 2])
         y = self._padding_with_shorter_part(y, max_len)  # padding if need
@@ -324,3 +324,64 @@ class SpeechTransformer2(SpeechTransformer):
             )
             pre_logits = tf.concat((pre_logits, padding_part), axis=1)
         return pre_logits
+
+class SpeechTransformer3(SpeechTransformer):
+    """ Decoder for SpeechTransformer3 works for two pass schedual sampling """
+    def call(self, samples, training: bool = None):
+        x0 = samples["input"]
+        y0 = insert_sos_in_labels(samples["output"], self.sos)
+        x = self.x_net(x0, training=training)
+        y = self.y_net(y0, training=training)
+        input_length = self.compute_logit_length(samples)
+        input_mask, output_mask = self._create_masks(x, input_length, y0)
+        # first pass
+        y, encoder_output = self.transformer(
+            x,
+            y,
+            input_mask,
+            output_mask,
+            input_mask,
+            training=training,
+            return_encoder_output=True,
+        )
+        y_pre = self.final_layer(y)
+        # second pass
+        y = self.mix_target_sequence(y0, y_pre, training)
+        y, encoder_output = self.transformer(
+            x,
+            y,
+            input_mask,
+            output_mask,
+            input_mask,
+            training=training,
+            return_encoder_output=True,
+        )
+        y = self.final_layer(y)
+        if self.hparams.return_encoder_output:
+            return y, encoder_output
+        return y
+
+    def mix_target_sequence(self, gold_token, predicted_token, training, top_k=5):
+        """ to mix gold token and prediction
+        param gold_token: true labels
+        param predicted_token: predictions by first pass
+        return: mix of the gold_token and predicted_token
+        """
+        mix_result = tf.TensorArray(
+            tf.float32, size=1, dynamic_size=True, clear_after_read=False
+        )
+        for i in tf.range(tf.shape(gold_token)[-1]):
+            if self.random_num([1]) > self.hparams.schedual_sampling_rate:# do schedual sampling
+                selected_input = predicted_token[:,i,:]
+                selected_idx = tf.nn.top_k(selected_input,top_k).indices
+                embedding_input = self.y_net.layers[1](selected_idx, training=training)
+                embedding_input = tf.reduce_mean(embedding_input, axis=1)
+                mix_result = mix_result.write(i,embedding_input)
+            else:
+                selected_input = tf.reshape(gold_token[:,i], [-1,1])
+                embedding_input = self.y_net.layers[1](selected_input, training=training)
+                mix_result = mix_result.write(i, embedding_input[:,0,:])
+        final_input = self.y_net.layers[2](tf.transpose(mix_result.stack(),[1,0,2]),
+                                           training=training)
+        final_input = self.y_net.layers[3](final_input, training=training)
+        return final_input
