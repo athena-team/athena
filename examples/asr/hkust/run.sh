@@ -24,6 +24,8 @@ source tools/env.sh
 
 stage=0
 stop_stage=100
+horovod_cmd="horovodrun -np 4 -H localhost:4"
+horovod_prefix="horovod_"
 dataset_dir=/nfs/project/datasets/opensource_data/hkust
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
@@ -43,14 +45,14 @@ fi
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # pretrain stage
     echo "Pretraining"
-    python horovodrun -np 4 -H localhost:4 athena/horovod_main.py \
+    $horovod_cmd python athena/${horovod_prefix}main.py \
         examples/asr/hkust/configs/mpc.json || exit 1
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # finetuning stage
     echo "Fine-tuning"
-    python horovodrun -np 4 -H localhost:4 athena/horovod_main.py \
+    $horovod_cmd python athena/${horovod_prefix}main.py \
         examples/asr/hkust/configs/mtl_transformer_sp.json || exit 1
 fi
 
