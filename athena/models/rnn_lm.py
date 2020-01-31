@@ -41,13 +41,13 @@ class RNNLM(BaseModel):
         """ config including the params for build lm """
         super(RNNLM, self).__init__()
         p = register_and_parse_hparams(self.default_config, config)
-        self.num_classes = (
-            data_descriptions.num_classes + 1
+        self.num_class = (
+            data_descriptions.num_class + 1
             if p.sos == p.eos
-            else data_descriptions.num_classes + 2
+            else data_descriptions.num_class + 2
         )
-        self.sos = self.num_classes + p.sos
-        self.eos = self.num_classes + p.eos
+        self.sos = self.num_class + p.sos
+        self.eos = self.num_class + p.eos
         self.metric = tf.keras.metrics.Mean(name="AverageLoss")
 
         layers = tf.keras.layers
@@ -55,7 +55,7 @@ class RNNLM(BaseModel):
             shape=data_descriptions.sample_shape["output"],
             dtype=tf.int32
         )
-        inner = tf.keras.layers.Embedding(self.num_classes, p.d_model)(input_features)
+        inner = tf.keras.layers.Embedding(self.num_class, p.d_model)(input_features)
         for _ in range(p.num_layer):
             inner = tf.keras.layers.Dropout(p.dropout_rate)(inner)
             inner = tf.keras.layers.RNN(
@@ -63,7 +63,7 @@ class RNNLM(BaseModel):
                 return_sequences=True
             )(inner)
         inner = tf.keras.layers.Dropout(p.dropout_rate)(inner)
-        inner = tf.keras.layers.Dense(self.num_classes)(inner)
+        inner = tf.keras.layers.Dense(self.num_class)(inner)
         self.rnnlm = tf.keras.Model(inputs=input_features, outputs=inner)
 
     def call(self, samples, training: bool = None):
@@ -82,7 +82,7 @@ class RNNLM(BaseModel):
         """ get loss """
         labels = samples['output']
         labels = insert_eos_in_labels(labels, self.eos, samples['output_length'])
-        labels = tf.one_hot(labels, self.num_classes)
+        labels = tf.one_hot(labels, self.num_class)
         loss = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits)
         n_token = tf.cast(tf.reduce_sum(samples['output_length'] + 1), tf.float32)
         self.metric.update_state(loss)

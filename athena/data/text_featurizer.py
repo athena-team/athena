@@ -120,7 +120,7 @@ class SentencePieceFeaturizer:
     def encode(self, sentence):
         """Convert a sentence to a list of ids by sentence piece model"""
         sentence = sentence.upper()
-        return [self.sp.EncodeAsIds(sentence)]
+        return self.sp.EncodeAsIds(sentence)
 
     def decode(self, ids):
         """Conver a list of ids to a sentence"""
@@ -139,7 +139,7 @@ class TextTokenizer:
         self.tokenizer.fit_on_texts(text)
 
     def __len__(self):
-        return self.tokenizer.num_words + 1
+        return len(self.tokenizer.word_index) + 1
 
     def encode(self, texts):
         """Convert a sentence to a list of ids, with special tokens added."""
