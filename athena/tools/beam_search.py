@@ -17,6 +17,8 @@
 """ the beam search decoder layer in encoder-decoder models """
 from collections import namedtuple
 import tensorflow as tf
+from .ctc_scorer import CTCPrefixScorer
+from .lm_scorer import NGramScorer, RNNScorer
 
 CandidateHolder = namedtuple(
     "CandidateHolder",
@@ -45,12 +47,44 @@ class BeamSearchDecoder:
         self.states = []
         self.decoder_one_step = None
 
-    def build(self, decoder_one_step):
-        """ Allocate the time propagating function of the decoder
+    @staticmethod
+    def build_decoder(hparams, num_class, sos, eos, decoder_one_step, lm_model=None):
+        """ Allocate the time propagating function of the decoder,
+            initialize the decoder
         Args:
             decoder_one_step: the time propagating function of the decoder
         """
-        self.decoder_one_step = decoder_one_step
+        beam_size = 1 if not hparams.beam_search else hparams.beam_size
+        beam_search_decoder = BeamSearchDecoder(
+            num_class, sos, eos, beam_size=beam_size
+        )
+        beam_search_decoder.decoder_one_step = decoder_one_step
+        if hparams.beam_search and hparams.ctc_weight != 0:
+            ctc_scorer = CTCPrefixScorer(
+                eos,
+                ctc_beam=hparams.beam_size*2,
+                num_classes=num_class,
+                ctc_weight=hparams.ctc_weight,
+            )
+            beam_search_decoder.set_ctc_scorer(ctc_scorer)
+        if hparams.lm_weight != 0:
+            if hparams.lm_type == "ngram":
+                if hparams.lm_path is None:
+                    raise ValueError("lm path should not be none")
+                lm_scorer = NGramScorer(
+                    hparams.lm_path,
+                    sos,
+                    eos,
+                    num_class,
+                    lm_weight=hparams.lm_weight,
+                )
+                beam_search_decoder.add_scorer(lm_scorer)
+            elif hparams.lm_type == "rnn":
+                lm_scorer = RNNScorer(
+                    lm_model,
+                    lm_weight=hparams.lm_weight)
+                beam_search_decoder.add_scorer(lm_scorer)
+        return beam_search_decoder
 
     def set_ctc_scorer(self, ctc_scorer):
         """ set the ctc_scorer
