@@ -60,10 +60,6 @@ class MtlTransformerCtc(BaseModel):
         self.time_propagate = self.model.time_propagate
         self.decoder = Dense(self.num_class)
         self.ctc_logits = None
-        self.lm_model = None
-        self.lm_scorer = None
-        self.ctc_scorer = None
-        self.beam_search_decoder = None
 
     def call(self, samples, training=None):
         """ call function in keras layers """
