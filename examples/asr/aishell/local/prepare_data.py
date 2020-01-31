@@ -27,27 +27,26 @@ from athena import get_wave_file_length
 SUBSETS = ["train", "dev", "test"]
 
 
-def convert_audio_and_split_transcript(directory, subset, out_csv_file):
+def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output_dir):
     """Convert tar.gz to WAV and split the transcript.
 
   Args:
-    input_dir: the directory which holds the input dataset.
-    source_name: the name of the specified dataset. e.g. train/dev/test
-    output_dir: the directory to place the newly generated wav and json files.
-    out_json_file: the name of the newly generated json file.
-    out_vocab_file: the name of the generated vocab file.
+    dataset_dir  : the directory which holds the input dataset.
+    subset       : the name of the specified dataset. e.g. dev.
+    out_csv_file : the resulting output csv file.
+    output_dir   : Athena working directory.
   """
 
     gfile = tf.compat.v1.gfile
     logging.info("Processing audio and transcript for {}".format(subset))
-    audio_dir = os.path.join(directory, "wav/")
-    trans_dir = os.path.join(directory, "transcript/")
+    audio_dir = os.path.join(dataset_dir, "wav/")
+    trans_dir = os.path.join(dataset_dir, "transcript/")
 
     files = []
     char_dict = {}
-    if not gfile.Exists(os.path.join(directory, subset)): # not unzip wav yet
+    if not gfile.Exists(os.path.join(dataset_dir, subset)): # not unzip wav yet
         for filename in os.listdir(audio_dir):
-            os.system("tar -zxvf " + audio_dir + filename + " -C " + directory)
+            os.system("tar -zxvf " + audio_dir + filename + " -C " + dataset_dir)
 
     with codecs.open(os.path.join(trans_dir, "aishell_transcript_v0.8.txt"), "r", encoding="utf-8") as f:
         for line in f:
@@ -62,7 +61,7 @@ def convert_audio_and_split_transcript(directory, subset, out_csv_file):
                     char_dict[item] = 0
             files.append((wav_filename + ".wav", labels))
     files_size_dict = {}
-    output_wav_dir = os.path.join(directory, subset)
+    output_wav_dir = os.path.join(dataset_dir, subset)
 
     for root, subdirs, _ in gfile.Walk(output_wav_dir):
         for subdir in subdirs:
@@ -88,25 +87,30 @@ def convert_audio_and_split_transcript(directory, subset, out_csv_file):
     df.to_csv(out_csv_file, index=False, sep="\t")
     logging.info("Successfully generated csv file {}".format(out_csv_file))
 
-def processor(dircetory, subset, force_process):
+def processor(dataset_dir, subset, force_process, output_dir):
     """ download and process """
     if subset not in SUBSETS:
         raise ValueError(subset, "is not in AISHELL")
     if force_process:
         logging.info("force process is set to be true")
 
-    subset_csv = os.path.join(dircetory, subset + ".csv")
+    subset_csv = os.path.join(output_dir, subset + ".csv")
     if not force_process and os.path.exists(subset_csv):
         logging.info("{} already exist".format(subset_csv))
         return subset_csv
-    logging.info("Processing the AISHELL subset {} in {}".format(subset, dircetory))
-    convert_audio_and_split_transcript(dircetory, subset, subset_csv)
+    logging.info("Processing the AISHELL subset {} in {}".format(subset, dataset_dir))
+    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv, output_dir)
     logging.info("Finished processing AISHELL subset {}".format(subset))
     return subset_csv
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
-    DIR = sys.argv[1]
+    if len(sys.argv) < 3:
+        print('Usage: python {} dataset_dir output_dir\n'
+              '    dataset_dir : directory contains AISHELL dataset\n'
+              '    output_dir  : Athena working directory'.format(sys.argv[0]))
+        exit(1)
+    DATASET_DIR = sys.argv[1]
+    OUTPUT_DIR = sys.argv[2]
     for SUBSET in SUBSETS:
-        processor(DIR, SUBSET, True)
-
+        processor(DATASET_DIR, SUBSET, True, OUTPUT_DIR)

@@ -32,8 +32,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
     echo "Creating csv"
     mkdir -p examples/asr/aishell/data
-    python examples/asr/aishell/local/prepare_data.py $dataset_dir || exit 1
-    cp $dataset_dir/{train,dev,test}.csv examples/asr/aishell/data/
+    python examples/asr/aishell/local/prepare_data.py \
+        $dataset_dir examples/asr/aishell/data || exit 1
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
