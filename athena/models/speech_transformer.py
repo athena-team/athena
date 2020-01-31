@@ -118,10 +118,6 @@ class SpeechTransformer(BaseModel):
 
         # some temp function
         self.random_num = tf.random_uniform_initializer(0, 1)
-        self.lm_model = None
-        self.lm_scorer = None
-        self.ctc_scorer = None
-        self.beam_search_decoder = None
 
     def call(self, samples, training: bool = None):
         x0 = samples["input"]
