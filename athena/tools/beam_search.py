@@ -1,4 +1,4 @@
-# Copyright (C) ATHENA AUTHORS
+# Copyright (C) ATHENA AUTHORS; Ruixiong Zhang; Dongwei Jiang
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,7 @@ class BeamSearchDecoder:
         self.eos = eos
         self.beam_size = beam_size
         self.scorers = []
+        self.ctc_scorer = None
         self.states = []
         self.decoder_one_step = None
 
@@ -50,6 +51,14 @@ class BeamSearchDecoder:
             decoder_one_step: the time propagating function of the decoder
         """
         self.decoder_one_step = decoder_one_step
+
+    def set_ctc_scorer(self, ctc_scorer):
+        """ set the ctc_scorer
+        Args:
+            ctc_scorer: the ctc scorer
+        """
+        self.ctc_scorer = ctc_scorer
+        self.scorers.append(ctc_scorer)
 
     def add_scorer(self, scorer):
         """ Add other auxiliary scorers except for the acoustic model

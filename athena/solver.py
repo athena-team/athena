@@ -26,6 +26,9 @@ from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
+from .tools.beam_search import BeamSearchDecoder
+from .tools.ctc_scorer import CTCPrefixScorer
+from .tools.lm_scorer import NGramScorer, RNNScorer
 
 
 class BaseSolver(tf.keras.Model):
@@ -203,6 +206,39 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.beam_search_decoder = self.init_decoder(self.hparams, lm_model)
+
+    def init_decoder(self, hparams, lm_model=None):
+        beam_size = 1 if not hparams.beam_search else hparams.beam_size
+        beam_search_decoder = BeamSearchDecoder(
+            self.model.num_class, self.model.sos, self.model.eos, beam_size=beam_size
+        )
+        beam_search_decoder.build(self.model.time_propagate)
+        if hparams.beam_search and hparams.ctc_weight != 0:
+            ctc_scorer = CTCPrefixScorer(
+                self.model.eos,
+                ctc_beam=hparams.beam_size*2,
+                num_classes=self.model.num_class,
+                ctc_weight=hparams.ctc_weight,
+            )
+            beam_search_decoder.set_ctc_scorer(ctc_scorer)
+        if hparams.lm_weight != 0:
+            if hparams.lm_type == "ngram":
+                if hparams.lm_path is None:
+                    raise ValueError("lm path should not be none")
+                lm_scorer = NGramScorer(
+                    hparams.lm_path,
+                    self.model.sos,
+                    self.model.eos,
+                    self.model.num_class,
+                    lm_weight=hparams.lm_weight,
+                )
+            elif hparams.lm_type == "rnn":
+                lm_scorer = RNNScorer(
+                    lm_model,
+                    lm_weight=hparams.lm_weight)
+            beam_search_decoder.add_scorer(lm_scorer)
+        return beam_search_decoder
 
     def decode(self, dataset):
         """ decode the model """
@@ -212,7 +248,7 @@ class DecoderSolver(BaseSolver):
         for _, samples in enumerate(dataset):
             begin = time.time()
             samples = self.model.prepare_samples(samples)
-            predictions = self.model.decode(samples, self.hparams, lm_model=self.lm_model)
+            predictions = self.model.decode(samples, self.hparams, self.beam_search_decoder)
             validated_preds = validate_seqs(predictions, self.model.eos)[0]
             validated_preds = tf.cast(validated_preds, tf.int64)
             num_errs, _ = metric.update_state(validated_preds, samples)
