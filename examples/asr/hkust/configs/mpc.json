@@ -1,6 +1,6 @@
 {
   "batch_size":64,
-  "num_epochs":100,
+  "num_epochs":125,
   "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/mpc",
   "summary_dir":"examples/asr/hkust/ckpts/mpc/event",
