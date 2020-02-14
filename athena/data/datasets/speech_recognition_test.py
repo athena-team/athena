@@ -32,7 +32,7 @@ def test():
                 "local_cmvn": False,
             },
             "speed_permutation": [0.9, 1.0],
-            "vocab_file": "examples/asr/hkust/data/vocab"
+            "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"}
         }
     )
     dataset = dataset_builder.as_dataset(16, 4)

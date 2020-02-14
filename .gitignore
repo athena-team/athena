@@ -4,5 +4,13 @@ __pycache__
 tags
 .vscode/*
 
+/athena.egg-info/
+/athena/transform/feats/ops/x_ops.so
+
+/build
+
+/dist
+
+/tools/kenlm
 /tools/sph2pipe_v2.5.tar.gz
-/tools/sph2pipe_v2.5
+/tools/sph2pipe

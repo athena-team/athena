@@ -36,7 +36,7 @@ class DeepSpeechModel(BaseModel):
     }
     def __init__(self, data_descriptions, config=None):
         super().__init__()
-        self.num_classes = data_descriptions.num_classes + 1
+        self.num_classes = data_descriptions.num_class + 1
         self.loss_function = CTCLoss(blank_index=-1)
         self.metric = CTCAccuracy()
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
@@ -52,6 +52,7 @@ class DeepSpeechModel(BaseModel):
             strides=(2, 2),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(input_feature)
         inner = layers.BatchNormalization()(inner)
         inner = tf.nn.relu6(inner)
@@ -61,6 +62,7 @@ class DeepSpeechModel(BaseModel):
             strides=(2, 1),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(inner)
         inner = layers.BatchNormalization()(inner)
         inner = tf.nn.relu6(inner)

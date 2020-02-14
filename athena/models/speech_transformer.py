@@ -72,6 +72,7 @@ class SpeechTransformer(BaseModel):
             strides=(2, 2),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(input_features)
         inner = layers.BatchNormalization()(inner)
         inner = tf.nn.relu6(inner)
@@ -81,6 +82,7 @@ class SpeechTransformer(BaseModel):
             strides=(2, 2),
             padding="same",
             use_bias=False,
+            data_format="channels_last",
         )(inner)
         inner = layers.BatchNormalization()(inner)
 
