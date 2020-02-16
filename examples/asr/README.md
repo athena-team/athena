@@ -25,7 +25,7 @@ bash examples/asr/$task_name/run.sh
 | Error Rate (CER for Mandarin, WER for English)  |  without MPC/%     |     with MPC/%   |
 | :-------------: | :----------: | :-----------: |
 |  HKUST          | 23.30        | 22.98         |
-| AISEHLL         | 7.00         |               |
+| AISEHLL         | 5.97         | 5.77          |
 | Librispeech     |              |               |
 | switchboard_fisher |           |               |
 
