@@ -38,4 +38,5 @@ if __name__ == "__main__":
         config = json.load(f)
     p = parse_config(config)
     HorovodSolver.initialize_devices()
-    train(json_file, HorovodSolver, hvd.size(), hvd.local_rank())
+    #multi-servers training should use hvd.rank()
+    train(json_file, HorovodSolver, hvd.size(), hvd.rank())
