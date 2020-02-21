@@ -6,7 +6,7 @@ source env.sh
 bash examples/asr/$task_name/run.sh
 ```
 
-## A complete run of ASR experiment can be broken down into following stages:
+## A complete run contains following stages:
 
 1) Data preparation: Before you run `examples/asr/$task_name/run.sh`, you should download the coorsponding dataset and store it in `/nfs/project/datasets/opensource_data/$task_name`. The script `examples/asr/$task_name/local/prepare_data.py` would generate the desired csv file decripting the dataset
 
