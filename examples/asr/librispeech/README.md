@@ -2,6 +2,7 @@ Result update:
 
 config: librispeech/configs/mtl_transformer_sp.json
 dataset:test-clean
+
 Model|WER
 -|:-:|
 [Transformer (ESPNET)](https://arxiv.org/abs/1909.06317)| 2.6 
