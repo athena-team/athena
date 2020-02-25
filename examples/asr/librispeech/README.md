@@ -13,7 +13,6 @@ Transformer (Ours with self pre-training) |
 
 
 Model|WER | Num parameters
--|:-:| :-: |
 [TDNN-hybrid](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf)|23.7 | -
 [LSTM enc + LSTM dec](https://arxiv.org/abs/1806.06342)|29.4 | -
 [Transformer (ESPNET)](https://arxiv.org/abs/1909.06317)|23.5 | 28.38M
