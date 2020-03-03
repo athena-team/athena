@@ -45,6 +45,11 @@ class NGramScorer(object):
         self.lang_model.BeginSentenceWrite(kenlm_state)
         self.cand_kenlm_states = np.array([[kenlm_state] * num_syms])
 
+    def reset(self):
+        kenlm_state = kenlm.State()
+        self.lang_model.BeginSentenceWrite(kenlm_state)
+        self.cand_kenlm_states = np.array([[kenlm_state] * self.num_syms])
+
     def score(self, candidate_holder, new_scores):
         """
         Call this function to compute the NGram score of the next prediction
@@ -109,6 +114,9 @@ class RNNScorer(object):
         """
         self.lang_model = lm_model
         self.lm_weight = lm_weight
+
+    def reset(self):
+        pass
 
     def score(self, candidate_holder, new_scores):
         """

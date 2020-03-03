@@ -215,6 +215,9 @@ class CTCPrefixScorer:
             eos_pos = eos_pos[0]
             log_psi = tf.concat([log_psi[:eos_pos], r_sum[-1:], log_psi[eos_pos+1:]], axis=0)
 
+        r_zero_result = tf.ones_like(r)
+        r_zero_result = r_zero_result * self.logzero
+        r = tf.where(r<self.logzero, r_zero_result, r)
         return log_psi, tf.transpose(r, [2, 0, 1])
 
     def loop(self, start, log_phi_exp, r_nb_expand_exp, xs_exp, x_exp, r_nb, r_b):
