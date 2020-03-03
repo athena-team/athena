@@ -44,6 +44,7 @@ class BeamSearchDecoder:
         self.beam_size = beam_size
         self.scorers = []
         self.ctc_scorer = None
+        self.lm_model = None
         self.states = []
         self.decoder_one_step = None
 
@@ -78,13 +79,21 @@ class BeamSearchDecoder:
                     num_class,
                     lm_weight=hparams.lm_weight,
                 )
-                beam_search_decoder.add_scorer(lm_scorer)
+                beam_search_decoder.set_lm_model(lm_scorer)
             elif hparams.lm_type == "rnn":
                 lm_scorer = RNNScorer(
                     lm_model,
                     lm_weight=hparams.lm_weight)
-                beam_search_decoder.add_scorer(lm_scorer)
+                beam_search_decoder.set_lm_model(lm_scorer)
         return beam_search_decoder
+
+    def set_lm_model(self, lm_model):
+        """ set the lm_model
+        Args:
+            lm_model: lm_model
+        """
+        self.lm_model = lm_model
+        self.scorers.append(lm_model)
 
     def set_ctc_scorer(self, ctc_scorer):
         """ set the ctc_scorer
@@ -93,14 +102,6 @@ class BeamSearchDecoder:
         """
         self.ctc_scorer = ctc_scorer
         self.scorers.append(ctc_scorer)
-
-    def add_scorer(self, scorer):
-        """ Add other auxiliary scorers except for the acoustic model
-        Args:
-            scorer: the auxiliary scorer like the lm scorer or
-              the ctc one decoding scorer
-        """
-        self.scorers.append(scorer)
 
     def beam_search_score(self, candidate_holder, encoder_outputs):
         """Call the time propagating function, fetch the acoustic score at the current step
@@ -259,6 +260,8 @@ class BeamSearchDecoder:
             cand_seqs, cand_logits, cand_states, cand_scores, cand_parents
         )
         self.states = init_states
+        if self.lm_model is not None:
+            self.lm_model.reset()
 
         max_seq_len = encoder_outputs[0].shape[1]
         completed_seqs = tf.fill([0, max_seq_len], self.eos)
