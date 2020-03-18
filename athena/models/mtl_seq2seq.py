@@ -57,6 +57,8 @@ class MtlTransformerCtc(BaseModel):
         self.model = self.SUPPORTED_MODEL[self.hparams.model](
             data_descriptions, self.hparams.model_config
         )
+        self.ks_encoder = self.model.ks_encoder
+        self.ks_decoder = self.model.ks_decoder
         self.time_propagate = self.model.time_propagate
         self.decoder = Dense(self.num_class)
         self.ctc_logits = None
@@ -116,3 +118,5 @@ class MtlTransformerCtc(BaseModel):
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions
+
+
