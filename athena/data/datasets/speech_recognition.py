@@ -24,6 +24,7 @@ from ...utils.hparam import register_and_parse_hparams
 from ..text_featurizer import TextFeaturizer
 from ..feature_normalizer import FeatureNormalizer
 from .base import BaseDatasetBuilder
+from .preprocess import SpecAugment
 
 
 class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
@@ -55,7 +56,8 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
-        "data_csv": None
+        "data_csv": None,
+        "preprocess": None
     }
 
     def __init__(self, config=None):
@@ -70,6 +72,9 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
+        self.preprocss_function = None
+        if self.hparams.preprocess is not None:
+            self.preprocss_function = SpecAugment(self.hparams.preprocess)
 
     def reload_config(self, config):
         """ reload the config """
@@ -133,8 +138,9 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         audio_data, _, transcripts, speed, speaker = self.entries[index]
         feat = self.audio_featurizer(audio_data, speed=speed)
         feat = self.feature_normalizer(feat, speaker)
+        if self.preprocss_function is not None:
+            feat = self.preprocss_function(feat)
         feat_length = feat.shape[0]
-
         label = self.text_featurizer.encode(transcripts)
         label_length = len(label)
         return {
