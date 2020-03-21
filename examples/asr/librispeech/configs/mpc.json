@@ -1,9 +1,10 @@
 {
   "batch_size":64,
-  "num_epochs":250,
-  "sorta_epoch":1,
-  "ckpt":"examples/asr/aishell/ckpts/mpc",
-  "summary_dir":"examples/asr/aishell/ckpts/mpc/event",
+  "num_epochs":100,
+  "sorta_epoch":2,
+  "ckpt":"examples/asr/librispeech/ckpts/mpc",
+  "summary_dir":"examples/asr/librispeech/ckpts/mpc/event",
+
   "solver_gpu":[0],
   "solver_config":{
     "clip_norm":100,
@@ -19,7 +20,7 @@
     "d_model":512,
     "num_heads":8,
     "num_encoder_layers":12,
-    "dff":1280,
+    "dff":2048,
     "rate":0.1,
     "chunk_size":1,
     "keep_probability":0.8
@@ -28,28 +29,21 @@
   "optimizer": "warmup_adam",
   "optimizer_config":{
     "d_model":512,
-    "warmup_steps":2000,
-    "k":0.3
+    "warmup_steps":25000,
+    "k":0.5
   },
 
   "dataset_builder":"speech_dataset",
   "num_data_threads": 1,
   "trainset_config":{
-    "data_csv": "examples/asr/aishell/data/train.csv",
+    "data_csv": "examples/asr/librispeech/data/train-960.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "input_length_range":[10, 8000]
+    "cmvn_file":"examples/asr/librispeech/data/cmvn",
+    "input_length_range":[10, 30000]
   },
   "devset_config":{
-    "data_csv": "examples/asr/aishell/data/dev.csv",
+    "data_csv": "examples/asr/librispeech/data/dev-clean.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "input_length_range":[10, 8000]
-  },
-  "testset_config":{
-    "data_csv": "examples/asr/aishell/data/test.csv",
-    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "input_length_range":[10, 8000]
+    "cmvn_file":"examples/asr/librispeech/data/cmvn"
   }
 }
