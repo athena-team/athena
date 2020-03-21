@@ -6,7 +6,7 @@ source env.sh
 bash examples/asr/$task_name/run.sh
 ```
 
-## A complete run contains following stages:
+## Stages:
 
 1) Data preparation: Before you run `examples/asr/$task_name/run.sh`, you should download the coorsponding dataset and store it in `/nfs/project/datasets/opensource_data/$task_name`. The script `examples/asr/$task_name/local/prepare_data.py` would generate the desired csv file decripting the dataset
 
@@ -23,9 +23,11 @@ bash examples/asr/$task_name/run.sh
 ## Results for ASR Tasks
 
 | Error Rate (CER for Mandarin, WER for English)  |  without MPC/%     |     with MPC/%   |
-| :-------------: | :----------: | :-----------: |
-|  HKUST          | 23.30        | 22.98         |
-| AISEHLL         | 5.97         | 5.77          |
+| :-------------  | :----------: | :-----------: |
+| HKUST           | 23.20        | 22.75         |
+| AISHELL         | 5.97         | 5.77          |
 | Librispeech     |              |               |
 | switchboard_fisher |           |               |
+
+For more detailed results with MPC, please refer to README section of each dataset. Download link of MPC checkpoints can also be found there.
 
