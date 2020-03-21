@@ -141,10 +141,10 @@ To run on 4 machines with 4 GPUs each with Athena:
 
 ## Results
 
-Language  | Model Name | Training Data | Hours of Speech | WER/%
+Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
-Mandarin | Transformer | HKUST Dataset | 151 h |
+Mandarin | Transformer | HKUST Dataset | 151 h | 22.98% (CER)
 
 ## Directory Structure
 

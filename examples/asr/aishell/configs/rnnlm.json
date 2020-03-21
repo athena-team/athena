@@ -1,7 +1,7 @@
 {
-  "batch_size":32,
-  "num_epochs":100,
-  "sorta_epoch":2,
+  "batch_size":64,
+  "num_epochs":70,
+  "sorta_epoch":1,
   "ckpt":"examples/asr/aishell/ckpts/rnnlm",
 
   "solver_gpu":[0],
@@ -18,7 +18,7 @@
   "model_config":{
     "d_model": 512,
     "rnn_type": "lstm",
-    "num_layer": 4,
+    "num_layer": 2,
     "dropout_rate": 0.1,
     "sos": -1,
     "eos": -1
@@ -28,7 +28,9 @@
   "optimizer_config":{
     "d_model":512,
     "warmup_steps":8000,
-    "k":0.5
+    "k":0.5,
+    "decay_steps": 127600,
+    "decay_rate": 0.1
   },
 
   "dataset_builder": "language_dataset",

@@ -1,6 +1,6 @@
 {
   "batch_size":32,
-  "num_epochs":15,
+  "num_epochs":50,
   "sorta_epoch":1,
   "ckpt":"examples/asr/aishell/ckpts/mtl_transformer_ctc/",
   "summary_dir":"examples/asr/aishell/ckpts/mtl_transformer_ctc/event",
@@ -34,9 +34,9 @@
 
   "decode_config":{
     "beam_search":true,
-    "beam_size":4,
-    "ctc_weight":0.3,
-    "lm_weight":0.1,
+    "beam_size":10,
+    "ctc_weight":0.5,
+    "lm_weight":0.7,
     "lm_type": "rnn",
     "lm_path":"examples/asr/aishell/rnnlm.json"
   },
@@ -44,9 +44,9 @@
   "optimizer":"warmup_adam",
   "optimizer_config":{
     "d_model":512,
-    "warmup_steps":3500,
-    "k":0.7,
-    "decay_steps": 100000,
+    "warmup_steps":25000,
+    "k":1.0,
+    "decay_steps": 100000000,
     "decay_rate": 0.1
   },
 
