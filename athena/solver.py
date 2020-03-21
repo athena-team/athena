@@ -50,7 +50,8 @@ class BaseSolver(tf.keras.Model):
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        if gpus is not None:
+        # means we're running in GPU mode
+        if len(gpus) != 0:
             assert len(gpus) > len(visible_gpu_idx)
             for idx in visible_gpu_idx:
                 tf.config.experimental.set_visible_devices(gpus[idx], "GPU")
