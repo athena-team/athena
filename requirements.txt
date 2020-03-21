@@ -10,3 +10,4 @@ sentencepiece
 librosa
 kenlm
 jieba
+pandas
