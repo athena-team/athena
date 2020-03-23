@@ -68,7 +68,7 @@ class BaseModel(tf.keras.Model):
         """
         logging.info("restore from pretrained model")
 
-    def decode(self, samples, hparams, bs_decoder):
+    def decode(self, samples, hparams):
         """ decode interface
         """
         logging.info("sorry, this model do not support decode")
