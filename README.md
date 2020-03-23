@@ -29,15 +29,21 @@ All of our models are implemented in Tensorflow>=2.0.0.
 
 ## Installation
 
-This project has only been tested on Python 3. We recommend creating a virtual environment and installing the python requirements there.
+This project has only been tested on Python 3. We highly recommend creating a virtual environment and installing the python requirements there.
 
 ```bash
+# Setting up virtual environment
+python -m venv venv_athena
+source venv_athena/bin/activate
+pip install --upgrade pip
+
+# Installing Athena
 git clone https://github.com/athena-team/athena.git
 cd athena
 pip install -r requirements.txt
 python setup.py bdist_wheel sdist
 python -m pip install --ignore-installed dist/athena-0.1.0*.whl
-source ./tools/env.sh
+source tools/env.sh
 ```
 
 Notes:
@@ -141,10 +147,10 @@ To run on 4 machines with 4 GPUs each with Athena:
 
 ## Results
 
-Language  | Model Name | Training Data | Hours of Speech | WER/%
+Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
-Mandarin | Transformer | HKUST Dataset | 151 h |
+Mandarin | Transformer | HKUST Dataset | 151 h | 22.98% (CER)
 
 ## Directory Structure
 

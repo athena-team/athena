@@ -24,6 +24,8 @@ source tools/env.sh
 
 stage=0
 stop_stage=100
+horovod_cmd="horovodrun -np 4 -H localhost:4"
+horovod_prefix="horovod_"
 dataset_dir=/nfs/project/datasets/opensource_data/hkust
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
@@ -37,19 +39,21 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     cat examples/asr/hkust/data/train.csv > examples/asr/hkust/data/all.csv
     tail -n +2 examples/asr/hkust/data/dev.csv >> examples/asr/hkust/data/all.csv
     python athena/cmvn_main.py \
-      examples/asr/hkust/mpc.json examples/asr/hkust/data/all.csv || exit 1
+        examples/asr/hkust/configs/mpc.json examples/asr/hkust/data/all.csv || exit 1
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # pretrain stage
     echo "Pretraining"
-    python horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/asr/hkust/mpc.json || exit 1
+    $horovod_cmd python athena/${horovod_prefix}main.py \
+        examples/asr/hkust/configs/mpc.json || exit 1
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # finetuning stage
     echo "Fine-tuning"
-    python horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/asr/hkust/mtl_transformer_sp.json || exit 1
+    $horovod_cmd python athena/${horovod_prefix}main.py \
+        examples/asr/hkust/configs/mtl_transformer_sp.json || exit 1
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -65,13 +69,16 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     tools/kenlm/build/bin/lmplz -o 5 < examples/asr/hkust/data/text.seg \
         > examples/asr/hkust/data/5gram.arpa || exit 1
 
-    python athena/decode_main.py examples/asr/hkust/mtl_transformer.json || exit 1
+    python athena/decode_main.py \
+        examples/asr/hkust/configs/mtl_transformer_sp.json || exit 1
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "training rnnlm"
-    tail -n +2 examples/asr/hkust/data/train.csv | awk '{print $3"\t"$3}' > examples/asr/hkust/data/train.trans.csv
-    tail -n +2 examples/asr/hkust/data/dev.csv | awk '{print $3"\t"$3}' > examples/asr/hkust/data/dev.trans.csv
-    python athena/main.py examples/asr/hkust/rnnlm.json || exit 1
+    tail -n +2 examples/asr/hkust/data/train.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/hkust/data/train.trans.csv
+    tail -n +2 examples/asr/hkust/data/dev.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/hkust/data/dev.trans.csv
+    python athena/main.py examples/asr/hkust/configs/rnnlm.json || exit 1
 fi
 

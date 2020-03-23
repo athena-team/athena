@@ -1,4 +1,4 @@
-tensorflow==2.0.0
+tensorflow==2.0.1
 sox
 absl-py
 yapf
@@ -10,3 +10,4 @@ sentencepiece
 librosa
 kenlm
 jieba
+pandas
