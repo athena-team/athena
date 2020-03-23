@@ -60,8 +60,8 @@ class MtlTransformerCtc(BaseModel):
         self.model = self.SUPPORTED_MODEL[self.hparams.model](
             data_descriptions, self.hparams.model_config
         )
-        self.deploy_encoder = self.model.deploy_encoder
-        self.deploy_decoder = self.model.deploy_decoder
+        self.deploy_encoder = None
+        self.deploy_decoder = None
         self.decoder = Dense(self.num_class)
         self.ctc_logits = None
 
