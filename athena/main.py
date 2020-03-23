@@ -41,8 +41,7 @@ SUPPORTED_MODEL = {
 
 SUPPORTED_OPTIMIZER = {
     "warmup_adam": WarmUpAdam,
-    "expdecay_adam": ExponentialDecayAdam,
-    "adam": tf.keras.optimizers.Adam,
+    "expdecay_adam": ExponentialDecayAdam
 }
 
 DEFAULT_CONFIGS = {
@@ -95,7 +94,7 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
         model=model,
         optimizer=optimizer,
     )
-    if pre_run or p.pretrained_model is not None:
+    if pre_run:
         # pre_run for lazy initilize in keras
         solver = BaseSolver(
             model,

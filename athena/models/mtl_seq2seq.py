@@ -26,6 +26,9 @@ from ..loss import CTCLoss
 from ..metrics import CTCAccuracy
 from .speech_transformer import SpeechTransformer, SpeechTransformer2
 from ..utils.hparam import register_and_parse_hparams
+from ..tools.beam_search import BeamSearchDecoder
+from ..tools.ctc_scorer import CTCPrefixScorer
+from ..tools.lm_scorer import NGramScorer, RNNScorer
 
 
 class MtlTransformerCtc(BaseModel):
@@ -57,9 +60,8 @@ class MtlTransformerCtc(BaseModel):
         self.model = self.SUPPORTED_MODEL[self.hparams.model](
             data_descriptions, self.hparams.model_config
         )
-        self.ks_encoder = self.model.ks_encoder
-        self.ks_decoder = self.model.ks_decoder
-        self.time_propagate = self.model.time_propagate
+        self.deploy_encoder = self.model.deploy_encoder
+        self.deploy_decoder = self.model.deploy_decoder
         self.decoder = Dense(self.num_class)
         self.ctc_logits = None
 
@@ -98,9 +100,9 @@ class MtlTransformerCtc(BaseModel):
 	    """
         self.model.restore_from_pretrained_model(pretrained_model, model_type)
 
-    def decode(self, samples, hparams, bs_decoder):
+    def decode(self, samples, hparams, lm_model=None):
         """ beam search decoding """
-        encoder_output, input_mask = self.model.decode(samples, hparams, bs_decoder, return_encoder=True)
+        encoder_output, input_mask = self.model.decode(samples, hparams, return_encoder=True)
         # init op
         last_predictions = tf.ones([1], dtype=tf.int32) * self.sos
         history_predictions = tf.TensorArray(
@@ -110,13 +112,44 @@ class MtlTransformerCtc(BaseModel):
         history_predictions = history_predictions.stack()
         init_cand_states = [history_predictions]
         step = 0
-        if hparams.beam_search and hparams.ctc_weight != 0 and bs_decoder.ctc_scorer is not None:
+        beam_size = 1 if not hparams.beam_search else hparams.beam_size
+        beam_search_decoder = BeamSearchDecoder(
+            self.num_class, self.sos, self.eos, beam_size=beam_size
+        )
+        beam_search_decoder.build(self.model.time_propagate)
+        if hparams.beam_search and hparams.ctc_weight != 0:
+            ctc_scorer = CTCPrefixScorer(
+                self.eos,
+                ctc_beam=hparams.beam_size*2,
+                num_classes=self.num_class,
+                ctc_weight=hparams.ctc_weight,
+            )
             ctc_logits = self.decoder(encoder_output, training=False)
             ctc_logits = tf.math.log(tf.nn.softmax(ctc_logits))
-            init_cand_states = bs_decoder.ctc_scorer.initial_state(init_cand_states, ctc_logits)
-        predictions = bs_decoder(
+            init_cand_states = ctc_scorer.initial_state(init_cand_states, ctc_logits)
+            beam_search_decoder.add_scorer(ctc_scorer)
+        if hparams.lm_weight != 0:
+            if hparams.lm_path is None:
+                raise ValueError("lm path should not be none")
+            if hparams.lm_type == "ngram":
+                lm_scorer = NGramScorer(
+                    hparams.lm_path,
+                    self.sos,
+                    self.eos,
+                    self.num_class,
+                    lm_weight=hparams.lm_weight,
+                )
+            elif hparams.lm_type == "rnn":
+                lm_scorer = RNNScorer(
+                    lm_model,
+                    lm_weight=hparams.lm_weight)
+            beam_search_decoder.add_scorer(lm_scorer)
+        predictions = beam_search_decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions
 
-
+    def deploy(self):
+        self.model.deploy()
+        self.deploy_encoder = self.model.deploy_encoder
+        self.deploy_decoder = self.model.deploy_decoder

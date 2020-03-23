@@ -1,4 +1,4 @@
-# Copyright (C) ATHENA AUTHORS; Ruixiong Zhang; Dongwei Jiang
+# Copyright (C) ATHENA AUTHORS
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,6 @@
 """ the beam search decoder layer in encoder-decoder models """
 from collections import namedtuple
 import tensorflow as tf
-from .ctc_scorer import CTCPrefixScorer
-from .lm_scorer import NGramScorer, RNNScorer
 
 CandidateHolder = namedtuple(
     "CandidateHolder",
@@ -43,65 +41,23 @@ class BeamSearchDecoder:
         self.eos = eos
         self.beam_size = beam_size
         self.scorers = []
-        self.ctc_scorer = None
-        self.lm_model = None
         self.states = []
         self.decoder_one_step = None
 
-    @staticmethod
-    def build_decoder(hparams, num_class, sos, eos, decoder_one_step, lm_model=None):
-        """ Allocate the time propagating function of the decoder,
-            initialize the decoder
+    def build(self, decoder_one_step):
+        """ Allocate the time propagating function of the decoder
         Args:
             decoder_one_step: the time propagating function of the decoder
         """
-        beam_size = 1 if not hparams.beam_search else hparams.beam_size
-        beam_search_decoder = BeamSearchDecoder(
-            num_class, sos, eos, beam_size=beam_size
-        )
-        beam_search_decoder.decoder_one_step = decoder_one_step
-        if hparams.beam_search and hparams.ctc_weight != 0:
-            ctc_scorer = CTCPrefixScorer(
-                eos,
-                ctc_beam=hparams.beam_size*2,
-                num_classes=num_class,
-                ctc_weight=hparams.ctc_weight,
-            )
-            beam_search_decoder.set_ctc_scorer(ctc_scorer)
-        if hparams.lm_weight != 0:
-            if hparams.lm_type == "ngram":
-                if hparams.lm_path is None:
-                    raise ValueError("lm path should not be none")
-                lm_scorer = NGramScorer(
-                    hparams.lm_path,
-                    sos,
-                    eos,
-                    num_class,
-                    lm_weight=hparams.lm_weight,
-                )
-                beam_search_decoder.set_lm_model(lm_scorer)
-            elif hparams.lm_type == "rnn":
-                lm_scorer = RNNScorer(
-                    lm_model,
-                    lm_weight=hparams.lm_weight)
-                beam_search_decoder.set_lm_model(lm_scorer)
-        return beam_search_decoder
+        self.decoder_one_step = decoder_one_step
 
-    def set_lm_model(self, lm_model):
-        """ set the lm_model
+    def add_scorer(self, scorer):
+        """ Add other auxiliary scorers except for the acoustic model
         Args:
-            lm_model: lm_model
+            scorer: the auxiliary scorer like the lm scorer or
+              the ctc one decoding scorer
         """
-        self.lm_model = lm_model
-        self.scorers.append(lm_model)
-
-    def set_ctc_scorer(self, ctc_scorer):
-        """ set the ctc_scorer
-        Args:
-            ctc_scorer: the ctc scorer
-        """
-        self.ctc_scorer = ctc_scorer
-        self.scorers.append(ctc_scorer)
+        self.scorers.append(scorer)
 
     def beam_search_score(self, candidate_holder, encoder_outputs):
         """Call the time propagating function, fetch the acoustic score at the current step
@@ -112,16 +68,8 @@ class BeamSearchDecoder:
             encoder_outputs: the encoder outputs from the transformer encoder.
               type: tuple, (encoder_outputs, input_mask)
         """
-        cand_logits = tf.TensorArray(
-            tf.float32, size=0, dynamic_size=True, clear_after_read=False
-        )
-        cand_logits = cand_logits.unstack(
-            tf.transpose(candidate_holder.cand_logits, [1, 0, 2])
-        )
-        cand_seqs = tf.TensorArray(
-            tf.float32, size=0, dynamic_size=True, clear_after_read=False
-        )
-        cand_seqs = cand_seqs.unstack(tf.transpose(candidate_holder.cand_seqs, [1, 0]))
+        cand_logits = candidate_holder.cand_logits
+        cand_seqs = candidate_holder.cand_seqs
         logits, new_cand_logits, states = self.decoder_one_step(
             cand_logits, cand_seqs, self.states, encoder_outputs
         )
@@ -136,7 +84,6 @@ class BeamSearchDecoder:
                 other_scores, new_states = scorer.score(candidate_holder, new_scores)
                 if other_scores is not None:
                     new_scores += other_scores
-        new_cand_logits = tf.transpose(new_cand_logits.stack(), [1, 0, 2])
         return new_scores, new_cand_logits, new_states
 
     def deal_with_completed(
@@ -260,8 +207,6 @@ class BeamSearchDecoder:
             cand_seqs, cand_logits, cand_states, cand_scores, cand_parents
         )
         self.states = init_states
-        if self.lm_model is not None:
-            self.lm_model.reset()
 
         max_seq_len = encoder_outputs[0].shape[1]
         completed_seqs = tf.fill([0, max_seq_len], self.eos)
