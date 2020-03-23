@@ -1,5 +1,4 @@
 {
-  "pb_path": "examples/asr/hkust/deploy/",
   "batch_size":32,
   "num_epochs":50,
   "sorta_epoch":1,

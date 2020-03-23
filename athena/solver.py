@@ -26,8 +26,6 @@ from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
-from .tools.beam_search import BeamSearchDecoder
-from .tools.wfst_decoder import WFSTDecoder
 
 
 class BaseSolver(tf.keras.Model):
@@ -198,18 +196,7 @@ class DecoderSolver(BaseSolver):
         "ctc_weight": 0.0,
         "lm_weight": 0.1,
         "lm_type": "",
-        "lm_path": None,
-        "decoder_type": None,
-        "wfst_path": None,
-        "wfst_beam": 30,
-        "max_active": 30.0,
-        "min_active": 0.0,
-        "acoustic_scale": 20.0
-    }
-
-    decoder_dict = {
-        "wfst": WFSTDecoder,
-        "beam_search": BeamSearchDecoder
+        "lm_path": None
     }
 
     # pylint: disable=super-init-not-called
@@ -217,12 +204,7 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        self.decoder = self.decoder_dict[self.hparams.decoder_type].build_decoder(self.hparams,
-                                                                                  self.model.num_class,
-                                                                                  self.model.sos,
-                                                                                  self.model.eos,
-                                                                                  self.model.time_propagate,
-                                                                                  lm_model=lm_model)
+        self.lm_model = lm_model
 
     def decode(self, dataset):
         """ decode the model """
@@ -232,7 +214,7 @@ class DecoderSolver(BaseSolver):
         for _, samples in enumerate(dataset):
             begin = time.time()
             samples = self.model.prepare_samples(samples)
-            predictions = self.model.decode(samples, self.hparams, self.decoder)
+            predictions = self.model.decode(samples, self.hparams, lm_model=self.lm_model)
             validated_preds = validate_seqs(predictions, self.model.eos)[0]
             validated_preds = tf.cast(validated_preds, tf.int64)
             num_errs, _ = metric.update_state(validated_preds, samples)

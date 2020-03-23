@@ -1,19 +1,3 @@
-# Copyright (C) ATHENA AUTHORS; Ruixiong Zhang
-# All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-# pylint: disable=invalid-name
 import tensorflow as tf
 import numpy as np
 import kenlm
@@ -44,11 +28,6 @@ class NGramScorer(object):
         kenlm_state = kenlm.State()
         self.lang_model.BeginSentenceWrite(kenlm_state)
         self.cand_kenlm_states = np.array([[kenlm_state] * num_syms])
-
-    def reset(self):
-        kenlm_state = kenlm.State()
-        self.lang_model.BeginSentenceWrite(kenlm_state)
-        self.cand_kenlm_states = np.array([[kenlm_state] * self.num_syms])
 
     def score(self, candidate_holder, new_scores):
         """
@@ -114,9 +93,6 @@ class RNNScorer(object):
         """
         self.lang_model = lm_model
         self.lm_weight = lm_weight
-
-    def reset(self):
-        pass
 
     def score(self, candidate_holder, new_scores):
         """
