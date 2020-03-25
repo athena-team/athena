@@ -198,7 +198,7 @@ class DecoderSolver(BaseSolver):
         "lm_weight": 0.1,
         "lm_type": "",
         "lm_path": None,
-        "decoder_type": None,
+        "decoder_type": "beam_search",
         "wfst_path": None,
         "wfst_beam": 30,
         "max_active": 30.0,
