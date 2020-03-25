@@ -96,9 +96,12 @@ class MtlTransformerCtc(BaseModel):
 	    """
         self.model.restore_from_pretrained_model(pretrained_model, model_type)
 
-    def decode(self, samples, hparams, bs_decoder):
-        """ beam search decoding """
-        encoder_output, input_mask = self.model.decode(samples, hparams, bs_decoder, return_encoder=True)
+    def decode(self, samples, hparams, decoder):
+        """
+        Initialization of the model for decoding,
+        decoder is called here to create predictions
+        """
+        encoder_output, input_mask = self.model.decode(samples, hparams, decoder, return_encoder=True)
         # init op
         last_predictions = tf.ones([1], dtype=tf.int32) * self.sos
         history_predictions = tf.TensorArray(
@@ -108,11 +111,11 @@ class MtlTransformerCtc(BaseModel):
         history_predictions = history_predictions.stack()
         init_cand_states = [history_predictions]
         step = 0
-        if hparams.beam_search and hparams.ctc_weight != 0 and bs_decoder.ctc_scorer is not None:
+        if hparams.beam_search and hparams.ctc_weight != 0 and decoder.ctc_scorer is not None:
             ctc_logits = self.decoder(encoder_output, training=False)
             ctc_logits = tf.math.log(tf.nn.softmax(ctc_logits))
-            init_cand_states = bs_decoder.ctc_scorer.initial_state(init_cand_states, ctc_logits)
-        predictions = bs_decoder(
+            init_cand_states = decoder.ctc_scorer.initial_state(init_cand_states, ctc_logits)
+        predictions = decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions

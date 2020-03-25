@@ -155,12 +155,12 @@ class CTCPrefixScorer:
         r[:, 1]: the prediction of the t-th frame is blank
         log_phi: when N frames create T outputs, it presents the probability that
                  the first N-1 frames create the first T-1 outputs
-                 shape:[x_input_length, ctc_beam_size]
+                 shape:[input_length, ctc_beam_size]
         log_psi: the prefix probability, shape:[ctc_beam]
         Args:
             y: cand_seq shape: [output_length]
             cs: top_ctc_candidates shape: [ctc_beam]
-            r_prev: ctc_pre_state shape: [x_input_length, 2]
+            r_prev: ctc_pre_state shape: [input_length, 2]
         Return:
             log_psi: ctc_score
             new_state
@@ -201,7 +201,7 @@ class CTCPrefixScorer:
         r_nb_expand_exp = log_psi_exp # shape: [ctc_beam]
         log_phi_exp = tf.math.exp(log_phi)
 
-        log_phi_exp, r_nb, r_b = self.loop(start, log_phi_exp, r_nb_expand_exp, xs_exp, x_exp, r_nb, r_b)
+        r_nb, r_b = self.loop(start, log_phi_exp, r_nb_expand_exp, xs_exp, x_exp, r_nb, r_b)
         log_phi_exp = log_phi_exp[:-1]
         xs_exp = xs_exp[1:]
         log_psi_exp_delta = tf.reduce_sum(log_phi_exp * xs_exp, axis=0) # shape: [ctc_beam]
@@ -209,7 +209,7 @@ class CTCPrefixScorer:
         log_psi = tf.math.log(log_psi_exp)
         r_b = tf.expand_dims(r_b, 1)
         r_nb = tf.expand_dims(r_nb, 1)
-        r = tf.math.log(tf.concat([r_nb, r_b], axis=1)) # shape: [length, 2, ctc_beam]
+        r = tf.math.log(tf.concat([r_nb, r_b], axis=1)) # shape: [input_length, 2, ctc_beam]
         eos_pos = tf.where(cs == self.eos)[:, 0]
         if tf.shape(eos_pos)[0] > 0:
             eos_pos = eos_pos[0]
@@ -221,8 +221,25 @@ class CTCPrefixScorer:
         return log_psi, tf.transpose(r, [2, 0, 1])
 
     def loop(self, start, log_phi_exp, r_nb_expand_exp, xs_exp, x_exp, r_nb, r_b):
+        """
+        Compute r_nb and r_b sequentially
+        Args:
+            start: the start position of the input frames to compute the probability of r,
+                   it can not be smaller than the length of the output sequence
+            log_phi_exp: the exp version of log_phi
+            r_nb_expand_exp: the initial value of the computation,
+                             it is r_nb[start-1]
+            xs_exp: the exp version of xs, shape: [input_length, ctc_beam]
+            x_exp: the exp version of x, shape: [input_length, beam]
+            r_nb: the initial probability matrix
+            r_b: the initial probability matrix
+        Returns:
+            r_nb: the probability matrix in which every probability is computed in condition that
+                  the prediction of the last input frame is blank, shape: [input_length, ctc_beam]
+            r_b: the probability matrix in which every probability is computed in condition that
+                  the prediction of the last input frame is not blank, shape: [input_length, ctc_beam]
+        """
         log_phi_exp = log_phi_exp.numpy()
-        r_nb_expand_exp = r_nb_expand_exp
         xs_exp = xs_exp.numpy()
         x_exp = x_exp.numpy()
         for t in range(start, self.input_length):
@@ -235,6 +252,5 @@ class CTCPrefixScorer:
             # the probability that the output can be produced by at least N frames
             #log_psi_exp = log_psi_exp + (log_phi_expand * xs_exp[t])
             r_nb_expand_exp = r_nb_expand_exp_tmp
-        return tf.convert_to_tensor(log_phi_exp, dtype=tf.float32), \
-               tf.convert_to_tensor(np.array(r_nb), dtype=tf.float32), \
+        return tf.convert_to_tensor(np.array(r_nb), dtype=tf.float32), \
                tf.convert_to_tensor(np.array(r_b), dtype=tf.float32)
