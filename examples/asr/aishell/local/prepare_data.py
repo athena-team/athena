@@ -44,9 +44,9 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output
 
     files = []
     char_dict = {}
-    if not gfile.Exists(os.path.join(dataset_dir, subset)): # not unzip wav yet
+    if not gfile.Exists(os.path.join(audio_dir, subset)): # not unzip wav yet
         for filename in os.listdir(audio_dir):
-            os.system("tar -zxvf " + audio_dir + filename + " -C " + dataset_dir)
+            os.system("tar -zxvf " + audio_dir + filename + " -C " + audio_dir)
 
     with codecs.open(os.path.join(trans_dir, "aishell_transcript_v0.8.txt"), "r", encoding="utf-8") as f:
         for line in f:
@@ -61,7 +61,7 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output
                     char_dict[item] = 0
             files.append((wav_filename + ".wav", labels))
     files_size_dict = {}
-    output_wav_dir = os.path.join(dataset_dir, subset)
+    output_wav_dir = os.path.join(audio_dir, subset)
 
     for root, subdirs, _ in gfile.Walk(output_wav_dir):
         for subdir in subdirs:
