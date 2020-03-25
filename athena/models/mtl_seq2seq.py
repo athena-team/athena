@@ -101,7 +101,7 @@ class MtlTransformerCtc(BaseModel):
         Initialization of the model for decoding,
         decoder is called here to create predictions
         """
-        encoder_output, input_mask = self.model.decode(samples, hparams, return_encoder=True)
+        encoder_output, input_mask = self.model.decode(samples, hparams, decoder, return_encoder=True)
         # init op
         last_predictions = tf.ones([1], dtype=tf.int32) * self.sos
         history_predictions = tf.TensorArray(
