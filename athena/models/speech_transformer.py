@@ -195,7 +195,7 @@ class SpeechTransformer(BaseModel):
         history_logits = history_logits.write(step - 1, logits)
         return logits, history_logits, step
 
-    def decode(self, samples, hparams, bs_decoder, return_encoder=False):
+    def decode(self, samples, hparams, decoder, return_encoder=False):
         """ beam search decoding """
         x0 = samples["input"]
         batch = tf.shape(x0)[0]
@@ -215,7 +215,7 @@ class SpeechTransformer(BaseModel):
         history_predictions = history_predictions.stack()
         init_cand_states = [history_predictions]
 
-        predictions = bs_decoder(
+        predictions = decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions
