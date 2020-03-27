@@ -19,5 +19,7 @@ Model|WER | Num parameters
 [TDNN-hybrid](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf)|23.7 | -
 [LSTM enc + LSTM dec](https://arxiv.org/abs/1806.06342)|29.4 | -
 [Transformer (ESPNET)](https://arxiv.org/abs/1909.06317)|23.5 | 28.38M
-Transformer (Ours without pre-training) | 23.3 | 57.88M
-Transformer (Ours with self pre-training) | 22.98 | 57.88M
+Transformer (Ours without pre-training) | 23.2 | 57.88M
+Transformer (Ours with self pre-training) | 22.75 | 57.88M
+Transformer (Ours with Didi Callcenter 5000h) | 21.7 | 57.88M
+Transformer (Ours with Didi Callcenter 10000h) | 21.2 | 57.88M

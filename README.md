@@ -50,6 +50,7 @@ Notes:
 
 - If you see errors such as `ERROR: Cannot uninstall 'wrapt'` while installing TensorFlow, try updating it using command `conda update wrapt`. Same for similar dependencies such as `entrypoints`, `llvmlite` and so on.
 - You may want to make sure you have `g++` version 7 or above to make sure you can successfully install TensorFlow.
+- Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing
 
 ## Data Preparation
 
@@ -150,7 +151,8 @@ To run on 4 machines with 4 GPUs each with Athena:
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
-Mandarin | Transformer | HKUST Dataset | 151 h | 22.98% (CER)
+Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
+Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 5.77% (CER)
 
 ## Directory Structure
 
