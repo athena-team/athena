@@ -52,7 +52,7 @@ def decode(jsonfile, n=1, log_file=None):
     ckpt_v_list = []
     #restore v from ckpts
     for idx in ckpt_index_list:
-        ckpt_path = p.ckpt + 'ckpt-' + str(idx)
+        ckpt_path = p.ckpt + 'ckpt-' + str(idx + 1)
         checkpointer.restore(ckpt_path) #current variables will be updated
         var_list = []
         for i in model.trainable_variables:
