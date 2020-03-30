@@ -4,7 +4,7 @@
 ## 1 Transformer
 
 ```bash
-source env.sh
+source tools/env.sh
 python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv
 python athena/main.py examples/translate/spa-eng-example/transformer.json
 ```
