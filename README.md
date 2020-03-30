@@ -51,6 +51,7 @@ Notes:
 - If you see errors such as `ERROR: Cannot uninstall 'wrapt'` while installing TensorFlow, try updating it using command `conda update wrapt`. Same for similar dependencies such as `entrypoints`, `llvmlite` and so on.
 - You may want to make sure you have `g++` version 7 or above to make sure you can successfully install TensorFlow.
 - Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing
+- To check the installation, you can just run `bash examples/translate/spa-eng-example/run.sh`
 
 ## Data Preparation
 
