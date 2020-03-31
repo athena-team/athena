@@ -38,7 +38,7 @@
     "ctc_weight":0.5,
     "lm_weight":0.7,
     "lm_type": "rnn",
-    "lm_path":"examples/asr/aishell/rnnlm.json"
+    "lm_path":"examples/asr/aishell/configs/rnnlm.json"
   },
 
   "optimizer":"warmup_adam",
