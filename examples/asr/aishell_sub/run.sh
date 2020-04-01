@@ -31,19 +31,19 @@ dataset_dir=/nfs/cold_project/datasets/opensource_data/aishell/data_aishell_sub
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
     echo "Creating csv"
-    mkdir -p examples/asr/aishell/data
-    python examples/asr/aishell/local/prepare_data.py \
-        $dataset_dir examples/asr/aishell/data || exit 1
+    mkdir -p examples/asr/aishell_sub/data
+    python examples/asr/aishell_sub/local/prepare_data.py \
+        $dataset_dir examples/asr/aishell_sub/data || exit 1
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # calculate cmvn
     echo "Computing cmvn"
-    cat examples/asr/aishell/data/train.csv > examples/asr/aishell/data/all.csv
-    tail -n +2 examples/asr/aishell/data/dev.csv >> examples/asr/aishell/data/all.csv
-    tail -n +2 examples/asr/aishell/data/test.csv >> examples/asr/aishell/data/all.csv
+    cat examples/asr/aishell_sub/data/train.csv > examples/asr/aishell_sub/data/all.csv
+    tail -n +2 examples/asr/aishell_sub/data/dev.csv >> examples/asr/aishell_sub/data/all.csv
+    tail -n +2 examples/asr/aishell_sub/data/test.csv >> examples/asr/aishell_sub/data/all.csv
     python athena/cmvn_main.py \
-        examples/asr/aishell/configs/mpc.json examples/asr/aishell/data/all.csv || exit 1
+        examples/asr/aishell_sub/configs/mpc.json examples/asr/aishell_sub/data/all.csv || exit 1
 fi
 
 # if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -56,30 +56,30 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # finetuning stage
     echo "Fine-tuning"
-    $horovod_cmd python athena/${horovod_prefix}main.py \
-        examples/asr/aishell/configs/mtl_transformer_sp.json || exit 1
+    python athena/main.py \
+        examples/asr/aishell_sub/configs/mtl_transformer_sp.json || exit 1
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # prepare language model
     echo "Training language model ..."
-    tail -n +2 examples/asr/aishell/data/train.csv |\
-        cut -f 3 > examples/asr/aishell/data/text
+    tail -n +2 examples/asr/aishell_sub/data/train.csv |\
+        cut -f 3 > examples/asr/aishell_sub/data/text
     # tools/kenlm/build/bin/lmplz -o 4 < examples/asr/aishell/data/text \
     #     > examples/asr/aisehll/data/4gram.arpa || exit 1
-    tail -n +2 examples/asr/aishell/data/train.csv |\
-        awk '{print $3"\t"$3}' > examples/asr/aishell/data/train.trans.csv
-    tail -n +2 examples/asr/aishell/data/dev.csv |\
-        awk '{print $3"\t"$3}' > examples/asr/aishell/data/dev.trans.csv
-    tail -n +2 examples/asr/aishell/data/test.csv |\
-        awk '{print $3"\t"$3}' > examples/asr/aishell/data/test.trans.csv
-    $horovod_cmd python athena/${horovod_prefix}main.py \
-        examples/asr/aishell/configs/rnnlm.json || exit 1
+    tail -n +2 examples/asr/aishell_sub/data/train.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/aishell_sub/data/train.trans.csv
+    tail -n +2 examples/asr/aishell_sub/data/dev.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/aishell_sub/data/dev.trans.csv
+    tail -n +2 examples/asr/aishell_sub/data/test.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/aishell_sub/data/test.trans.csv
+    python athena/main.py \
+        examples/asr/aishell_sub/configs/rnnlm.json || exit 1
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # decoding stage
     echo "Running decode ..."
     python athena/decode_main.py \
-        examples/asr/aishell/configs/mtl_transformer_sp.json || exit 1
+        examples/asr/aishell_sub/configs/mtl_transformer_sp.json || exit 1
 fi
