@@ -1,7 +1,7 @@
 
 # Athena
 
-*Athena* is an open-source implementation of end-to-end Automatic Speech Recognition (ASR) engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and MPC based unsupervised pretraning.
+*Athena* is an open-source implementation of end-to-end Automatic Speech Recognition (ASR) engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and unsupervised pretraning.
 
 Our vision is to empower both industrial application and academic research on end-to-end models for speech recognition. To make ASR accessible to everyone, we're also releasing some example implementation based on some opensource dataset, like HKSUT, Librispeech
 
