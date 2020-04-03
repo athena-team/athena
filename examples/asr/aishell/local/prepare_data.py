@@ -27,14 +27,13 @@ from athena import get_wave_file_length
 SUBSETS = ["train", "dev", "test"]
 
 
-def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output_dir):
+def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
     """Convert tar.gz to WAV and split the transcript.
 
   Args:
     dataset_dir  : the directory which holds the input dataset.
     subset       : the name of the specified dataset. e.g. dev.
     out_csv_file : the resulting output csv file.
-    output_dir   : Athena working directory.
   """
 
     gfile = tf.compat.v1.gfile
@@ -99,7 +98,7 @@ def processor(dataset_dir, subset, force_process, output_dir):
         logging.info("{} already exist".format(subset_csv))
         return subset_csv
     logging.info("Processing the AISHELL subset {} in {}".format(subset, dataset_dir))
-    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv, output_dir)
+    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv)
     logging.info("Finished processing AISHELL subset {}".format(subset))
     return subset_csv
 
