@@ -7,6 +7,14 @@ import sys
 import numpy as np
 import openfst_python as fst
 import tensorflow as tf
+from absl import logging
+from .ctc_scorer import CTCPrefixScorer
+from collections import namedtuple
+
+CandidateHolder = namedtuple(
+    "CandidateHolder",
+    ["cand_seqs", "cand_states"],
+)
 
 class LatticeArc:
     """Arc used in Token
@@ -24,10 +32,11 @@ class Token:
     The token record the linked arc, cost and inner packed states
     used in model
     """
-    def __init__(self, arc, acoustic_cost, prev_tok=None, cur_label=None, inner_packed_states=None):
+    def __init__(self, arc, acoustic_cost, prev_tok=None, cur_label=None, inner_packed_states=None, cand_states=None):
         self.prev_tok = prev_tok
         self.cur_label = cur_label
         self.inner_packed_states = inner_packed_states
+        self.cand_states = cand_states
         self.arc = LatticeArc(arc.ilabel, arc.olabel,
                 (float(arc.weight), acoustic_cost), arc.nextstate)
         if prev_tok is not None:
@@ -46,6 +55,7 @@ class WFSTDecoder:
         self.num_steps_decoded = -1
         self.beam_delta = 0.5
         self.fst = fst.Fst.read(hparams.wfst_path)
+        logging.info("read WFST graph successfully")
         self.acoustic_scale = hparams.acoustic_scale
         self.max_active = hparams.max_active
         self.min_active = hparams.min_active
@@ -57,6 +67,19 @@ class WFSTDecoder:
         self.inference_one_step_fn = time_propagate
         self.step = None
         self.ctc_scorer = None
+        self.scorers = []
+
+        self.vocab = {}
+        with open(hparams.vocab,'r') as f:
+            for line in f:
+                char = line.strip().split()[0]
+                idx = line.strip().split()[1]
+                self.vocab[char] = int(idx)
+        self.words = []
+        with open(hparams.osymbols,'r') as f:
+            for line in f:
+                word = line.strip().split()[0]
+                self.words.append(word)
 
     """Decode the input samples using seq2seq models and WFST graph"""
     @staticmethod
@@ -74,7 +97,24 @@ class WFSTDecoder:
                        fn(encoder_outputs, label_input, packed_inner_states)
             auxiliary_model: other auxiliary models
         """
-        return WFSTDecoder(hparams, num_class, sos, eos, time_propagate)
+        wfst_decoder = WFSTDecoder(hparams, num_class, sos, eos, time_propagate)
+        if hparams.ctc_weight != 0:
+            ctc_scorer = CTCPrefixScorer(
+                eos,
+                ctc_beam=hparams.wfst_beam*2,
+                num_classes=num_class,
+                ctc_weight=hparams.ctc_weight,
+            )
+            wfst_decoder.set_ctc_scorer(ctc_scorer)
+        return wfst_decoder
+
+    def set_ctc_scorer(self, ctc_scorer):
+        """ set the ctc_scorer
+        Args:
+            ctc_scorer: the ctc scorer
+        """
+        self.ctc_scorer = ctc_scorer
+        self.scorers.append(ctc_scorer)
 
     def __call__(self, history_predictions, init_cand_states, step, encoder_outputs):
         """using seq2seq model and WFST graph to decode input utterance
@@ -88,7 +128,10 @@ class WFSTDecoder:
         self.step = step
         self.max_seq_len = encoder_outputs[0].shape[1]
         init_cand_logits = tf.fill([0, self.num_syms], 0.0)
-        self.init_decoding(init_cand_logits)
+        cand_states = []
+        for states in init_cand_states:
+            cand_states.append(states[0])
+        self.init_decoding(init_cand_logits, cand_states)
         while not self.end_detect():
             encoder_output, input_mask = encoder_outputs
             encoder_output = tf.tile(
@@ -115,7 +158,7 @@ class WFSTDecoder:
         else:
             return True
 
-    def init_decoding(self, initial_packed_states):
+    def init_decoding(self, initial_packed_states, cand_states):
         """Init decoding states for every input utterance
         Args:
             initial_packed_states: initial packed states for callback function
@@ -126,7 +169,7 @@ class WFSTDecoder:
         start_state = self.fst.start()
         assert start_state != -1
         dummy_arc = LatticeArc(0, 0, 0.0, start_state)
-        self.cur_toks[start_state] = Token(dummy_arc, 0.0, None, [self.sos], initial_packed_states)
+        self.cur_toks[start_state] = Token(dummy_arc, 0.0, None, [self.sos], initial_packed_states, cand_states)
         self.num_steps_decoded = 0
         self.process_nonemitting(float('inf'))
 
@@ -150,7 +193,7 @@ class WFSTDecoder:
             tok = tmp_toks[state]
             for arc in self.fst.arcs(state):
                 if arc.ilabel == 0:
-                    new_tok = Token(arc, 0.0, tok, tok.cur_label, tok.inner_packed_states)
+                    new_tok = Token(arc, 0.0, tok, tok.cur_label, tok.inner_packed_states, tok.cand_states)
                     if self.fst.final(arc.nextstate).to_string() != fst.Weight.Zero('tropical').to_string():
                         new_tok.rescaled_cost = ((new_tok.cost +
                             float(self.fst.final(arc.nextstate)))/self.num_steps_decoded)
@@ -171,22 +214,37 @@ class WFSTDecoder:
         history_logits = tf.TensorArray(
             tf.float32, size=0, dynamic_size=True, clear_after_read=False
         )
-        cand_seqs_array = []
+        cand_seqs_ori_array = []
         cand_seqs = tf.TensorArray(
             tf.float32, size=0, dynamic_size=True, clear_after_read=False
         )
+        num_states = len(list(self.prev_toks.values())[0].cand_states)
+        cand_states_array = [[] for i in range(num_states)] # num of states in cand_states
+        cand_states = []
         for idx, state in enumerate(self.prev_toks):
             state2id[state] = idx
-            cand_seqs_array.append(self.prev_toks[state].cur_label)
+            cand_seqs_ori_array.append(self.prev_toks[state].cur_label)
             history_logits_array.append(self.prev_toks[state].inner_packed_states)
+            for i, cand_state in enumerate(self.prev_toks[state].cand_states):
+                cand_states_array[i].append(cand_state)
+        for cand_state in cand_states_array:
+            cand_states.append(tf.convert_to_tensor(cand_state)) # [(beam, hsize)*num_states]
         history_logits_array = np.transpose(np.array(history_logits_array), [1, 0, 2]) # [time, beam, S]
         history_logits = history_logits.unstack(tf.convert_to_tensor(history_logits_array))
-        cand_seqs_array = np.transpose(np.array(cand_seqs_array), [1, 0])
-        cand_seqs = cand_seqs.unstack(tf.convert_to_tensor(cand_seqs_array))
+        cand_seqs_array = tf.convert_to_tensor(np.array(cand_seqs_ori_array), dtype=tf.int32)
+        cand_seqs = cand_seqs.unstack(tf.transpose(cand_seqs_array, [1, 0]))
         all_log_scores, new_cand_logits, step = self.inference_one_step_fn(history_logits,
                                                                            cand_seqs,
                                                                            self.step,
                                                                            encoder_outputs)
+        candidate_holder = CandidateHolder(cand_seqs_array, cand_states)
+        Z = tf.reduce_logsumexp(all_log_scores, axis=(1,), keepdims=True)
+        all_log_scores = all_log_scores - Z
+        if self.scorers:
+            for scorer in self.scorers:
+                other_scores, new_cand_states = scorer.score(candidate_holder, all_log_scores)
+                if other_scores is not None:
+                    all_log_scores += other_scores
         self.step = step
         new_cand_logits = tf.transpose(new_cand_logits.stack(), [1, 0, 2]).numpy() # [beam, time, S]
 
@@ -212,8 +270,9 @@ class WFSTDecoder:
                         new_weight = float(arc.weight) + tok.cost + ac_cost
                         if new_weight < next_weight_cutoff:
                             inner_packed_state = new_cand_logits[seq_id]
+                            one_cand_state = [s[seq_id] for s in new_cand_states]
                             new_tok = Token(arc, ac_cost, tok, tok.cur_label+[arc.ilabel-1],
-                                    inner_packed_state)
+                                    inner_packed_state, one_cand_state)
                             if new_weight + adaptive_beam < next_weight_cutoff:
                                 next_weight_cutoff = new_weight + adaptive_beam
                             if arc.nextstate in self.cur_toks:
@@ -237,7 +296,7 @@ class WFSTDecoder:
                 continue
             for arc in self.fst.arcs(state):
                 if arc.ilabel == 0:
-                    new_tok = Token(arc, 0.0, tok, tok.cur_label, tok.inner_packed_states)
+                    new_tok = Token(arc, 0.0, tok, tok.cur_label, tok.inner_packed_states, tok.cand_states)
                     if new_tok.cost < cutoff:
                         if arc.nextstate in self.cur_toks:
                             if self.cur_toks[arc.nextstate].cost > new_tok.cost:
@@ -318,4 +377,6 @@ class WFSTDecoder:
         for arc in arcs_reverse[::-1]:
             if arc.olabel != 0:
                 ans.append(arc.olabel)
+        ans = ''.join([self.words[int(idx)] for idx in ans])
+        ans = [self.vocab[prediction] for prediction in ans]
         return ans

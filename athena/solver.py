@@ -198,12 +198,14 @@ class DecoderSolver(BaseSolver):
         "lm_weight": 0.1,
         "lm_type": "",
         "lm_path": None,
-        "decoder_type": "beam_search",
+        "decoder_type": "wfst",
         "wfst_path": None,
         "wfst_beam": 30,
-        "max_active": 30.0,
-        "min_active": 0.0,
-        "acoustic_scale": 20.0
+        "max_active": 30,
+        "min_active": 0,
+        "acoustic_scale": 10.0,
+        "osymbols":None,
+        "vocab":None
     }
 
     decoder_dict = {
