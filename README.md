@@ -47,7 +47,7 @@ source tools/env.sh
 ```
 
 Notes:
-
+- Many users may suffer the installation of horovod, you can just skip the installation of horovod and just run using `athena/main.py` using one gpu or one cpu. However, how to successfully install the horovod, you can find out more information from the horovod website (https://github.com/horovod/horovod#install)
 - If you see errors such as `ERROR: Cannot uninstall 'wrapt'` while installing TensorFlow, try updating it using command `conda update wrapt`. Same for similar dependencies such as `entrypoints`, `llvmlite` and so on.
 - You may want to make sure you have `g++` version 7 or above to make sure you can successfully install TensorFlow.
 - Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing
