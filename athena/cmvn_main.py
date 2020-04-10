@@ -35,4 +35,9 @@ if __name__ == "__main__":
     if "speed_permutation" in p.trainset_config:
         p.dataset_config['speed_permutation'] = [1.0]
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
-    dataset_builder.load_csv(csv_file).compute_cmvn_if_necessary(True)
+
+    if 'compute_cmvn_parallelly' in p:
+        compute_cmvn_parallelly = p.compute_cmvn_parallelly
+    else:
+        compute_cmvn_parallelly = False
+    dataset_builder.load_csv(csv_file).compute_cmvn_if_necessary(True,compute_cmvn_parallelly)

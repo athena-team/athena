@@ -193,7 +193,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
                 filter_entries.append(tuple([wav_filename, wav_len, speaker]))
         self.entries = filter_entries
 
-    def compute_cmvn_if_necessary(self, is_necessary=True):
+    def compute_cmvn_if_necessary(self, is_necessary=True, is_parallel=False):
         """ compute cmvn file
         """
         if not is_necessary:
@@ -201,9 +201,8 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         if os.path.exists(self.hparams.cmvn_file):
             return self
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
-        with tf.device("/cpu:0"):
-            self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim
-            )
+        self.feature_normalizer.compute_cmvn(
+            self.entries, self.speakers, self.audio_featurizer, feature_dim, is_parallel
+        )
         self.feature_normalizer.save_cmvn()
         return self

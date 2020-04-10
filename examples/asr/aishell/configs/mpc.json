@@ -40,6 +40,7 @@
     "cmvn_file":"examples/asr/aishell/data/cmvn",
     "input_length_range":[10, 8000]
   },
+  "compute_cmvn_parallelly": true,
   "devset_config":{
     "data_csv": "examples/asr/aishell/data/dev.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},

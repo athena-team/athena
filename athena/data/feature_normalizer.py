@@ -22,7 +22,42 @@ import time
 import pandas
 from absl import logging
 import tensorflow as tf
+import numpy as np
+import multiprocessing as mp
+from multiprocessing import Pool, cpu_count    # 查看cpu核心数
 
+def tqdm_listener(q, total):
+    pbar = tqdm.tqdm(total = total)
+    for item in iter(q.get, None):
+        pbar.update()
+
+def compute_cmvn_by_chunk(feature_dim, tar_speaker, featurizer, entries, msg_queue):
+    initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+    initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+    total_num = tf.Variable(0, dtype=tf.int32)
+
+    if msg_queue is None:
+        entries = tqdm.tqdm(entries)
+
+    for items in entries:
+        audio_file, speaker = items[0], items[-1]
+        if speaker != tar_speaker:
+            continue
+        feat_data = featurizer(audio_file)
+        temp_frame_num = feat_data.shape[0]
+        total_num.assign_add(temp_frame_num)
+
+        temp_feat = tf.reshape(feat_data, [-1, feature_dim])
+        temp_feat2 = tf.square(temp_feat)
+
+        temp_mean = tf.reduce_sum(temp_feat, axis=[0])
+        temp_var = tf.reduce_sum(temp_feat2, axis=[0])
+
+        initial_mean.assign_add(temp_mean)
+        initial_var.assign_add(temp_var)
+        if msg_queue is not None:
+            msg_queue.put(1)
+    return initial_mean, initial_var, total_num
 
 class FeatureNormalizer:
     """ Feature Normalizer """
@@ -50,32 +85,43 @@ class FeatureNormalizer:
         feat_data = (feat_data - mean) / tf.sqrt(var)
         return feat_data
 
-    def compute_cmvn(self, entries, speakers, featurizer, feature_dim):
+    def compute_cmvn(self, entries, speakers, featurizer, feature_dim, is_parallel=False):
         """ Compute cmvn for filtered entries """
+
         start = time.time()
         for tar_speaker in speakers:
             logging.info("processing %s" % tar_speaker)
             initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
             initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
             total_num = tf.Variable(0, dtype=tf.int32)
+            if not is_parallel:
+                initial_mean, initial_var, total_num = compute_cmvn_by_chunk(feature_dim, tar_speaker, featurizer, entries, None)
+            else:
+                num_cores = cpu_count()*2
+                chunks = np.array_split(entries,num_cores)
+                ctx = mp.get_context('spawn')
+                m = ctx.Manager()
+                q = m.Queue()
 
-            tq_entries = tqdm.tqdm(entries)
-            for items in tq_entries:
-                audio_file, speaker = items[0], items[-1]
-                if speaker != tar_speaker:
-                    continue
-                feat_data = featurizer(audio_file)
-                temp_frame_num = feat_data.shape[0]
-                total_num.assign_add(temp_frame_num)
+                proc = ctx.Process(target=tqdm_listener, args=(q,len(entries)))
+                proc.start()
 
-                temp_feat = tf.reshape(feat_data, [-1, feature_dim])
-                temp_feat2 = tf.square(temp_feat)
+                p = ctx.Pool(num_cores)
+                args = []
 
-                temp_mean = tf.reduce_sum(temp_feat, axis=[0])
-                temp_var = tf.reduce_sum(temp_feat2, axis=[0])
+                for chunk in chunks:
+                    args.append((feature_dim, tar_speaker, featurizer, chunk, q))
+                result_list = p.starmap(compute_cmvn_by_chunk, args)
 
-                initial_mean.assign_add(temp_mean)
-                initial_var.assign_add(temp_var)
+                q.put(None)
+                p.close()
+                p.join()
+                proc.join()
+
+                for _initial_mean, _initial_var, _total_num in result_list:
+                    total_num.assign_add(_total_num)
+                    initial_var.assign_add(_initial_var)
+                    initial_mean.assign_add(_initial_mean)
 
             # compute mean and var
             if total_num == 0:
