@@ -24,7 +24,7 @@ from absl import logging
 import tensorflow as tf
 import numpy as np
 import multiprocessing as mp
-from multiprocessing import Pool, cpu_count    # 查看cpu核心数
+from multiprocessing import Pool, cpu_count
 
 def tqdm_listener(q, total):
     pbar = tqdm.tqdm(total = total)
