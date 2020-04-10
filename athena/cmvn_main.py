@@ -21,6 +21,7 @@ import sys
 import json
 from absl import logging
 from athena.main import parse_config, SUPPORTED_DATASET_BUILDER
+import os
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
@@ -38,6 +39,7 @@ if __name__ == "__main__":
 
     if 'compute_cmvn_parallelly' in p:
         compute_cmvn_parallelly = p.compute_cmvn_parallelly
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
     else:
         compute_cmvn_parallelly = False
     dataset_builder.load_csv(csv_file).compute_cmvn_if_necessary(True,compute_cmvn_parallelly)
