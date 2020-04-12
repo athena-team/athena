@@ -61,16 +61,57 @@ class Checkpoint(tf.train.Checkpoint):
                 checkpoint = save_path.split('/')[-1]
                 wf.write('model_checkpoint_path: "%s"' % checkpoint)
 
+    def save_avg(self, ckpt_num, log_file, model):
+        """ save n-best avg checkpoint """
+        log_file = log_file + '.INFO'
+        if not os.path.exists(log_file):
+            return
+        checkpoint_wer_dict = {}
+        for line in open(log_file):
+            if 'epoch:' in line:
+                splits = line.strip().split('\t')
+                epoch = int(splits[0].split(' ')[-1])
+                ctc_acc = float(splits[-1].split(' ')[-1])
+                checkpoint_wer_dict[epoch] = ctc_acc
+        checkpoint_wer_dict = {k: v for k, v in
+                               sorted(checkpoint_wer_dict.items(), key=lambda item: item[1], reverse=True)}
+        ckpt_index_list = list(checkpoint_wer_dict.keys())[0: ckpt_num]
+        logging.info('best_wer_checkpoint: %s' % ckpt_index_list)
+        ckpt_v_list = []
+        # restore v from ckpts
+        for idx in ckpt_index_list:
+            ckpt_path = self.checkpoint_prefix + '-' + str(idx + 1)
+            self.restore(ckpt_path)  # current variables will be updated
+            var_list = []
+            for i in model.trainable_variables:
+                v = tf.constant(i.value())
+                var_list.append(v)
+            ckpt_v_list.append(var_list)
+        # compute average, and assign to current variables
+        for i in range(len(model.trainable_variables)):
+            v = [tf.expand_dims(ckpt_v_list[j][i], [0]) for j in range(len(ckpt_v_list))]
+            v = tf.reduce_mean(tf.concat(v, axis=0), axis=0)
+            model.trainable_variables[i].assign(v)
+        save_path = self.save(file_prefix=self.checkpoint_prefix + '_avg')
+        with open(os.path.join(self.checkpoint_directory, 'avg_ckpt'), 'w') as wf:
+            checkpoint = save_path.split('/')[-1]
+            wf.write('model_checkpoint_path: "%s"' % checkpoint)
+
     def __call__(self, loss=None):
         logging.info("saving model in :%s" % self.checkpoint_prefix)
         save_path = self.save(file_prefix=self.checkpoint_prefix)
         self._compare_and_save_best(loss, save_path)
 
-    def restore_from_best(self):
+
+    def restore_from_best(self, mode='best'):
         """ restore from the best model """
+        if mode == 'avg':
+            latest_filename = 'avg_ckpt'
+        else:
+            latest_filename = 'best_loss'
         self.restore(
             tf.train.latest_checkpoint(
                 self.checkpoint_directory,
-                latest_filename='best_loss'
+                latest_filename=latest_filename
             )
         )

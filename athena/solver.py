@@ -121,6 +121,8 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
+        "decode_log": "./decode_nohup.out",
+        "load_mode": "avg",
         "beam_search": True,
         "beam_size": 4,
         "ctc_weight": 0.0,
