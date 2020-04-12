@@ -1,7 +1,7 @@
 
 # Athena
 
-*Athena* is an open-source implementation of end-to-end Automatic Speech Recognition (ASR) engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and MPC based unsupervised pretraning.
+*Athena* is an open-source implementation of end-to-end Automatic Speech Recognition (ASR) engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and unsupervised pretraning.
 
 Our vision is to empower both industrial application and academic research on end-to-end models for speech recognition. To make ASR accessible to everyone, we're also releasing some example implementation based on some opensource dataset, like HKSUT, Librispeech
 
@@ -29,21 +29,29 @@ All of our models are implemented in Tensorflow>=2.0.0.
 
 ## Installation
 
-This project has only been tested on Python 3. We recommend creating a virtual environment and installing the python requirements there.
+This project has only been tested on Python 3. We highly recommend creating a virtual environment and installing the python requirements there.
 
 ```bash
+# Setting up virtual environment
+python -m venv venv_athena
+source venv_athena/bin/activate
+pip install --upgrade pip
+
+# Installing Athena
 git clone https://github.com/athena-team/athena.git
 cd athena
 pip install -r requirements.txt
 python setup.py bdist_wheel sdist
 python -m pip install --ignore-installed dist/athena-0.1.0*.whl
-source ./tools/env.sh
+source tools/env.sh
 ```
 
 Notes:
-
+- Many users may suffer the installation of horovod, you can just skip the installation of horovod and just run using `athena/main.py` using one gpu or one cpu. However, how to successfully install the horovod, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
 - If you see errors such as `ERROR: Cannot uninstall 'wrapt'` while installing TensorFlow, try updating it using command `conda update wrapt`. Same for similar dependencies such as `entrypoints`, `llvmlite` and so on.
 - You may want to make sure you have `g++` version 7 or above to make sure you can successfully install TensorFlow.
+- Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing
+- To check the installation, you can just run the translate example, in which, `python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv` and then `python athena/main.py examples/translate/spa-eng-example/transformer.json`
 
 ## Data Preparation
 
@@ -144,7 +152,8 @@ To run on 4 machines with 4 GPUs each with Athena:
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
-Mandarin | Transformer | HKUST Dataset | 151 h | 22.98% (CER)
+Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
+Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 5.77% (CER)
 
 ## Directory Structure
 

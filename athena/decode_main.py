@@ -21,6 +21,7 @@ import sys, os
 import json
 import tensorflow as tf
 from absl import logging
+from absl import app
 from athena import DecoderSolver
 from athena.main import (
     parse_config,
@@ -29,41 +30,23 @@ from athena.main import (
 )
 
 
-def decode(jsonfile, n=1, log_file=None):
+def decode(jsonfile):
     """ entry point for model decoding, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
+    if 'decode_log' in p.decode_config:
+        decode_log = p.decode_config['decode_log']
+        log_dir = os.path.dirname(decode_log)
+        log_name = os.path.basename(decode_log)
+        logging.get_absl_handler().use_absl_log_file(log_name, log_dir)
+    mode = 'avg'
+    if 'load_mode' in p.decode_config:
+        mode = 'best' if 'ckpt_mode' == 'best' else 'avg'
+    checkpointer.restore_checkpoint(mode=mode)
     lm_model = None
     if 'lm_type' in p.decode_config and p.decode_config['lm_type'] == "rnn":
         _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(p.decode_config['lm_path'])
-        lm_checkpointer.restore_from_best()
-    if not os.path.exists(log_file):
-        raise IOError('The file is not exist！')
-    checkpoint_wer_dict = {}
-    for line in open(log_file):
-        if 'epoch:' in line:
-            splits = line.strip().split('\t')
-            epoch = int(splits[0].split(' ')[-1])
-            ctc_acc = float(splits[-1].split(' ')[-1])
-            checkpoint_wer_dict[epoch] = ctc_acc
-    checkpoint_wer_dict = {k: v for k, v in sorted(checkpoint_wer_dict.items(), key=lambda item: item[1], reverse=True)}
-    ckpt_index_list = list(checkpoint_wer_dict.keys())[0: n]
-    print('best_wer_checkpoint: ')
-    print(ckpt_index_list)
-    ckpt_v_list = []
-    #restore v from ckpts
-    for idx in ckpt_index_list:
-        ckpt_path = p.ckpt + 'ckpt-' + str(idx)
-        checkpointer.restore(ckpt_path) #current variables will be updated
-        var_list = []
-        for i in model.trainable_variables:
-            v = tf.constant(i.value())
-            var_list.append(v)
-        ckpt_v_list.append(var_list)
-    #compute average, and assign to current variables
-    for i in range(len(model.trainable_variables)):
-        v = [tf.expand_dims(ckpt_v_list[j][i],[0]) for j in range(len(ckpt_v_list))]
-        v = tf.reduce_mean(tf.concat(v,axis=0),axis=0)
-        model.trainable_variables[i].assign(v)
+        lm_checkpointer.restore_checkpoint()
+
     solver = DecoderSolver(model, config=p.decode_config, lm_model=lm_model)
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
@@ -84,4 +67,6 @@ if __name__ == "__main__":
     p = parse_config(config)
 
     DecoderSolver.initialize_devices(p.solver_gpu)
-    decode(jsonfile, n=5, log_file='nohup.out')
+    decode_main = lambda argv: decode(jsonfile)
+    app.run(decode_main)
+

@@ -21,7 +21,9 @@ import sys
 import json
 import tensorflow as tf
 from absl import logging
+from absl import app
 from athena import *
+import os
 
 SUPPORTED_DATASET_BUILDER = {
     "speech_recognition_dataset": SpeechRecognitionDatasetBuilder,
@@ -48,6 +50,8 @@ DEFAULT_CONFIGS = {
     "batch_size": 32,
     "num_epochs": 20,
     "sorta_epoch": 1,
+    "avg_ckpt_num": 10,
+    "log": './nohup.out',
     "ckpt": None,
     "summary_dir": None,
     "solver_gpu": [0],
@@ -115,6 +119,9 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 	:param rank: rank of current worker, 0 if using single gpu
 	"""
     p, model, optimizer, checkpointer = build_model_from_jsonfile(jsonfile)
+    log_dir = os.path.dirname(p.log)
+    log_name = os.path.basename(p.log)
+    logging.get_absl_handler().use_absl_log_file(log_name, log_dir)
     epoch = int(checkpointer.save_counter)
     if p.pretrained_model is not None and epoch == 0:
         p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
@@ -154,6 +161,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
             checkpointer(loss)
 
         epoch = epoch + 1
+    checkpointer.save_avg(p.avg_ckpt_num, p.log, model)
 
 
 if __name__ == "__main__":
@@ -169,4 +177,5 @@ if __name__ == "__main__":
         config = json.load(f)
     p = parse_config(config)
     BaseSolver.initialize_devices(p.solver_gpu)
-    train(json_file, BaseSolver, 1, 0)
+    train_main = lambda argv : train(json_file, BaseSolver, 1, 0)
+    app.run(train_main)

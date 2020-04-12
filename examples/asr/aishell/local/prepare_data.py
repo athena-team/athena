@@ -27,14 +27,13 @@ from athena import get_wave_file_length
 SUBSETS = ["train", "dev", "test"]
 
 
-def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output_dir):
+def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
     """Convert tar.gz to WAV and split the transcript.
 
   Args:
     dataset_dir  : the directory which holds the input dataset.
     subset       : the name of the specified dataset. e.g. dev.
     out_csv_file : the resulting output csv file.
-    output_dir   : Athena working directory.
   """
 
     gfile = tf.compat.v1.gfile
@@ -44,9 +43,9 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output
 
     files = []
     char_dict = {}
-    if not gfile.Exists(os.path.join(dataset_dir, subset)): # not unzip wav yet
+    if not gfile.Exists(os.path.join(audio_dir, subset)): # not unzip wav yet
         for filename in os.listdir(audio_dir):
-            os.system("tar -zxvf " + audio_dir + filename + " -C " + dataset_dir)
+            os.system("tar -zxvf " + audio_dir + filename + " -C " + audio_dir)
 
     with codecs.open(os.path.join(trans_dir, "aishell_transcript_v0.8.txt"), "r", encoding="utf-8") as f:
         for line in f:
@@ -61,7 +60,7 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output
                     char_dict[item] = 0
             files.append((wav_filename + ".wav", labels))
     files_size_dict = {}
-    output_wav_dir = os.path.join(dataset_dir, subset)
+    output_wav_dir = os.path.join(audio_dir, subset)
 
     for root, subdirs, _ in gfile.Walk(output_wav_dir):
         for subdir in subdirs:
@@ -99,7 +98,7 @@ def processor(dataset_dir, subset, force_process, output_dir):
         logging.info("{} already exist".format(subset_csv))
         return subset_csv
     logging.info("Processing the AISHELL subset {} in {}".format(subset, dataset_dir))
-    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv, output_dir)
+    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv)
     logging.info("Finished processing AISHELL subset {}".format(subset))
     return subset_csv
 
