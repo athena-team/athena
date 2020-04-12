@@ -3,7 +3,7 @@
   "num_epochs":20,
   "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/deep_speech",
-  "solver_gpu":[2],
+  "solver_gpu":[0],
   "solver_config":{
     "clip_norm":100.0,
     "log_interval":1
