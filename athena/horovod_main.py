@@ -23,6 +23,7 @@ import json
 import tensorflow as tf
 import horovod.tensorflow as hvd
 from absl import logging
+from absl import app
 from athena import BaseSolver
 from athena.main import parse_config, train
 
@@ -112,4 +113,6 @@ if __name__ == "__main__":
     p = parse_config(config)
     HorovodSolver.initialize_devices()
     #multi-servers training should use hvd.rank()
-    train(json_file, HorovodSolver, hvd.size(), hvd.rank())
+    train_main = lambda argv : train(json_file, HorovodSolver, hvd.size(), hvd.rank())
+    app.run(train_main)
+
