@@ -41,11 +41,11 @@ def decode(jsonfile):
     mode = 'avg'
     if 'load_mode' in p.decode_config:
         mode = 'best' if 'ckpt_mode' == 'best' else 'avg'
-    checkpointer.restore_from_best(mode=mode)
+    checkpointer.restore_checkpoint(mode=mode)
     lm_model = None
     if 'lm_type' in p.decode_config and p.decode_config['lm_type'] == "rnn":
         _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(p.decode_config['lm_path'])
-        lm_checkpointer.restore_from_best()
+        lm_checkpointer.restore_checkpoint()
 
     solver = DecoderSolver(model, config=p.decode_config, lm_model=lm_model)
     assert p.testset_config is not None

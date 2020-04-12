@@ -159,10 +159,9 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 
         if rank == 0:
             checkpointer(loss)
-        if epoch == p.num_epochs - 1:
-            checkpointer.save_avg(p.avg_ckpt_num, p.log, model)
 
         epoch = epoch + 1
+    checkpointer.save_avg(p.avg_ckpt_num, p.log, model)
 
 
 if __name__ == "__main__":
