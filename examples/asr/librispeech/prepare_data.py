@@ -127,13 +127,13 @@ def convert_audio_and_split_transcript(input_dir,
                         tfm.build(flac_file, wav_file)
                     # wav_filesize = os.path.getsize(wav_file)
                     wav_length = get_wave_file_length(wav_file)
-                    speaker = seqid.split('-')[0]
-                    files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
+
+                    files.append((os.path.abspath(wav_file), wav_length, transcript))
     # Write to CSV file which contains three columns:
-    # "wav_filename", "wav_length_ms", "transcript", "speaker".
+    # "wav_filename", "wav_length_ms", "transcript".
     csv_file_path = os.path.join(output_dir, output_file)
     df = pandas.DataFrame(
-        data=files, columns=["wav_filename", "wav_length_ms", "transcript", "speaker"]
+        data=files, columns=["wav_filename", "wav_length_ms", "transcript"]
     )
     df.to_csv(csv_file_path, index=False, sep="\t")
     logging.info("Successfully generated csv file {}".format(csv_file_path))
@@ -150,8 +150,8 @@ def processor(dircetory, subset, force_process):
         return subset_csv
 
     dataset_dir = os.path.join(dircetory, subset)
-    logging.info("Downloading and process the librispeech in %s" % dataset_dir)
-    logging.info("Preparing dataset %s" % subset)
+    logging.info("Downloading and process the librispeech in", dataset_dir)
+    logging.info("Preparing dataset %s", subset)
     download_and_extract(dataset_dir, librispeech_urls[subset])
     convert_audio_and_split_transcript(
         dataset_dir + "/LibriSpeech",
