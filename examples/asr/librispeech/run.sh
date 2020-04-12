@@ -51,13 +51,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         examples/asr/librispeech/configs/mpc.json examples/asr/librispeech/data/all.csv || exit 1
 
     # create spm model
-    # spm should be installed
     cat examples/asr/librispeech/data/train-960.csv | awk -F '\t' '{print tolower($3)}' | tail -n +2 \
         > examples/asr/librispeech/data/text
     spm_train --input=examples/asr/librispeech/data/text \
         --vocab_size=5000 \
         --model_type=unigram \
-        --model_prefix=examples/asr/librispeech/data/librispeech_unigram5000 \
+        --model_prefix=librispeech_unigram5000 \
         --input_sentence_size=100000000
 fi
 
@@ -80,12 +79,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "Training language model ..."
     # tools/kenlm/build/bin/lmplz -o 4 < examples/asr/librispeech/data/text \
     #     > examples/asr/aisehll/data/4gram.arpa || exit 1
-    cat examples/asr/librispeech/data/train-960.csv |\
-        awk -F '\t' '{print $3"\t"$3}' > examples/asr/librispeech/data/train.trans.csv
-    cat examples/asr/librispeech/data/dev-clean.csv |\
-        awk -F '\t' '{print $3"\t"$3}' > examples/asr/librispeech/data/dev.trans.csv
-    cat examples/asr/librispeech/data/test-clean.csv |\
-        awk -F '\t' '{print $3"\t"$3}' > examples/asr/librispeech/data/test.trans.csv
+    tail -n +2 examples/asr/librispeech/data/train-960.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/librispeech/data/train.trans.csv
+    tail -n +2 examples/asr/librispeech/data/dev-clean.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/librispeech/data/dev.trans.csv
+    tail -n +2 examples/asr/librispeech/data/test-clean.csv |\
+        awk '{print $3"\t"$3}' > examples/asr/librispeech/data/test.trans.csv
     $horovod_cmd python athena/${horovod_prefix}main.py \
         examples/asr/librispeech/configs/rnnlm.json || exit 1
 fi
