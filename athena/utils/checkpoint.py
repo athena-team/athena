@@ -103,8 +103,8 @@ class Checkpoint(tf.train.Checkpoint):
         self._compare_and_save_best(loss, save_path)
 
 
-    def restore_from_best(self, mode='best'):
-        """ restore from the best model """
+    def restore_checkpoint(self, mode='best'):
+        """ restore from the best or avg model """
         if mode == 'avg':
             latest_filename = 'avg_ckpt'
         else:
