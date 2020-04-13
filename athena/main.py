@@ -64,7 +64,6 @@ DEFAULT_CONFIGS = {
     "devset_config": None,
     "testset_config": None,
     "decode_config": None,
-    "compute_cmvn_parallelly": False
 }
 
 def parse_config(config):

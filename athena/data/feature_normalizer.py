@@ -24,7 +24,7 @@ from absl import logging
 import tensorflow as tf
 import numpy as np
 import multiprocessing as mp
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
 
 def tqdm_listener(q, total):
     pbar = tqdm.tqdm(total = total)
@@ -62,12 +62,16 @@ def compute_cmvn_by_chunk(feature_dim, tar_speaker, featurizer, entries, msg_que
 class FeatureNormalizer:
     """ Feature Normalizer """
 
-    def __init__(self, cmvn_file=None):
+    def __init__(self, cmvn_config=None):
         super().__init__()
-        self.cmvn_file = cmvn_file
+        self.cmvn_file = cmvn_config.cmvn_file
+        self.compute_cmvn_parallelly = cmvn_config.compute_cmvn_parallelly
+        if cmvn_config.compute_cmvn_parallelly:
+            cores = cpu_count()
+            self.cmvn_worker = cmvn_config.cmvn_worker 
         self.cmvn_dict = {}
         self.speakers = []
-        if cmvn_file is not None:
+        if self.cmvn_file is not None:
             self.load_cmvn()
 
     def __call__(self, feat_date, speaker):
@@ -85,19 +89,21 @@ class FeatureNormalizer:
         feat_data = (feat_data - mean) / tf.sqrt(var)
         return feat_data
 
-    def compute_cmvn(self, entries, speakers, featurizer, feature_dim, is_parallel=False):
+    def compute_cmvn(self, entries, speakers, featurizer, feature_dim):
         """ Compute cmvn for filtered entries """
 
         start = time.time()
         for tar_speaker in speakers:
             logging.info("processing %s" % tar_speaker)
-            initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
-            initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
-            total_num = tf.Variable(0, dtype=tf.int32)
-            if not is_parallel:
+
+            if not self.compute_cmvn_parallelly:
                 initial_mean, initial_var, total_num = compute_cmvn_by_chunk(feature_dim, tar_speaker, featurizer, entries, None)
             else:
-                num_cores = cpu_count()*2
+                initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+                initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+                total_num = tf.Variable(0, dtype=tf.int32)
+
+                num_cores = self.cmvn_worker
                 chunks = np.array_split(entries,num_cores)
                 ctx = mp.get_context('spawn')
                 m = ctx.Manager()

@@ -66,7 +66,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         logging.info("hparams: {}".format(self.hparams))
 
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
-        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
+        self.feature_normalizer = FeatureNormalizer(self.hparams)
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)

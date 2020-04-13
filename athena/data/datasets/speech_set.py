@@ -54,7 +54,9 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         "audio_config": {"type": "Fbank"},
         "cmvn_file": None,
         "input_length_range": [20, 50000],
-        "data_csv": None
+        "data_csv": None,
+        "compute_cmvn_parallelly": False,
+        "cmvn_worker": 1,
     }
 
     def __init__(self, config=None):
@@ -65,7 +67,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         logging.info("hparams: {}".format(self.hparams))
 
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
-        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
+        self.feature_normalizer = FeatureNormalizer(self.hparams)
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
 
@@ -193,7 +195,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
                 filter_entries.append(tuple([wav_filename, wav_len, speaker]))
         self.entries = filter_entries
 
-    def compute_cmvn_if_necessary(self, is_necessary=True, is_parallel=False):
+    def compute_cmvn_if_necessary(self, is_necessary=True):
         """ compute cmvn file
         """
         if not is_necessary:
@@ -202,7 +204,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             return self
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         self.feature_normalizer.compute_cmvn(
-            self.entries, self.speakers, self.audio_featurizer, feature_dim, is_parallel
+            self.entries, self.speakers, self.audio_featurizer, feature_dim
         )
         self.feature_normalizer.save_cmvn()
         return self
