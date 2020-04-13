@@ -24,7 +24,6 @@ from absl import logging
 import tensorflow as tf
 import numpy as np
 import multiprocessing as mp
-from multiprocessing import cpu_count
 
 def tqdm_listener(q, total):
     pbar = tqdm.tqdm(total = total)
@@ -67,7 +66,6 @@ class FeatureNormalizer:
         self.cmvn_file = cmvn_config.cmvn_file
         self.compute_cmvn_parallelly = cmvn_config.compute_cmvn_parallelly
         if cmvn_config.compute_cmvn_parallelly:
-            cores = cpu_count()
             self.cmvn_worker = cmvn_config.cmvn_worker 
         self.cmvn_dict = {}
         self.speakers = []
