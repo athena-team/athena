@@ -37,8 +37,5 @@ if __name__ == "__main__":
         p.dataset_config['speed_permutation'] = [1.0]
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
 
-    if 'compute_cmvn_parallelly' in p.trainset_config:
-        compute_cmvn_parallelly = p.trainset_config['compute_cmvn_parallelly']
-        if compute_cmvn_parallelly:
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
     dataset_builder.load_csv(csv_file).compute_cmvn_if_necessary(True, True)

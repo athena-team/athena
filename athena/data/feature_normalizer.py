@@ -24,6 +24,8 @@ from absl import logging
 import tensorflow as tf
 import numpy as np
 import multiprocessing as mp
+from multiprocessing import cpu_count
+
 
 def tqdm_listener(q, total):
     pbar = tqdm.tqdm(total = total)
@@ -61,13 +63,12 @@ def compute_cmvn_by_chunk(feature_dim, tar_speaker, featurizer, entries, msg_que
 class FeatureNormalizer:
     """ Feature Normalizer """
 
-    def __init__(self, cmvn_config=None):
+    def __init__(self, cmvn_file=None):
         super().__init__()
-        self.cmvn_file = cmvn_config.cmvn_file
-        self.cmvn_worker = cmvn_config.cmvn_worker 
+        self.cmvn_file = cmvn_file
         self.cmvn_dict = {}
         self.speakers = []
-        if self.cmvn_file is not None:
+        if cmvn_file is not None:
             self.load_cmvn()
 
     def __call__(self, feat_date, speaker):
@@ -85,7 +86,7 @@ class FeatureNormalizer:
         feat_data = (feat_data - mean) / tf.sqrt(var)
         return feat_data
 
-    def compute_cmvn(self, entries, speakers, featurizer, feature_dim, maybe_parallel=False):
+    def compute_cmvn(self, entries, speakers, featurizer, feature_dim, maybe_parallel=False, cmvn_worker=None):
         """ Compute cmvn for filtered entries """
 
         start = time.time()
@@ -99,17 +100,18 @@ class FeatureNormalizer:
                 initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
                 total_num = tf.Variable(0, dtype=tf.int32)
 
-                chunks = np.array_split(entries, self.cmvn_worker)
+                cmvn_worker = cmvn_worker if cmvn_worker else cpu_count()
+
                 ctx = mp.get_context('spawn')
                 m = ctx.Manager()
                 q = m.Queue()
-
                 proc = ctx.Process(target=tqdm_listener, args=(q,len(entries)))
                 proc.start()
 
-                p = ctx.Pool(self.cmvn_worker)
+                p = ctx.Pool(cmvn_worker)
                 args = []
 
+                chunks = np.array_split(entries, cmvn_worker)
                 for chunk in chunks:
                     args.append((feature_dim, tar_speaker, featurizer, chunk, q))
                 result_list = p.starmap(compute_cmvn_by_chunk, args)

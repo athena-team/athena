@@ -55,7 +55,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         "cmvn_file": None,
         "input_length_range": [20, 50000],
         "data_csv": None,
-        "cmvn_worker": 1,
+        "cmvn_worker": None,
     }
 
     def __init__(self, config=None):
@@ -66,7 +66,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         logging.info("hparams: {}".format(self.hparams))
 
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
-        self.feature_normalizer = FeatureNormalizer(self.hparams)
+        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
 
@@ -203,7 +203,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             return self
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         self.feature_normalizer.compute_cmvn(
-            self.entries, self.speakers, self.audio_featurizer, feature_dim, maybe_parallel
+            self.entries, self.speakers, self.audio_featurizer, feature_dim, maybe_parallel, self.hparams.cmvn_worker
         )
         self.feature_normalizer.save_cmvn()
         return self
