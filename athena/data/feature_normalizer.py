@@ -64,9 +64,7 @@ class FeatureNormalizer:
     def __init__(self, cmvn_config=None):
         super().__init__()
         self.cmvn_file = cmvn_config.cmvn_file
-        self.compute_cmvn_parallelly = cmvn_config.compute_cmvn_parallelly
-        if cmvn_config.compute_cmvn_parallelly:
-            self.cmvn_worker = cmvn_config.cmvn_worker 
+        self.cmvn_worker = cmvn_config.cmvn_worker 
         self.cmvn_dict = {}
         self.speakers = []
         if self.cmvn_file is not None:
@@ -87,22 +85,21 @@ class FeatureNormalizer:
         feat_data = (feat_data - mean) / tf.sqrt(var)
         return feat_data
 
-    def compute_cmvn(self, entries, speakers, featurizer, feature_dim):
+    def compute_cmvn(self, entries, speakers, featurizer, feature_dim, maybe_parallel=False):
         """ Compute cmvn for filtered entries """
 
         start = time.time()
         for tar_speaker in speakers:
             logging.info("processing %s" % tar_speaker)
 
-            if not self.compute_cmvn_parallelly:
+            if not maybe_parallel:
                 initial_mean, initial_var, total_num = compute_cmvn_by_chunk(feature_dim, tar_speaker, featurizer, entries, None)
             else:
                 initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
                 initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
                 total_num = tf.Variable(0, dtype=tf.int32)
 
-                num_cores = self.cmvn_worker
-                chunks = np.array_split(entries,num_cores)
+                chunks = np.array_split(entries, self.cmvn_worker)
                 ctx = mp.get_context('spawn')
                 m = ctx.Manager()
                 q = m.Queue()
@@ -110,7 +107,7 @@ class FeatureNormalizer:
                 proc = ctx.Process(target=tqdm_listener, args=(q,len(entries)))
                 proc.start()
 
-                p = ctx.Pool(num_cores)
+                p = ctx.Pool(self.cmvn_worker)
                 args = []
 
                 for chunk in chunks:
