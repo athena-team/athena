@@ -113,7 +113,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
 
         self.entries.sort(key=lambda item: float(item[1]))
         if self.text_featurizer.model_type == "text":
-            _, _, all_transcripts, _ = zip(*self.entries)
+            _, _, all_transcripts, _, _ = zip(*self.entries)
             self.text_featurizer.load_model(all_transcripts)
 
         # apply some filter
