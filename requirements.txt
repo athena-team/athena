@@ -8,6 +8,6 @@ horovod
 tqdm
 sentencepiece
 librosa
-kenlm
 jieba
 pandas
+https://github.com/kpu/kenlm/archive/master.zip
