@@ -4,7 +4,6 @@ absl-py
 yapf
 pylint
 flake8
-horovod
 tqdm
 sentencepiece
 librosa
