@@ -90,18 +90,12 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         if "speaker" not in headers.split("\t"):
             entries = self.entries
             self.entries = []
-            if self.text_featurizer.model_type == "text":
-                _, _, all_transcripts = zip(*entries)
-                self.text_featurizer.load_model(all_transcripts)
             for wav_filename, wav_len, transcripts in entries:
                 self.entries.append(
                     tuple([wav_filename, wav_len, transcripts, "global"])
                 )
             self.speakers.append("global")
         else:
-            if self.text_featurizer.model_type == "text":
-                _, _, all_transcripts, _ = zip(*entries)
-                self.text_featurizer.load_model(all_transcripts)
             for _, _, _, speaker in self.entries:
                 if speaker not in self.speakers:
                     self.speakers.append(speaker)
@@ -118,6 +112,9 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
                 ]))
 
         self.entries.sort(key=lambda item: float(item[1]))
+        if self.text_featurizer.model_type == "text":
+            _, _, all_transcripts, _ = zip(*self.entries)
+            self.text_featurizer.load_model(all_transcripts)
 
         # apply some filter
         self.filter_sample_by_unk()
