@@ -86,6 +86,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         lines = [line.split("\t") for line in lines]
         self.entries = [tuple(line) for line in lines]
 
+        # handling speakers
         self.speakers = []
         if "speaker" not in headers.split("\t"):
             entries = self.entries
@@ -100,6 +101,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
                 if speaker not in self.speakers:
                     self.speakers.append(speaker)
 
+        # handling speed
         entries = self.entries
         self.entries = []
         if len(self.hparams.speed_permutation) > 1:
@@ -111,6 +113,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
                     float(wav_len) / float(speed), transcripts, speed, speaker
                 ]))
 
+        # handling special case for text_featurizer
         self.entries.sort(key=lambda item: float(item[1]))
         if self.text_featurizer.model_type == "text":
             _, _, all_transcripts, _, _ = zip(*self.entries)
