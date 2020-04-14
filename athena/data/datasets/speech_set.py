@@ -135,7 +135,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         return self.preprocess_data(file_path)
 
     def load_scps(self, file_dir):
-        """ lload kaldi-format feats.scp and utt2spk (optional) """
+        """ load kaldi-format feats.scp and utt2spk (optional) """
         return self.preprocess_data_kaldiio(file_dir)
 
     def __getitem__(self, index):
