@@ -31,27 +31,57 @@ All of our models are implemented in Tensorflow>=2.0.0.
 
 This project has only been tested on Python 3. We highly recommend creating a virtual environment and installing the python requirements there.
 
-```bash
-# Setting up virtual environment
-python -m venv venv_athena
-source venv_athena/bin/activate
-pip install --upgrade pip
+1. Creating a virtual environment
 
-# Installing Athena
+```bash
+$ # Setting up virtual environment
+$ python -m venv venv_athena
+$ source venv_athena/bin/activate
+```
+
+2. Install tensorflow backend, more informaction can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow)
+
+```bash
+$ # we highly encourage firstly update pip 
+$ pip install --upgrade pip
+$ pip install tensorflow
+```
+
+3. Install *athena* package
+
+```bash
 git clone https://github.com/athena-team/athena.git
 cd athena
 pip install -r requirements.txt
 python setup.py bdist_wheel sdist
 python -m pip install --ignore-installed dist/athena-0.1.0*.whl
+```
+
+- Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing. 
+
+4. For multiple GPU/CPU training
+You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
+
+5. Test your installation
+
+- on a single cpu/gpu 
+```bash
 source tools/env.sh
+python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv
+python athena/main.py examples/translate/spa-eng-example/transformer.json
+```
+
+- on multiple cpu/gpu in one machine (you should make sure your hovorod is installed successfully)
+```bash
+source tools/env.sh
+python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv
+horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/translate/spa-eng-example/transformer.json
 ```
 
 Notes:
-- Many users may suffer the installation of horovod, you can just skip the installation of horovod and just run using `athena/main.py` using one gpu or one cpu. However, how to successfully install the horovod, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
 - If you see errors such as `ERROR: Cannot uninstall 'wrapt'` while installing TensorFlow, try updating it using command `conda update wrapt`. Same for similar dependencies such as `entrypoints`, `llvmlite` and so on.
 - You may want to make sure you have `g++` version 7 or above to make sure you can successfully install TensorFlow.
-- Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing
-- To check the installation, you can just run the translate example, in which, `python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv` and then `python athena/main.py examples/translate/spa-eng-example/transformer.json`
+
 
 ## Data Preparation
 
