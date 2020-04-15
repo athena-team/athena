@@ -13,6 +13,12 @@ All of our models are implemented in Tensorflow>=2.0.0.
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation](#installation)
+    - [1) Creating a virtual environment [Optional]](#1-creating-a-virtual-environment-optional)
+    - [2) Install *tensorflow* backend](#2-install-tensorflow-backend)
+    - [3) Install *horovod* for multiple-device training [Optional]](#3-install-horovod-for-multiple-device-training-optional)
+    - [4) Install *athena* package](#4-install-athena-package)
+    - [5) Test your installation](#5-test-your-installation)
+    - [Notes](#notes)
   - [Data Preparation](#data-preparation)
     - [Create Manifest](#create-manifest)
   - [Training](#training)
@@ -25,13 +31,13 @@ All of our models are implemented in Tensorflow>=2.0.0.
 
 - Hybrid CTC/Transformer based end-to-end ASR
 - Speech-Transformer
-- MPC based unsupervised pretraining
+- Unsupervised pretraining
 
 ## Installation
 
-This project has only been tested on Python 3. We highly recommend creating a virtual environment and installing the python requirements there.
+### 1) Creating a virtual environment [Optional]
 
-1. Creating a virtual environment [Optional]
+This project has only been tested on Python 3. We highly recommend creating a virtual environment and installing the python requirements there.
 
 ```bash
 # Setting up virtual environment
@@ -39,15 +45,22 @@ python -m venv venv_athena
 source venv_athena/bin/activate
 ```
 
-2. Install tensorflow backend, more informaction can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow)
+### 2) Install *tensorflow* backend
+
+More informaction can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow)
 
 ```bash
-# we highly encourage firstly update pip
+# we highly recommend firstly update pip
 pip install --upgrade pip
 pip install tensorflow
 ```
 
-3. Install *athena* package
+### 3) Install *horovod* for multiple-device training [Optional]
+
+For multiple GPU/CPU training
+You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
+
+### 4) Install *athena* package
 
 ```bash
 git clone https://github.com/athena-team/athena.git
@@ -57,16 +70,12 @@ python setup.py bdist_wheel sdist
 python -m pip install --ignore-installed dist/athena-0.1.0*.whl
 ```
 
-- Once successfully installed athena, you should `source tools/env.sh` firstly before doing other thing.
+- Once athena is successfully installed , you should do `source tools/env.sh` firstly before doing other things.
+- For installing some other supporting tools, you can check the `tools/install*.sh` to install kenlm, sph2pipe, spm and ... [Optional]
 
-- For multiple GPU/CPU training
-You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
+### 5) Test your installation
 
-- Install some tools, you can check the `tools/install*.sh` to install kenlm, sph2pipe, spm and ...
-
-4. Test your installation
-
-- on a single cpu/gpu
+- On a single cpu/gpu
 
 ```bash
 source tools/env.sh
@@ -74,7 +83,7 @@ python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa
 python athena/main.py examples/translate/spa-eng-example/transformer.json
 ```
 
-- on multiple cpu/gpu in one machine (you should make sure your hovorod is installed successfully)
+- On multiple cpu/gpu in one machine (you should make sure your hovorod is successfully installed)
 
 ```bash
 source tools/env.sh
@@ -82,7 +91,8 @@ python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa
 horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/translate/spa-eng-example/transformer.json
 ```
 
-Notes:
+### Notes
+
 - If you see errors such as `ERROR: Cannot uninstall 'wrapt'` while installing TensorFlow, try updating it using command `conda update wrapt`. Same for similar dependencies such as `entrypoints`, `llvmlite` and so on.
 - You may want to make sure you have `g++` version 7 or above to make sure you can successfully install TensorFlow.
 
