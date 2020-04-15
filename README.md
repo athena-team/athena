@@ -47,7 +47,7 @@ source venv_athena/bin/activate
 
 ### 2) Install *tensorflow* backend
 
-More informaction can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow)
+For more information, you can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow)
 
 ```bash
 # we highly recommend firstly update pip
