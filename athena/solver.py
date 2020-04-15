@@ -116,7 +116,6 @@ class BaseSolver(tf.keras.Model):
         return loss_metric.result(), metrics
 
 
-
 class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
