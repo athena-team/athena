@@ -95,9 +95,9 @@ class Checkpoint(tf.train.Checkpoint):
             for line in f:
                 key, val = line.split('\t')
                 ckpt_metrics_dict[key] = float(val.strip())
-        ckpt_metrics_dict = {k: v for k, v in
-                             sorted(ckpt_metrics_dict.items(), key=lambda item: item[1], reverse=True)}
-        ckpt_list = list(ckpt_metrics_dict.keys())[0: model_avg_num]
+        ckpt_sorted_list = sorted(ckpt_metrics_dict.items(), key=lambda item: item[1], reverse=True)
+        ckpt_list = ckpt_sorted_list[0: model_avg_num]
+        ckpt_list = [k for k, _ in ckpt_list]
         logging.info('n_best_metrics_checkpoint: %s' % ckpt_list)
         ckpt_v_list = []
         # restore v from ckpts

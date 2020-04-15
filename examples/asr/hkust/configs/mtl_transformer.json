@@ -3,8 +3,6 @@
   "num_epochs":50,
   "model_best_num":10,
   "sorta_epoch":1,
-  "log": "examples/asr/hkust/ckpts/mtl_transformer_ctc/nohup.out",
-  "avg_ckpt_num": 10,
   "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc/",
   "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc/event",
 
