@@ -21,7 +21,6 @@ import sys, os
 import json
 import tensorflow as tf
 from absl import logging
-from absl import app
 from athena import DecoderSolver
 from athena.main import (
     parse_config,
@@ -33,15 +32,8 @@ from athena.main import (
 def decode(jsonfile):
     """ entry point for model decoding, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
-    if 'decode_log' in p.decode_config:
-        decode_log = p.decode_config['decode_log']
-        log_dir = os.path.dirname(decode_log)
-        log_name = os.path.basename(decode_log)
-        logging.get_absl_handler().use_absl_log_file(log_name, log_dir)
-    mode = 'avg'
-    if 'load_mode' in p.decode_config:
-        mode = 'best' if 'ckpt_mode' == 'best' else 'avg'
-    checkpointer.restore_checkpoint(mode=mode)
+    model_avg_num = 1 if 'model_avg_num' not in p.decode_config else p.decode_config['model_avg_num']
+    checkpointer.compute_nbest_avg(model_avg_num)
     lm_model = None
     if 'lm_type' in p.decode_config and p.decode_config['lm_type'] == "rnn":
         _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(p.decode_config['lm_path'])
@@ -67,6 +59,4 @@ if __name__ == "__main__":
     p = parse_config(config)
 
     DecoderSolver.initialize_devices(p.solver_gpu)
-    decode_main = lambda argv: decode(jsonfile)
-    app.run(decode_main)
-
+    decode(jsonfile)
