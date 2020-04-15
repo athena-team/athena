@@ -17,7 +17,7 @@
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, redefined-outer-name
 r""" a sample implementation of LAS for HKUST """
-import sys, os
+import sys
 import json
 import tensorflow as tf
 from absl import logging
@@ -32,12 +32,12 @@ from athena.main import (
 def decode(jsonfile):
     """ entry point for model decoding, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
-    model_avg_num = 1 if 'model_avg_num' not in p.decode_config else p.decode_config['model_avg_num']
-    checkpointer.compute_nbest_avg(model_avg_num)
+    avg_num = 1 if 'model_avg_num' not in p.decode_config else p.decode_config['model_avg_num']
+    checkpointer.compute_nbest_avg(avg_num)
     lm_model = None
     if 'lm_type' in p.decode_config and p.decode_config['lm_type'] == "rnn":
         _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(p.decode_config['lm_path'])
-        lm_checkpointer.restore_checkpoint()
+        lm_checkpointer.restore_from_best()
 
     solver = DecoderSolver(model, config=p.decode_config, lm_model=lm_model)
     assert p.testset_config is not None
