@@ -23,7 +23,6 @@ import json
 import tensorflow as tf
 import horovod.tensorflow as hvd
 from absl import logging
-from absl import app
 from athena import BaseSolver
 from athena.main import parse_config, train
 
@@ -96,7 +95,7 @@ class HorovodSolver(BaseSolver):
         if hvd.local_rank() == 0:
             logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
             self.model.reset_metrics()
-        return loss_metric.result()
+        return loss_metric.result(), metrics
 
 
 if __name__ == "__main__":
@@ -113,6 +112,4 @@ if __name__ == "__main__":
     p = parse_config(config)
     HorovodSolver.initialize_devices()
     #multi-servers training should use hvd.rank()
-    train_main = lambda argv : train(json_file, HorovodSolver, hvd.size(), hvd.rank())
-    app.run(train_main)
-
+    train(json_file, HorovodSolver, hvd.size(), hvd.rank())

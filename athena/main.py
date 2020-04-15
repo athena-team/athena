@@ -21,9 +21,7 @@ import sys
 import json
 import tensorflow as tf
 from absl import logging
-from absl import app
 from athena import *
-import os
 
 SUPPORTED_DATASET_BUILDER = {
     "speech_recognition_dataset": SpeechRecognitionDatasetBuilder,
@@ -50,8 +48,6 @@ DEFAULT_CONFIGS = {
     "batch_size": 32,
     "num_epochs": 20,
     "sorta_epoch": 1,
-    "avg_ckpt_num": 10,
-    "log": './nohup.out',
     "ckpt": None,
     "summary_dir": None,
     "solver_gpu": [0],
@@ -68,6 +64,7 @@ DEFAULT_CONFIGS = {
     "devset_config": None,
     "testset_config": None,
     "decode_config": None,
+    "model_best_num": 1
 }
 
 def parse_config(config):
@@ -95,6 +92,8 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
     optimizer = SUPPORTED_OPTIMIZER[p.optimizer](p.optimizer_config)
     checkpointer = Checkpoint(
         checkpoint_directory=p.ckpt,
+        metric_name=model.metric.name,
+        n_best_num=p.model_best_num,
         model=model,
         optimizer=optimizer,
     )
@@ -119,9 +118,6 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 	:param rank: rank of current worker, 0 if using single gpu
 	"""
     p, model, optimizer, checkpointer = build_model_from_jsonfile(jsonfile)
-    log_dir = os.path.dirname(p.log)
-    log_name = os.path.basename(p.log)
-    logging.get_absl_handler().use_absl_log_file(log_name, log_dir)
     epoch = int(checkpointer.save_counter)
     if p.pretrained_model is not None and epoch == 0:
         p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
@@ -143,6 +139,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
         config=p.solver_config,
     )
     loss = 0.0
+    metrics = {}
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
@@ -155,13 +152,12 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
                 logging.info(">>>>> start evaluate in epoch %d" % epoch)
             devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
             devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-            loss = solver.evaluate(devset, epoch)
+            loss, metrics = solver.evaluate(devset, epoch)
 
         if rank == 0:
-            checkpointer(loss)
+            checkpointer(loss, metrics)
 
         epoch = epoch + 1
-    checkpointer.save_avg(p.avg_ckpt_num, p.log, model)
 
 
 if __name__ == "__main__":
@@ -177,5 +173,4 @@ if __name__ == "__main__":
         config = json.load(f)
     p = parse_config(config)
     BaseSolver.initialize_devices(p.solver_gpu)
-    train_main = lambda argv : train(json_file, BaseSolver, 1, 0)
-    app.run(train_main)
+    train(json_file, BaseSolver, 1, 0)

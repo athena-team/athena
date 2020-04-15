@@ -40,9 +40,12 @@ class Checkpoint(tf.train.Checkpoint):
             ckpt()
     """
 
-    def __init__(self, checkpoint_directory=None, **kwargs):
+    def __init__(self, checkpoint_directory=None, metric_name=None, n_best_num=1, **kwargs):
         super().__init__(**kwargs)
         self.best_loss = np.inf
+        self.n_best_model = {}
+        self.n_best_num = n_best_num
+        self.metric_name = metric_name
         if checkpoint_directory is None:
             checkpoint_directory = os.path.join(os.path.expanduser("~"), ".athena")
         self.checkpoint_prefix = os.path.join(checkpoint_directory, "ckpt")
@@ -50,68 +53,78 @@ class Checkpoint(tf.train.Checkpoint):
         logging.info("trying to restore from : %s" % checkpoint_directory)
         # load from checkpoint if previous models exist in checkpoint dir
         self.restore(tf.train.latest_checkpoint(checkpoint_directory))
+        if os.path.exists(os.path.join(self.checkpoint_directory, 'n_best')):
+            with open(os.path.join(self.checkpoint_directory, 'n_best')) as f:
+                for line in f:
+                    key, val = line.split('\t')
+                    self.n_best_model[key] = float(val.strip())
 
-    def _compare_and_save_best(self, loss, save_path):
+    def _compare_and_save_best(self, loss, metrics, save_path):
         """ compare and save the best model in best_loss """
-        if loss is None:
-            return
-        if loss < self.best_loss:
+        checkpoint = save_path.split('/')[-1]
+        if loss is not None and loss < self.best_loss:
             self.best_loss = loss
             with open(os.path.join(self.checkpoint_directory, 'best_loss'), 'w') as wf:
-                checkpoint = save_path.split('/')[-1]
                 wf.write('model_checkpoint_path: "%s"' % checkpoint)
-
-    def save_avg(self, ckpt_num, log_file, model):
-        """ save n-best avg checkpoint """
-        log_file = log_file + '.INFO'
-        if not os.path.exists(log_file):
+        if metrics is None or len(metrics) == 0 or self.metric_name is None:
             return
-        checkpoint_wer_dict = {}
-        for line in open(log_file):
-            if 'epoch:' in line:
-                splits = line.strip().split('\t')
-                epoch = int(splits[0].split(' ')[-1])
-                ctc_acc = float(splits[-1].split(' ')[-1])
-                checkpoint_wer_dict[epoch] = ctc_acc
-        checkpoint_wer_dict = {k: v for k, v in
-                               sorted(checkpoint_wer_dict.items(), key=lambda item: item[1], reverse=True)}
-        ckpt_index_list = list(checkpoint_wer_dict.keys())[0: ckpt_num]
-        logging.info('best_wer_checkpoint: %s' % ckpt_index_list)
+        result = metrics[self.metric_name]
+        n_best_value = np.array(list(self.n_best_model.values()))
+        if len(n_best_value) < self.n_best_num:
+            self.n_best_model[checkpoint] = result
+        else:
+            min_result = np.min(n_best_value)
+            if result <= min_result:
+                return
+            min_index = np.argmin(n_best_value)
+            min_key = list(self.n_best_model.keys())[min_index]
+            self.n_best_model.pop(min_key)
+            self.n_best_model[checkpoint] = result
+        with open(os.path.join(self.checkpoint_directory, 'n_best'), 'w') as wf:
+            for key in self.n_best_model:
+                wf.write('%s\t%s\n' % (key, float(self.n_best_model[key])))
+
+    def compute_nbest_avg(self, model_avg_num):
+        """ restore n-best avg checkpoint """
+        avg_file = os.path.join(self.checkpoint_directory, 'n_best')
+        if not os.path.exists(avg_file):
+            self.restore_from_best()
+            return
+        ckpt_metrics_dict = {}
+        with open(avg_file) as f:
+            for line in f:
+                key, val = line.split('\t')
+                ckpt_metrics_dict[key] = float(val.strip())
+        ckpt_metrics_dict = {k: v for k, v in
+                             sorted(ckpt_metrics_dict.items(), key=lambda item: item[1], reverse=True)}
+        ckpt_list = list(ckpt_metrics_dict.keys())[0: model_avg_num]
+        logging.info('n_best_metrics_checkpoint: %s' % ckpt_list)
         ckpt_v_list = []
         # restore v from ckpts
-        for idx in ckpt_index_list:
-            ckpt_path = self.checkpoint_prefix + '-' + str(idx + 1)
+        for key in ckpt_list:
+            ckpt_path = os.path.join(self.checkpoint_directory, key)
             self.restore(ckpt_path)  # current variables will be updated
             var_list = []
-            for i in model.trainable_variables:
+            for i in self.model.trainable_variables:
                 v = tf.constant(i.value())
                 var_list.append(v)
             ckpt_v_list.append(var_list)
         # compute average, and assign to current variables
-        for i in range(len(model.trainable_variables)):
+        for i in range(len(self.model.trainable_variables)):
             v = [tf.expand_dims(ckpt_v_list[j][i], [0]) for j in range(len(ckpt_v_list))]
             v = tf.reduce_mean(tf.concat(v, axis=0), axis=0)
-            model.trainable_variables[i].assign(v)
-        save_path = self.save(file_prefix=self.checkpoint_prefix + '_avg')
-        with open(os.path.join(self.checkpoint_directory, 'avg_ckpt'), 'w') as wf:
-            checkpoint = save_path.split('/')[-1]
-            wf.write('model_checkpoint_path: "%s"' % checkpoint)
+            self.model.trainable_variables[i].assign(v)
 
-    def __call__(self, loss=None):
+    def __call__(self, loss=None, metrics=None):
         logging.info("saving model in :%s" % self.checkpoint_prefix)
         save_path = self.save(file_prefix=self.checkpoint_prefix)
-        self._compare_and_save_best(loss, save_path)
+        self._compare_and_save_best(loss, metrics, save_path)
 
-
-    def restore_checkpoint(self, mode='best'):
-        """ restore from the best or avg model """
-        if mode == 'avg':
-            latest_filename = 'avg_ckpt'
-        else:
-            latest_filename = 'best_loss'
+    def restore_from_best(self):
+        """ restore from the best model """
         self.restore(
             tf.train.latest_checkpoint(
                 self.checkpoint_directory,
-                latest_filename=latest_filename
+                latest_filename='best_loss'
             )
         )
