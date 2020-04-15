@@ -60,7 +60,7 @@ class Checkpoint(tf.train.Checkpoint):
                     self.n_best_model[key] = float(val.strip())
 
     def _compare_and_save_best(self, loss, metrics, save_path):
-        """ compare and save the best model in best_loss """
+        """ compare and save the best model with best_loss and N best metrics"""
         checkpoint = save_path.split('/')[-1]
         if loss is not None and loss < self.best_loss:
             self.best_loss = loss
