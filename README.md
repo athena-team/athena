@@ -52,7 +52,7 @@ For more information, you can checkout the [tensorflow website](https://github.c
 ```bash
 # we highly recommend firstly update pip
 pip install --upgrade pip
-pip install tensorflow
+pip install tensorflow==2.0.0
 ```
 
 ### 3) Install *horovod* for multiple-device training [Optional]
