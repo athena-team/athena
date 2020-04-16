@@ -184,7 +184,7 @@ With all the above preparation done, training becomes straight-forward. `athena/
 
 Please install Horovod and MPI at first, if you want to train model using multi-gpu. See the [Horovod page](https://github.com/horovod/horovod) for more instructions.
 
-To run on a machine with 4 GPUs with Athona:
+To run on a machine with 4 GPUs with Athena:
 `$ horovodrun -np 4 -H localhost:4 python athena/horovod_main.py <your_config_in_json_file>`
 
 To run on 4 machines with 4 GPUs each with Athena:
