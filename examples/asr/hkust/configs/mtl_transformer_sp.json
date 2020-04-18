@@ -1,7 +1,6 @@
 {
   "batch_size":32,
   "num_epochs":50,
-  "model_best_num":10,
   "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/",
   "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/event",
@@ -34,7 +33,6 @@
   },
 
   "decode_config":{
-    "model_avg_num":10,
     "beam_search":true,
     "beam_size":10,
     "ctc_weight":0.5,

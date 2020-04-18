@@ -63,8 +63,7 @@ DEFAULT_CONFIGS = {
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
-    "decode_config": None,
-    "model_best_num": 1
+    "decode_config": None
 }
 
 def parse_config(config):
@@ -92,8 +91,6 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
     optimizer = SUPPORTED_OPTIMIZER[p.optimizer](p.optimizer_config)
     checkpointer = Checkpoint(
         checkpoint_directory=p.ckpt,
-        metric_name=model.metric.name,
-        n_best_num=p.model_best_num,
         model=model,
         optimizer=optimizer,
     )

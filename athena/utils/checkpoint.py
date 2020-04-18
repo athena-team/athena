@@ -40,12 +40,11 @@ class Checkpoint(tf.train.Checkpoint):
             ckpt()
     """
 
-    def __init__(self, checkpoint_directory=None, metric_name=None, n_best_num=1, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, checkpoint_directory=None, model=None, **kwargs):
+        super().__init__(**kwargs, model=model)
         self.best_loss = np.inf
         self.n_best_model = {}
-        self.n_best_num = n_best_num
-        self.metric_name = metric_name
+        self.metric_name = model.metric.name
         if checkpoint_directory is None:
             checkpoint_directory = os.path.join(os.path.expanduser("~"), ".athena")
         self.checkpoint_prefix = os.path.join(checkpoint_directory, "ckpt")
@@ -69,17 +68,7 @@ class Checkpoint(tf.train.Checkpoint):
         if metrics is None or len(metrics) == 0 or self.metric_name is None:
             return
         result = metrics[self.metric_name]
-        n_best_value = np.array(list(self.n_best_model.values()))
-        if len(n_best_value) < self.n_best_num:
-            self.n_best_model[checkpoint] = result
-        else:
-            min_result = np.min(n_best_value)
-            if result <= min_result:
-                return
-            min_index = np.argmin(n_best_value)
-            min_key = list(self.n_best_model.keys())[min_index]
-            self.n_best_model.pop(min_key)
-            self.n_best_model[checkpoint] = result
+        self.n_best_model[checkpoint] = result
         with open(os.path.join(self.checkpoint_directory, 'n_best'), 'w') as wf:
             for key in self.n_best_model:
                 wf.write('%s\t%s\n' % (key, float(self.n_best_model[key])))

@@ -34,7 +34,6 @@
   },
 
   "decode_config":{
-    "model_avg_num":10,
     "beam_search":true,
     "beam_size":4,
     "ctc_weight":0.3,
