@@ -58,7 +58,13 @@ pip install tensorflow==2.0.0
 ### 3.3) Install *horovod* for multiple-device training [Optional]
 
 For multiple GPU/CPU training
-You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
+You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install) Another way, you can run the script as follow:
+```bash
+cd tools
+sh build_horovod_env.sh
+source horovod.env
+```
+
 
 ### 3.4) Install *athena* package
 
