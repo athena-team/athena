@@ -61,7 +61,7 @@ For multiple GPU/CPU training
 You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install). Another way, you can run the script to install horovod automatically as follow:
 ```bash
 cd tools
-sh build_horovod_env.sh
+sh build_horovod_env.sh tf_conda_path
 source horovod.env
 ```
 
