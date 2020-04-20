@@ -29,8 +29,8 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 
 ## THCHS-30
 
-| CER Word Task 0db white / car / cafeteria | PER Phone Task 0db white / car / cafeteria| Paper | Published | Notes | Codes
-| :------------- | :----------- | :------------- | :---- | :-------- | :---: | :---: |
+| CER Word Task 0db white / car / cafeteria | PER Phone Task 0db white / car / cafeteria | Paper | Published | Notes | Codes
+| :---------------------------------------- | :----------------------------------------- | :---- | :-------- | :---: | :---: 
 | 75.01% / 32.13% / 56.37% | 46.95% / 15.96% / 32.5% | [THCHS-30: A Free Chinese Speech Corpus](https://arxiv.org/pdf/1512.01882.pdf) | December 2015 | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) | 
 | 65.87% / 25.07% / 51.92% | 39.80% / 11.48% / 30.55%| None | None | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) |
 
