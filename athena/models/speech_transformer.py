@@ -308,16 +308,16 @@ class SpeechTransformer2(SpeechTransformer):
         )
         for i in tf.range(tf.shape(gold_token)[-1]):
             if self.random_num([1]) > self.hparams.schedual_sampling_rate:# do schedual sampling
-                selected_input = predicted_token[:,i,:]
-                selected_idx = tf.nn.top_k(selected_input,top_k).indices
+                selected_input = predicted_token[:, i, :]
+                selected_idx = tf.nn.top_k(selected_input, top_k).indices
                 embedding_input = self.y_net.layers[1](selected_idx, training=training)
                 embedding_input = tf.reduce_mean(embedding_input, axis=1)
-                mix_result = mix_result.write(i,embedding_input)
+                mix_result = mix_result.write(i, embedding_input)
             else:
-                selected_input = tf.reshape(gold_token[:,i], [-1,1])
+                selected_input = tf.reshape(gold_token[:, i], [-1, 1])
                 embedding_input = self.y_net.layers[1](selected_input, training=training)
-                mix_result = mix_result.write(i, embedding_input[:,0,:])
-        final_input = self.y_net.layers[2](tf.transpose(mix_result.stack(),[1,0,2]),
+                mix_result = mix_result.write(i, embedding_input[:, 0, :])
+        final_input = self.y_net.layers[2](tf.transpose(mix_result.stack(), [1, 0, 2]),
                                            training=training)
         final_input = self.y_net.layers[3](final_input, training=training)
         return final_input
