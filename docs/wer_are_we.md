@@ -6,7 +6,7 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 
 | CER Test     | Paper          | Published      | Notes     | Codes   | 
 | :----------- | :------------- | :------------- | :-------: | :-----: |
-| 21.2% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation + MPC Pre-training on 10,000 hours unlabeled speech (Ours) | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/hkust) |
+| 21.2% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation + MPC Pre-training on 10,000 hours unlabeled speech | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/hkust) |
 | 23.09% | [CIF: Continuous Integrate-and-Fire for End-to-End Speech Recognition](https://arxiv.org/abs/1905.11235) | February 2020 | CIF + SAN-based models (AM + LM) + speed perturbation + SpecAugment | None |
 | 23.5% | [A Comparative Study on Transformer vs RNN in Speech Applications](https://arxiv.org/abs/1909.06317) | September 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/hkust/asr1) |
 | 23.67% | [Purely sequence-trained neural networks for ASR based on lattice-free MMI](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf) | 2016 | TDNN/HMM, lattice-free MMI + speed perturbation| [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/hkust/s5) |
@@ -21,7 +21,7 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 
 | CER Dev | CER Test | Paper  | Published | Notes  | Codes
 | :------ | :------- | :----- | :-------- | :-----:| :---:
-| None | 5.77% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation (Ours) | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/aishell) |
+| None | 5.77% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/aishell) |
 | None | 6.34% | [CAT: CRF-Based ASR Toolkit](https://arxiv.org/pdf/1911.08747.pdf)| November 2019 | VGG + BLSTM + CTC-CRF + 3-gram LM + speed perturbation| [thu-spmi/CAT](https://github.com/thu-spmi/CAT/tree/master/egs/aishell) |
 | 6.0% | 6.7% | [A Comparative Study on Transformer vs RNN in Speech Applications](https://arxiv.org/abs/1909.06317) | September 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/aishell/asr1) |
 | None | 7.43% | [Purely sequence-trained neural networks for ASR based on lattice-free MMI](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf) | 2016 | TDNN/HMM, lattice-free MMI + speed perturbation| [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/aishell/s5) |
@@ -29,7 +29,7 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 
 ## THCHS-30
 
-| CER Word Task 0db<br>white / car / cafeteria | PER Phone Task 0db<br>white / car / cafeteria| Paper | Published | Notes | Codes
+| CER Word Task 0db white / car / cafeteria | PER Phone Task 0db white / car / cafeteria| Paper | Published | Notes | Codes
 | :------------- | :----------- | :------------- | :---- | :-------- | :---: | :---: |
 | 75.01% / 32.13% / 56.37% | 46.95% / 15.96% / 32.5% | [THCHS-30: A Free Chinese Speech Corpus](https://arxiv.org/pdf/1512.01882.pdf) | December 2015 | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) | 
 | 65.87% / 25.07% / 51.92% | 39.80% / 11.48% / 30.55%| None | None | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) |
@@ -62,6 +62,7 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 | 4.8%  | 14.5% | [Letter-Based Speech Recognition with Gated ConvNets](https://arxiv.org/abs/1712.09444) | December 2017 | (Gated) ConvNet for AM going to letters + 4-gram LM | None
 | 8.01% | 22.49% | same, [Kaldi](http://kaldi-asr.org/) | 2015 | HMM-(SAT)GMM | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/librispeech/s5) |
 | | 12.51% | [Audio Augmentation for Speech Recognition](http://www.danielpovey.com/files/2015_interspeech_augmentation.pdf) | 2015 | TDNN + pNorm + speed up/down speech | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/librispeech/s5) |
+
 
 ## WSJ
 
