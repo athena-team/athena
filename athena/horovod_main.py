@@ -95,7 +95,7 @@ class HorovodSolver(BaseSolver):
         if hvd.local_rank() == 0:
             logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
             self.model.reset_metrics()
-        return loss_metric.result()
+        return loss_metric.result(), metrics
 
 
 if __name__ == "__main__":
