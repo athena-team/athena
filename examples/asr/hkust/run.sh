@@ -38,7 +38,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # calculate cmvn
     cat examples/asr/hkust/data/train.csv > examples/asr/hkust/data/all.csv
     tail -n +2 examples/asr/hkust/data/dev.csv >> examples/asr/hkust/data/all.csv
-    python athena/cmvn_main.py \
+    python CUDA_VISIBLE_DEVICES='' athena/cmvn_main.py \
         examples/asr/hkust/configs/mpc.json examples/asr/hkust/data/all.csv || exit 1
 fi
 
