@@ -1,12 +1,17 @@
+
 # wer_are_we
+
 WER are we? An attempt at tracking states-of-the-art results and their corresponding codes on speech recognition.  *Feel free to correct!*
 (Inspired by [wer_are_we](https://github.com/syhw/wer_are_we))
 
 ## HKUST
 
-| CER Test     | Paper          | Published      | Notes     | Codes   | 
+(Possibly trained on more data than HKUST.)
+
+| CER Test     | Paper          | Published      | Notes     | Codes   |
 | :----------- | :------------- | :------------- | :-------: | :-----: |
 | 21.2% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation + MPC Pre-training on 10,000 hours unlabeled speech | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/hkust) |
+| 22.75% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation + MPC Self data Pre-training | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/hkust) |
 | 23.09% | [CIF: Continuous Integrate-and-Fire for End-to-End Speech Recognition](https://arxiv.org/abs/1905.11235) | February 2020 | CIF + SAN-based models (AM + LM) + speed perturbation + SpecAugment | None |
 | 23.5% | [A Comparative Study on Transformer vs RNN in Speech Applications](https://arxiv.org/abs/1909.06317) | September 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/hkust/asr1) |
 | 23.67% | [Purely sequence-trained neural networks for ASR based on lattice-free MMI](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf) | 2016 | TDNN/HMM, lattice-free MMI + speed perturbation| [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/hkust/s5) |
@@ -15,9 +20,7 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 | 28.0%  | [Advances in Joint CTC-Attention based End-to-End Speech Recognition with a Deep CNN Encoder and RNN-LM](https://arxiv.org/pdf/1706.02737.pdf) | June 2017 | CTC-Attention MTL + joint decoding ( one-pass) + VGG Net + RNN-LM (seperate) + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/hkust/asr1) |
 | 29.9% | [Joint CTC/attention decoding for end-to-end speech recognition](https://www.aclweb.org/anthology/P17-1048.pdf)| 2017 | CTC-Attention MTL-large + joint decoding (one pass) + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/hkust/asr1) |
 
-
 ## AISHELL-1
-
 
 | CER Dev | CER Test | Paper  | Published | Notes  | Codes
 | :------ | :------- | :----- | :-------- | :-----:| :---:
@@ -26,14 +29,12 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 | 6.0% | 6.7% | [A Comparative Study on Transformer vs RNN in Speech Applications](https://arxiv.org/abs/1909.06317) | September 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/aishell/asr1) |
 | None | 7.43% | [Purely sequence-trained neural networks for ASR based on lattice-free MMI](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf) | 2016 | TDNN/HMM, lattice-free MMI + speed perturbation| [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/aishell/s5) |
 
-
 ## THCHS-30
 
 | CER Word Task<br>0db white / car / cafeteria | PER Phone Task<br>0db white / car / cafeteria | Paper | Published | Notes | Codes
 | :---------------------------------------- | :----------------------------------------- | :---- | :-------- | :---: | :---: 
-| 75.01% / 32.13% / 56.37% | 46.95% / 15.96% / 32.56% | [THCHS-30: A Free Chinese Speech Corpus](https://arxiv.org/pdf/1512.01882.pdf) | December 2015 | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) | 
+| 75.01% / 32.13% / 56.37% | 46.95% / 15.96% / 32.56% | [THCHS-30: A Free Chinese Speech Corpus](https://arxiv.org/pdf/1512.01882.pdf) | December 2015 | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) |
 | 65.87% / 25.07% / 51.92% | 39.80% / 11.48% / 30.55%| None | None | DNN + DAE-based noise cancellation | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/blob/master/egs/thchs30/s5) |
-
 
 ## LibriSpeech
 
@@ -63,7 +64,6 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 | 8.01% | 22.49% | same, [Kaldi](http://kaldi-asr.org/) | 2015 | HMM-(SAT)GMM | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/librispeech/s5) |
 | | 12.51% | [Audio Augmentation for Speech Recognition](http://www.danielpovey.com/files/2015_interspeech_augmentation.pdf) | 2015 | TDNN + pNorm + speed up/down speech | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/librispeech/s5) |
 
-
 ## WSJ
 
 (Possibly trained on more data than WSJ.)
@@ -80,27 +80,35 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 | 5.6% | | [Convolutional Neural Networks-based Continuous Speech Recognition using Raw Speech Signal](http://infoscience.epfl.ch/record/203464/files/Palaz_Idiap-RR-18-2014.pdf) | 2014 | CNN over RAW speech (wav) | None |
 | 5.7%  | 8.7%  | [End-to-end Speech Recognition from the Raw Waveform](https://arxiv.org/abs/1806.07098) | June 2018 | End-to-end CNN on the waveform | None |
 
+## TIMIT
+
+(Add results later)
+
+## Switchboard
+
+(Add results later)
 
 ## Lexicon
- * WER: word error rate
- * PER: phone error rate
- * LM: language model
- * HMM: hidden markov model
- * GMM: Gaussian mixture model
- * DNN: deep neural network
- * CNN: convolutional neural network
- * DBN: deep belief network (RBM-based DNN)
- * TDNN-F: a factored form of time delay neural networks (TDNN)
- * RNN: recurrent neural network
- * LSTM: long short-term memory
- * CTC: connectionist temporal classification
- * MMI: maximum mutual information (MMI),
- * MPE: minimum phone error
- * sMBR: state-level minimum Bayes risk
- * SAT: speaker adaptive training
- * MLLR: maximum likelihood linear regression
- * LDA: (in this context) linear discriminant analysis
- * MFCC: [Mel frequency cepstral coefficients](http://snippyhollow.github.io/blog/2014/09/25/classical-speech-recognition-features-in-one-picture/)
- * FB/FBANKS/MFSC: [Mel frequency spectral coefficients](http://snippyhollow.github.io/blog/2014/09/25/classical-speech-recognition-features-in-one-picture/)
- * IFCC: Instantaneous frequency cosine coefficients (https://github.com/siplabiith/IFCC-Feature-Extraction)
- * VGG: very deep convolutional neural networks from Visual Graphics Group, VGG is an architecture of 2 {3x3 convolutions} followed by 1 pooling, repeated
+
+* WER: word error rate
+* PER: phone error rate
+* LM: language model
+* HMM: hidden markov model
+* GMM: Gaussian mixture model
+* DNN: deep neural network
+* CNN: convolutional neural network
+* DBN: deep belief network (RBM-based DNN)
+* TDNN-F: a factored form of time delay neural networks (TDNN)
+* RNN: recurrent neural network
+* LSTM: long short-term memory
+* CTC: connectionist temporal classification
+* MMI: maximum mutual information (MMI),
+* MPE: minimum phone error
+* sMBR: state-level minimum Bayes risk
+* SAT: speaker adaptive training
+* MLLR: maximum likelihood linear regression
+* LDA: (in this context) linear discriminant analysis
+* MFCC: [Mel frequency cepstral coefficients](http://snippyhollow.github.io/blog/2014/09/25/classical-speech-recognition-features-in-one-picture/)
+* FB/FBANKS/MFSC: [Mel frequency spectral coefficients](http://snippyhollow.github.io/blog/2014/09/25/classical-speech-recognition-features-in-one-picture/)
+* IFCC: Instantaneous frequency cosine coefficients (https://github.com/siplabiith/IFCC-Feature-Extraction)
+* VGG: very deep convolutional neural networks from Visual Graphics Group, VGG is an architecture of 2 {3x3 convolutions} followed by 1 pooling, repeated
