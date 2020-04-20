@@ -63,7 +63,7 @@ DEFAULT_CONFIGS = {
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
-    "decode_config": None,
+    "decode_config": None
 }
 
 def parse_config(config):
@@ -136,6 +136,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
         config=p.solver_config,
     )
     loss = 0.0
+    metrics = {}
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
@@ -148,10 +149,10 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
                 logging.info(">>>>> start evaluate in epoch %d" % epoch)
             devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
             devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-            loss = solver.evaluate(devset, epoch)
+            loss, metrics = solver.evaluate(devset, epoch)
 
         if rank == 0:
-            checkpointer(loss)
+            checkpointer(loss, metrics)
 
         epoch = epoch + 1
 

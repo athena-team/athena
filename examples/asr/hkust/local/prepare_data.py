@@ -15,6 +15,10 @@
 # limitations under the License.
 # ==============================================================================
 # pylint: disable=invalid-name
+
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 """ hkust dataset """
 
 import os
