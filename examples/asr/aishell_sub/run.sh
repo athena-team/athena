@@ -41,7 +41,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     cat ${workplace_dir}/data/train.csv > ${workplace_dir}/data/all.csv
     tail -n +2 ${workplace_dir}/data/dev.csv >> ${workplace_dir}/data/all.csv
     tail -n +2 ${workplace_dir}/data/test.csv >> ${workplace_dir}/data/all.csv
-    python athena/cmvn_main.py \
+    python CUDA_VISIBLE_DEVICES='' athena/cmvn_main.py \
         ${workplace_dir}/configs/mpc.json ${workplace_dir}/data/all.csv || exit 1
 fi
 
