@@ -113,14 +113,14 @@ class BaseSolver(tf.keras.Model):
             loss_metric.update_state(loss)
         logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
         self.model.reset_metrics()
-        return loss_metric.result()
-
+        return loss_metric.result(), metrics
 
 
 class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
+        "model_avg_num": 1,
         "beam_search": True,
         "beam_size": 4,
         "ctc_weight": 0.0,
