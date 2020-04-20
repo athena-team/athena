@@ -55,7 +55,7 @@ class BaseSolver(tf.keras.Model):
             tf.config.experimental.set_memory_growth(gpu, True)
         # means we're running in GPU mode
         if len(gpus) != 0:
-            assert len(gpus) > len(visible_gpu_idx)
+            assert len(gpus) >= len(visible_gpu_idx)
             for idx in visible_gpu_idx:
                 tf.config.experimental.set_visible_devices(gpus[idx], "GPU")
 
@@ -117,8 +117,7 @@ class BaseSolver(tf.keras.Model):
             loss_metric.update_state(loss)
         logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
         self.model.reset_metrics()
-        return loss_metric.result()
-
+        return loss_metric.result(), metrics
 
 class HorovodSolver(BaseSolver):
     """ A multi-processer solver based on Horovod """
@@ -175,6 +174,7 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
+        "model_avg_num": 1,
         "beam_search": True,
         "beam_size": 4,
         "ctc_weight": 0.0,

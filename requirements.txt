@@ -1,13 +1,11 @@
-tensorflow==2.0.1
 sox
 absl-py
 yapf
 pylint
 flake8
-horovod
 tqdm
 sentencepiece
 librosa
-kenlm
 jieba
 pandas
+https://github.com/kpu/kenlm/archive/master.zip

@@ -25,6 +25,7 @@ from absl import logging
 from athena import HorovodSolver
 from athena.main import parse_config, train
 
+
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 2:
