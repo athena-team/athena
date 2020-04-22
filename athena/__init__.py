@@ -50,7 +50,6 @@ from .models.translate_transformer import NeuralTranslateTransformer
 
 # solver & loss & accuracy
 from .solver import BaseSolver
-from .solver import HorovodSolver
 from .solver import DecoderSolver
 from .loss import CTCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy

@@ -41,8 +41,7 @@ SUPPORTED_MODEL = {
 
 SUPPORTED_OPTIMIZER = {
     "warmup_adam": WarmUpAdam,
-    "expdecay_adam": ExponentialDecayAdam,
-    "adam": tf.keras.optimizers.Adam,
+    "expdecay_adam": ExponentialDecayAdam
 }
 
 DEFAULT_CONFIGS = {

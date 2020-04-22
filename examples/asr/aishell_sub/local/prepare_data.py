@@ -27,13 +27,14 @@ from athena import get_wave_file_length
 SUBSETS = ["train", "dev", "test"]
 
 
-def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
+def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file, output_dir):
     """Convert tar.gz to WAV and split the transcript.
 
   Args:
     dataset_dir  : the directory which holds the input dataset.
     subset       : the name of the specified dataset. e.g. dev.
     out_csv_file : the resulting output csv file.
+    output_dir   : Athena working directory.
   """
 
     gfile = tf.compat.v1.gfile
@@ -47,6 +48,7 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
         for filename in os.listdir(audio_dir):
             os.system("tar -zxvf " + audio_dir + filename + " -C " + audio_dir)
 
+    i = 0
     with codecs.open(os.path.join(trans_dir, "aishell_transcript_v0.8.txt"), "r", encoding="utf-8") as f:
         for line in f:
             items = line.strip().split(" ")
@@ -58,7 +60,10 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
                     char_dict[item] += 1
                 else:
                     char_dict[item] = 0
-            files.append((wav_filename + ".wav", labels))
+            # for demo purposes, we only choose 5% of total data
+            if i % 20 == 0:
+                files.append((wav_filename + ".wav", labels))
+            i += 1
     files_size_dict = {}
     output_wav_dir = os.path.join(audio_dir, subset)
 
@@ -98,7 +103,7 @@ def processor(dataset_dir, subset, force_process, output_dir):
         logging.info("{} already exist".format(subset_csv))
         return subset_csv
     logging.info("Processing the AISHELL subset {} in {}".format(subset, dataset_dir))
-    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv)
+    convert_audio_and_split_transcript(dataset_dir, subset, subset_csv, output_dir)
     logging.info("Finished processing AISHELL subset {}".format(subset))
     return subset_csv
 

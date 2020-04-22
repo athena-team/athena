@@ -1,5 +1,5 @@
 {
-  "batch_size":32,
+  "batch_size":10,
   "num_epochs":15,
   "sorta_epoch":1,
   "ckpt":"examples/asr/aishell/ckpts/mtl_transformer_ctc/",
@@ -37,16 +37,15 @@
     "beam_size":4,
     "ctc_weight":0.3,
     "lm_weight":0.1,
-    "lm_type": "rnn",
-    "lm_path":"examples/asr/aishell/rnnlm.json"
+    "lm_path":"examples/asr/aishell/data/lm.bin"
   },
 
   "optimizer":"warmup_adam",
   "optimizer_config":{
     "d_model":512,
-    "warmup_steps":3500,
-    "k":0.7,
-    "decay_steps": 100000,
+    "warmup_steps":8000,
+    "k":0.5,
+    "decay_steps": 50000,
     "decay_rate": 0.1
   },
 
@@ -57,8 +56,7 @@
     "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/aishell/data/cmvn",
     "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
-    "input_length_range":[10, 8000],
-    "speed_permutation": [0.9, 1.0, 1.1]
+    "input_length_range":[10, 8000]
   },
   "devset_config":{
     "data_csv": "examples/asr/aishell/data/dev.csv",
