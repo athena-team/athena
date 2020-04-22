@@ -58,10 +58,10 @@ pip install tensorflow==2.0.0
 ### 3.3) Install *horovod* for multiple-device training [Optional]
 
 For multiple GPU/CPU training
-You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install). Another way, you can run the script to install horovod automatically as follow:
+You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install). Another way, you can run the script to install horovod automatically based on Centos as follow:
 ```bash
 cd tools
-sh build_horovod_env.sh tf_conda_path
+sh tools/build_horovod_centos_env.sh conda_dir site_packages_dir
 source horovod.env
 ```
 
