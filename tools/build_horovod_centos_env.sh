@@ -1,10 +1,12 @@
 #!/bin/bash
 conda_dir=$1
+site_packages_dir=$2
 work_dir=`pwd`
 
 if [ $# -ne 1 ]; then
   echo $#
-  echo "sh $0 conda_dir"  
+  echo "usage: sh $0 conda_dir site_packages_dir"  
+  echo "eg: sh $0 ~/anaconda ~/anaconda/lib/python3.6/site-packages"
   exit
 fi
 if [ -f horovod.env ];then
@@ -50,9 +52,11 @@ function build_horovod()
     cd horovod 
     python setup.py clean
     HOROVOD_WITH_TENSORFLOW=1 python setup.py bdist
-    rm -rf $conda_dir/lib/python3.6/site-packages/horovod*
-    cp -rp $work_dir/horovod/build/lib.linux-x86_64-3.6/horovod $conda_dir/lib/python3.6/site-packages/
+    horovod_dir=`readlink -f build/lib.linux-*/horovod`
+    rm -rf $site_packages_dir/horovod*
+    cp -rp $horovod_dir $site_packages_dir/
     cd -
+    horovod_bin_dir=`readlink -f build/scripts*`
   fi
 }
 
@@ -68,7 +72,7 @@ function gen_horovod_env_file()
   echo "export PATH=$conda_dir/bin:\$PATH">>horovod.env
   echo "export PATH=$work_dir/openmpi-4.0.2/bin:\$PATH">>horovod.env
   echo "export LD_LIBRARY_PATH=$work_dir/openmpi-4.0.2/lib:\$LD_LIBRARY_PATH">>horovod.env
-  echo "export PATH=$work_dir/horovod/build/scripts-3.6:\$PATH">>horovod.env
+  echo "export PATH=$horovod_bin_dir:\$PATH">>horovod.env
 }
 
 function test()
