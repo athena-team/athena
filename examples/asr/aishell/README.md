@@ -19,5 +19,5 @@ Model|WER | Num parameters
 [TDNN-hybrid](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf)|7.43 | -
 [VGG + BLSTM + CTC-CRF](https://arxiv.org/pdf/1911.08747.pdf)|6.34 | -
 [Transformer (ESPNET)](https://arxiv.org/abs/1909.06317)|6.7 | 28.38M
-Transformer (Ours without pre-training) |  | 57.88M
-Transformer (Ours with self pre-training) |  | 57.88M
+Transformer (Ours without pre-training) | 6.82 | 57.88M
+Transformer (Ours with self pre-training) | 6.6 | 57.88M

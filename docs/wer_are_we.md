@@ -24,7 +24,7 @@ WER are we? An attempt at tracking states-of-the-art results and their correspon
 
 | CER Dev | CER Test | Paper  | Published | Notes  | Codes
 | :------ | :------- | :----- | :-------- | :-----:| :---:
-| None | 5.77% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation + MPC Self data Pre-training | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/aishell) |
+| None | 6.6% | [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932) | October 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation + MPC Self data Pre-training | [athena-team/Athena](https://github.com/athena-team/athena/tree/master/examples/asr/aishell) |
 | None | 6.34% | [CAT: CRF-Based ASR Toolkit](https://arxiv.org/pdf/1911.08747.pdf)| November 2019 | VGG + BLSTM + CTC-CRF + 3-gram LM + speed perturbation| [thu-spmi/CAT](https://github.com/thu-spmi/CAT/tree/master/egs/aishell) |
 | 6.0% | 6.7% | [A Comparative Study on Transformer vs RNN in Speech Applications](https://arxiv.org/abs/1909.06317) | September 2019 | Transformer-CTC MTL + RNN-LM + speed perturbation | [espnet/espnet](https://github.com/espnet/espnet/blob/master/egs/aishell/asr1) |
 | None | 7.43% | [Purely sequence-trained neural networks for ASR based on lattice-free MMI](https://www.danielpovey.com/files/2016_interspeech_mmi.pdf) | 2016 | TDNN/HMM, lattice-free MMI + speed perturbation| [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi/tree/master/egs/aishell/s5) |
