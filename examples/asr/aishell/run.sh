@@ -42,7 +42,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     cat examples/asr/aishell/data/train.csv > examples/asr/aishell/data/all.csv
     tail -n +2 examples/asr/aishell/data/dev.csv >> examples/asr/aishell/data/all.csv
     tail -n +2 examples/asr/aishell/data/test.csv >> examples/asr/aishell/data/all.csv
-    python athena/cmvn_main.py \
+    python CUDA_VISIBLE_DEVICES='' athena/cmvn_main.py \
         examples/asr/aishell/configs/mpc.json examples/asr/aishell/data/all.csv || exit 1
 fi
 
