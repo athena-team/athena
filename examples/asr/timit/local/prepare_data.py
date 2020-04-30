@@ -26,7 +26,11 @@ import tensorflow as tf
 from absl import logging
 from athena import get_wave_file_length
 
-SUBSETS = ['train', 'test']
+SUBSETS = ['train', 'test', 'core-test']
+CORE_TESTSET_SPEAKER = ['mdab0', 'mwbt0', 'felc0', 'mtas1', 'mwew0', 'fpas0', 'mjmp0', 
+                        'mlnt0', 'fpkt0', 'mlll0', 'mtls0', 'fjlm0', 'mbpm0', 'mklt0', 
+                        'fnlp0', 'mcmj0', 'mjdh0', 'fmgd0', 'mgrt0', 'mnjm0', 'fdhc0', 
+                        'mjln0', 'mpam0', 'fmld0']
 
 def convert_audio_and_split_transcript(dataset_dir,
                                        subset,
@@ -44,6 +48,12 @@ def convert_audio_and_split_transcript(dataset_dir,
     """
 
     logging.info("Processing audio and transcript for %s" % subset)
+    csv_file_path = os.path.join(output_dir, subset + ".csv")
+
+    core_test = False
+    if subset == "core-test":
+        core_test = True
+        subset = "test"
 
     subset_dir = os.path.join(dataset_dir, subset)
     output_wav_dir = os.path.join(output_dir, "wav", subset)
@@ -115,10 +125,13 @@ def convert_audio_and_split_transcript(dataset_dir,
                 os.system(sph2pipe_cmd)
 
             wav_length = get_wave_file_length(wav_file)
-            files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
+            if core_test: 
+                if speaker in CORE_TESTSET_SPEAKER and not file_name.startswith("sa"):
+                    files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
+            else:
+                files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
     # Write to CSV file which contains four columns:
     # "wav_filename", "wav_length_ms", "transcript", "speaker".
-    csv_file_path = os.path.join(output_dir, subset + ".csv")
     df = pandas.DataFrame(
         data=files, columns=["wav_filename", "wav_length_ms", "transcript", "speaker"]
     )
@@ -142,8 +155,8 @@ def processor(dataset_dir, subset, output_dir, force_process):
         dataset_dir,
         subset,
         output_dir,
-        trans_type="char",
-        phone_map_amount=None
+        trans_type="phn",
+        phone_map_amount="39"
     )
     logging.info("Finished processing TIMIT subset {}".format(subset))
     return subset_csv
