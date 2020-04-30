@@ -27,9 +27,9 @@ from absl import logging
 from athena import get_wave_file_length
 
 SUBSETS = ['train', 'test', 'core-test']
-CORE_TESTSET_SPEAKER = ['mdab0', 'mwbt0', 'felc0', 'mtas1', 'mwew0', 'fpas0', 'mjmp0', 
-                        'mlnt0', 'fpkt0', 'mlll0', 'mtls0', 'fjlm0', 'mbpm0', 'mklt0', 
-                        'fnlp0', 'mcmj0', 'mjdh0', 'fmgd0', 'mgrt0', 'mnjm0', 'fdhc0', 
+CORE_TESTSET_SPEAKER = ['mdab0', 'mwbt0', 'felc0', 'mtas1', 'mwew0', 'fpas0', 'mjmp0',
+                        'mlnt0', 'fpkt0', 'mlll0', 'mtls0', 'fjlm0', 'mbpm0', 'mklt0',
+                        'fnlp0', 'mcmj0', 'mjdh0', 'fmgd0', 'mgrt0', 'mnjm0', 'fdhc0',
                         'mjln0', 'mpam0', 'fmld0']
 
 def convert_audio_and_split_transcript(dataset_dir,
@@ -125,7 +125,7 @@ def convert_audio_and_split_transcript(dataset_dir,
                 os.system(sph2pipe_cmd)
 
             wav_length = get_wave_file_length(wav_file)
-            if core_test: 
+            if core_test:
                 if speaker in CORE_TESTSET_SPEAKER and not file_name.startswith("sa"):
                     files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
             else:
