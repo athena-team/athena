@@ -1,0 +1,1 @@
+The dataset can be downloaded from https://github.com/philipperemy/timit.
