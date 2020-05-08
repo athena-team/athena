@@ -27,10 +27,10 @@ from absl import logging
 from athena import get_wave_file_length
 
 SUBSETS = ['train', 'test', 'core-test']
-CORE_TESTSET_SPEAKER = ['mdab0', 'mwbt0', 'felc0', 'mtas1', 'mwew0', 'fpas0', 'mjmp0',
-                        'mlnt0', 'fpkt0', 'mlll0', 'mtls0', 'fjlm0', 'mbpm0', 'mklt0',
-                        'fnlp0', 'mcmj0', 'mjdh0', 'fmgd0', 'mgrt0', 'mnjm0', 'fdhc0',
-                        'mjln0', 'mpam0', 'fmld0']
+CORE_TESTSET_SPEAKER = ['MDAB0', 'MWBT0', 'FELC0', 'MTAS1', 'MWEW0', 'FPAS0', 'MJMP0',
+                        'MLNT0', 'FPKT0', 'MLLL0', 'MTLS0', 'FJLM0', 'MBPM0', 'MKLT0',
+                        'FNLP0', 'MCMJ0', 'MJDH0', 'FMGD0', 'MGRT0', 'MNJM0', 'FDHC0',
+                        'MJLN0', 'MPAM0', 'FMLD0']
 
 def convert_audio_and_split_transcript(dataset_dir,
                                        subset,
@@ -65,9 +65,9 @@ def convert_audio_and_split_transcript(dataset_dir,
         os.makedirs(output_wav_dir)
 
     if trans_type == "char":
-        fnmatch_pattern = "*.txt"
+        fnmatch_pattern = "*.TXT"
     elif trans_type == "phn":
-        fnmatch_pattern = "*.phn"
+        fnmatch_pattern = "*.PHN"
     else:
         raise ValueError(fnmatch_pattern, "is not an effective transcript type in TIMIT")
 
@@ -111,8 +111,8 @@ def convert_audio_and_split_transcript(dataset_dir,
             utt_key = speaker + "-" + file_name
 
             # sphere to wav
-            sph_file = os.path.join(root, file_name + ".wav")
-            wav_file = os.path.join(output_wav_dir, utt_key + ".wav")
+            sph_file = os.path.join(root, file_name + ".WAV")
+            wav_file = os.path.join(output_wav_dir, utt_key + ".WAV")
             channel = 1
             if not gfile.Exists(wav_file):
                 sph2pipe_cmd = (
@@ -126,7 +126,7 @@ def convert_audio_and_split_transcript(dataset_dir,
 
             wav_length = get_wave_file_length(wav_file)
             if core_test:
-                if speaker in CORE_TESTSET_SPEAKER and not file_name.startswith("sa"):
+                if speaker in CORE_TESTSET_SPEAKER and not file_name.startswith("SA"):
                     files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
             else:
                 files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
