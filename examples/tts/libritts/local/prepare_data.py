@@ -29,7 +29,7 @@ from absl import logging
 from six.moves import urllib
 from athena import get_wave_file_length
 
-gfile = tf.compat.v1.gfile
+GFILE = tf.compat.v1.gfile
 
 SUBSETS = {
     "train-clean-100": "http://www.openslr.org/resources/60/train-clean-100.tar.gz",
@@ -48,8 +48,8 @@ def download_and_extract(directory, url):
         directory: the directory where to extract the tarball.
         url: the url to download the data file.
     """
-    if not gfile.Exists(directory):
-        gfile.MakeDirs(directory)
+    if not GFILE.Exists(directory):
+        GFILE.MakeDirs(directory)
 
     _, tar_filepath = tempfile.mkstemp(suffix=".tar.gz")
 
@@ -72,7 +72,7 @@ def download_and_extract(directory, url):
         with tarfile.open(tar_filepath, "r") as tar:
             tar.extractall(directory)
     finally:
-        gfile.Remove(tar_filepath)
+        GFILE.Remove(tar_filepath)
 
 def convert_audio_and_split_transcript(input_dir,
                                        source_name,
@@ -96,7 +96,7 @@ def convert_audio_and_split_transcript(input_dir,
 
     files = []
     # generate the csv
-    for root, _, filenames in gfile.Walk(source_dir):
+    for root, _, filenames in GFILE.Walk(source_dir):
         for filename in fnmatch.filter(filenames, "*.normalized.txt"):
             trans_file = os.path.join(root, filename)
             seqid = filename.split('.')[0]
@@ -145,4 +145,3 @@ if __name__ == "__main__":
     DIR = sys.argv[1]
     for SUBSET in SUBSETS:
         processor(DIR, SUBSET, True)
-
