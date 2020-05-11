@@ -32,7 +32,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
     Args:
         for __init__(self, config=None)
 
-    Config::
+    Config:
         audio_config: the config file for feature extractor, default={'type':'Fbank'}
         vocab_file: the vocab file, default='data/utils/ch-en.vocab'
 
@@ -41,11 +41,11 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         num_class(self): return the max_index of the vocabulary + 1
         @property:
           sample_shape:
-            {"input": tf.TensorShape([None, self.audio_featurizer.dim,
-                                  self.audio_featurizer.num_channels]),
+            {"input": tf.TensorShape([None]),
              "input_length": tf.TensorShape([1]),
              "output_length": tf.TensorShape([1]),
-             "output": tf.TensorShape([None])}
+             "output": tf.TensorShape([None, dimension]),
+             "speaker": tf.TensorShape([1])}
     """
     default_config = {
         "audio_config": {"type": "Fbank"},
@@ -69,6 +69,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
+        self.speakers_dict = {}
 
     def reload_config(self, config):
         """ reload the config """
@@ -76,7 +77,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
             self.hparams.override_from_dict(config)
 
     def preprocess_data(self, file_path):
-        """ Generate a list of tuples (wav_filename, wav_length_ms, transcript speaker)."""
+        """ Generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker)."""
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding="utf-8") as file:
             lines = file.read().splitlines()
@@ -100,6 +101,9 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
                 if speaker not in self.speakers:
                     self.speakers.append(speaker)
 
+        speakers_ids = list(range(len(self.speakers)))
+        self.speakers_dict = dict(zip(self.speakers, speakers_ids))
+
         # handling special case for text_featurizer
         self.entries.sort(key=lambda item: len(item[2]))
         if self.text_featurizer.model_type == "text":
@@ -121,6 +125,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         audio_feat = self.audio_featurizer(audio_data)
         audio_feat = self.feature_normalizer(audio_feat, speaker)
         audio_feat_length = audio_feat.shape[0]
+        audio_feat = tf.reshape(audio_feat, [audio_feat_length, -1])
 
         text = self.text_featurizer.encode(transcripts)
         text_length = len(text)
@@ -129,6 +134,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
             "input_length": text_length,
             "output_length": audio_feat_length,
             "output": audio_feat,
+            "speaker": self.speakers_dict[speaker]
         }
 
     def __len__(self):
@@ -157,29 +163,30 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
             "input_length": tf.int32,
             "output_length": tf.int32,
             "output": tf.float32,
+            "speaker": tf.int32
         }
 
     @property
     def sample_shape(self):
-        dim = self.audio_featurizer.dim
-        nc = self.audio_featurizer.num_channels
+        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         return {
             "input": tf.TensorShape([None]),
             "input_length": tf.TensorShape([]),
             "output_length": tf.TensorShape([]),
-            "output": tf.TensorShape([None, dim, nc]),
+            "output": tf.TensorShape([None, feature_dim]),
+            "speaker": tf.TensorShape([])
         }
 
     @property
     def sample_signature(self):
-        dim = self.audio_featurizer.dim
-        nc = self.audio_featurizer.num_channels
+        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         return (
             {
                 "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
                 "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
-                "output": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "output": tf.TensorSpec(shape=(None, None, feature_dim), dtype=tf.float32),
+                "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32)
             },
         )
 
