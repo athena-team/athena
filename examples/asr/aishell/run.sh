@@ -81,5 +81,11 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # decoding stage
     echo "Running decode ..."
     python athena/decode_main.py \
-        examples/asr/aishell/configs/mtl_transformer_sp.json || exit 1
+        examples/asr/aishell/configs/mtl_transformer_sp.json > decode.log || exit 1
+fi
+
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+    # score-computing stage
+    echo "computing score with sclite ..."
+    . ./tools/score_computer.sh decode.log examples/asr/aishell/data/vocab score_save || exit 1
 fi
