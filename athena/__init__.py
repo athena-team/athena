@@ -43,6 +43,7 @@ from .layers.transformer import TransformerDecoderLayer
 from .models.base import BaseModel
 from .models.speech_transformer import SpeechTransformer, SpeechTransformer2
 from .models.masked_pc import MaskedPredictCoding
+from .models.apc import AutoregressivePredictCoding
 from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
@@ -52,6 +53,7 @@ from .models.translate_transformer import NeuralTranslateTransformer
 from .solver import BaseSolver
 from .solver import DecoderSolver
 from .loss import CTCLoss
+from .loss import APCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy
 from .metrics import CTCAccuracy
 from .metrics import Seq2SeqSparseCategoricalAccuracy

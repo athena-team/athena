@@ -97,3 +97,28 @@ class MPCLoss(tf.keras.losses.Loss):
         loss = tf.reduce_sum(tf.abs(loss, name="L1_loss"), axis=-1)
         loss = tf.reduce_mean(loss)
         return loss
+
+class APCLoss(tf.keras.losses.Loss):
+    """APC LOSS
+    L1 loss for APC model
+    """
+
+    def __init__(self, name="MPCLoss"):
+        super().__init__(name=name)
+
+    def __call__(self, logits, samples, logit_length=None):
+
+        target = samples["output"]
+        shape = tf.shape(logits)
+        target = tf.reshape(target, shape)
+        loss = target - logits
+        # apc mask
+        mask = 1 - tf.cast(tf.math.equal(tf.reshape(samples["output"], shape), 0), loss.dtype)
+        loss *= mask
+        # sequence length mask
+        seq_mask = tf.sequence_mask(logit_length, shape[1], dtype=loss.dtype)
+        seq_mask = tf.tile(seq_mask[:, :, tf.newaxis], [1, 1, shape[2]])
+        loss *= seq_mask
+        loss = tf.reduce_sum(tf.abs(loss, name="L1_loss"), axis=-1)
+        loss = tf.reduce_mean(loss)
+        return loss

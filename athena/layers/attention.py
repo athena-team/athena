@@ -40,14 +40,18 @@ class ScaledDotProductAttention(tf.keras.layers.Layer):
         output, attention_weights
     """
 
-    def call(self, q, k, v, mask):
+    def call(self, q, k, v, mask, unidirectional=False):
         """This is where the layer's logic lives."""
         matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
 
         # scale matmul_qk
         dk = tf.cast(tf.shape(k)[-1], tf.float32)
         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
-
+        mask_total = tf.zeros(tf.shape(scaled_attention_logits))
+        if unidirectional:
+            uni_mask = tf.ones(tf.shape(scaled_attention_logits))
+            uni_mask -= tf.linalg.band_part(uni_mask, -1, 0)
+            mask_total += uni_mask
         # add the mask to the scaled tensor.
         if mask is not None:
             scaled_attention_logits += mask * -1e9
@@ -121,7 +125,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
-    def call(self, v, k, q, mask):
+    def call(self, v, k, q, mask, unidirectional=False):
         """ call function """
         batch_size = tf.shape(q)[0]
 
@@ -135,7 +139,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         # scaled_attention.shape == (batch_size, num_heads, seq_len_q, depth)
         # attention_weights.shape == (batch_size, num_heads, seq_len_q, seq_len_k)
-        scaled_attention, attention_weights = self.attention(q, k, v, mask)
+        scaled_attention, attention_weights = self.attention(q, k, v, mask, unidirectional=unidirectional)
 
         # (batch_size, seq_len_q, num_heads, depth)
         scaled_attention = tf.transpose(scaled_attention, perm=[0, 2, 1, 3])

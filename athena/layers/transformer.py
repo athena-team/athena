@@ -167,7 +167,7 @@ class TransformerEncoder(tf.keras.layers.Layer):
         super().__init__()
         self.layers = encoder_layers
 
-    def call(self, src, src_mask=None, training=None):
+    def call(self, src, src_mask=None, training=None, unidirectional=False):
         """Pass the input through the endocder layers in turn.
 
         Args:
@@ -179,7 +179,7 @@ class TransformerEncoder(tf.keras.layers.Layer):
         """
         output = src
         for i in range(len(self.layers)):
-            output = self.layers[i](output, src_mask=src_mask, training=training)
+            output = self.layers[i](output, src_mask=src_mask, training=training, unidirectional=unidirectional)
         return output
 
 
@@ -284,7 +284,7 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         self.norm2 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
         self.dropout = layers.Dropout(dropout, input_shape=(d_model,))
 
-    def call(self, src, src_mask=None, training=None):
+    def call(self, src, src_mask=None, training=None, unidirectional=False):
         """Pass the input through the endocder layer.
 
         Args:
@@ -294,7 +294,7 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         Shape:
             see the docs in Transformer class.
         """
-        out = self.self_attn(src, src, src, mask=src_mask)[0]
+        out = self.self_attn(src, src, src, mask=src_mask, unidirectional=unidirectional)[0]
         out = self.norm1(src + self.dropout(out, training=training))
         out = self.norm2(out + self.ffn(out, training=training))
 
