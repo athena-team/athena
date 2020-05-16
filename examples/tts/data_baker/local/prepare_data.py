@@ -40,7 +40,7 @@ GFILE = tf.compat.v1.gfile
 URL = "https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar"
 
 
-def normalize_hkust_trans(trans):
+def normalize_biaobei_trans(trans):
   ''' normalize HKUST transcripts
   delete unuseful symbols and keep space between English words
   Args:
