@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-""" biaobei dataset """
+""" data baker dataset
+Speech corpus is a female who pronounces standard Mandarin.
+It includes about 12 hours and is composed of 10000 sentences.
+detailed information can be seen on https://www.data-baker.com/open_source.html
+"""
 
 import os
 import sys
@@ -87,7 +91,7 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     """Convert rar to WAV and split the transcript.
       Args:
     dataset_dir  : the directory which holds the input dataset.
-            -----> /nfs/project/datasets/biaobei_tts
+            -----> /nfs/project/datasets/data_baker_tts
     total_csv_path : the resulting output csv file.
 
     BZNSYP dir Tree structure:
@@ -164,10 +168,10 @@ def split_train_dev_test(total_csv, output_dir):
 
 def processor(dircetory):
     """ download and process """
-    # already downloaded biaobei
-    biaobei = os.path.join(dircetory, "BZNSYP.rar")
-    if os.path.exists(biaobei):
-        logging.info("{} already exist".format(biaobei))
+    # already downloaded data_baker
+    data_baker = os.path.join(dircetory, "BZNSYP.rar")
+    if os.path.exists(data_baker):
+        logging.info("{} already exist".format(data_baker))
     else:
         download_and_extract(dircetory, URL)
 
