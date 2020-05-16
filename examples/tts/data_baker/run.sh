@@ -26,13 +26,13 @@ stage=0
 stop_stage=100
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
-dataset_dir=examples/tts/biaobei/data
+dataset_dir=examples/tts/data_baker/data
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
     echo "Creating csv"
     mkdir -p $dataset_dir
-    python examples/tts/biaobei/local/prepare_data.py \
+    python examples/tts/data_baker/local/prepare_data.py \
         $dataset_dir || exit 1
 fi
 

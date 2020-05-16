@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-""" librittsdataset """
+""" libritts dataset
+
+LibriTTS: A Corpus Derived from LibriSpeech for Text-to-Speech
+https://arxiv.org/pdf/1904.02882
+"""
 
 import codecs
 import fnmatch
