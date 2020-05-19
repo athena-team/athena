@@ -84,11 +84,12 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
     if p.trainset_config is None and p.num_classes is None:
         raise ValueError("trainset_config and num_classes can not both be null")
-    model = SUPPORTED_MODEL[p.model](
-        data_descriptions=dataset_builder,
-        config=p.model_config,
-    )
     optimizer = SUPPORTED_OPTIMIZER[p.optimizer](p.optimizer_config)
+    model = SUPPORTED_MODEL[p.model](
+	    optimizer=optimizer,
+	    data_descriptions=dataset_builder,
+	    config=p.model_config,
+    )
     checkpointer = Checkpoint(
         checkpoint_directory=p.ckpt,
         model=model,

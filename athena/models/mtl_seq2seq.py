@@ -47,8 +47,8 @@ class MtlTransformerCtc(BaseModel):
         "mtl_weight": 0.5
     }
 
-    def __init__(self, data_descriptions, config=None):
-        super().__init__()
+    def __init__(self, optimizer, data_descriptions, config=None):
+        super().__init__(optimizer)
         self.num_class = data_descriptions.num_class + 1
         self.sos = self.num_class - 1
         self.eos = self.num_class - 1
@@ -58,7 +58,7 @@ class MtlTransformerCtc(BaseModel):
         self.loss_function = CTCLoss(blank_index=-1)
         self.metric = CTCAccuracy()
         self.model = self.SUPPORTED_MODEL[self.hparams.model](
-            data_descriptions, self.hparams.model_config
+	        optimizer, data_descriptions, self.hparams.model_config
         )
         self.decoder = Dense(self.num_class)
         self.ctc_logits = None

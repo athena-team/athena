@@ -50,8 +50,8 @@ class SpeechTransformer(BaseModel):
         "label_smoothing_rate": 0.0
     }
 
-    def __init__(self, data_descriptions, config=None):
-        super().__init__()
+    def __init__(self, optimizer, data_descriptions, config=None):
+        super().__init__(optimizer)
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
         self.num_class = data_descriptions.num_class + 1

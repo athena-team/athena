@@ -24,10 +24,11 @@ import tensorflow as tf
 class BaseModel(tf.keras.Model):
     """Base class for model."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, optimizer, **kwargs):
         super().__init__(**kwargs)
         self.loss_function = None
         self.metric = None
+        self.optimizer = optimizer
 
     def call(self, samples, training=None):
         """ call model """
@@ -72,3 +73,14 @@ class BaseModel(tf.keras.Model):
         """ decode interface
         """
         logging.info("sorry, this model do not support decode")
+
+    def calculate_gradients(self, tape, loss):
+        """ calculate gradients w.r.t parameters of models using gradienttape
+        """
+        grads = tape.gradient(loss, self.model.trainable_variables)
+        return grads
+
+    def apply_gradients(self, grads):
+        """ apply gradients for model
+        """
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
