@@ -61,21 +61,21 @@ class MtlTransformerCtc(BaseModel):
 	        optimizer, data_descriptions, self.hparams.model_config
         )
         self.decoder = Dense(self.num_class)
-        self.ctc_logits = None
 
     def call(self, samples, training=None):
         """ call function in keras layers """
-        output, encoder_output = self.model(samples, training=training)
-        self.ctc_logits = self.decoder(encoder_output, training=training)
-        return output
+        attention_logits, encoder_output = self.model(samples, training=training)
+        ctc_logits = self.decoder(encoder_output, training=training)
+        return attention_logits, ctc_logits
 
-    def get_loss(self, logits, samples, training=None):
+    def get_loss(self, outputs, samples, training=None):
         """ get loss used for training """
+        attention_logits, ctc_logits = outputs
         logit_length = self.compute_logit_length(samples)
-        extra_loss = self.loss_function(self.ctc_logits, samples, logit_length)
-        self.metric(self.ctc_logits, samples, logit_length)
+        extra_loss = self.loss_function(ctc_logits, samples, logit_length)
+        self.metric(ctc_logits, samples, logit_length)
 
-        main_loss, metrics = self.model.get_loss(logits, samples, training=training)
+        main_loss, metrics = self.model.get_loss(attention_logits, samples, training=training)
         mtl_weight = self.hparams.mtl_weight
         loss = mtl_weight * main_loss + (1.0 - mtl_weight) * extra_loss
         metrics[self.metric.name] = self.metric.result()
