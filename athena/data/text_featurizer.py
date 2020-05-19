@@ -128,11 +128,20 @@ class SentencePieceFeaturizer:
 
 class TextTokenizer:
     """ Text Tokenizer """
-    def __init__(self, text=None):
+    def __init__(self, csv=None):
         self.tokenizer = tf.keras.preprocessing.text.Tokenizer()
-        self.text = text
-        if text is not None:
-            self.load_model(text)
+        if csv is not None:
+            text = self.load_text_from_csvs(csv)
+            self.model = self.load_model(text)
+
+    def load_text_from_csv(self, csv):
+        transcripts = []
+        with open(csv, "r", encoding="utf-8") as csv_file:
+            lines = csv_file.readlines()[1:]
+            for line in lines:
+                transcript = line.split("\t")[2]
+                transcripts.append(transcript)
+        return transcripts
 
     def load_model(self, text):
         """ load model """

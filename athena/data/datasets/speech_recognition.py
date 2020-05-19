@@ -115,9 +115,9 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
 
         # handling special case for text_featurizer
         self.entries.sort(key=lambda item: float(item[1]))
-        if self.text_featurizer.model_type == "text":
-            _, _, all_transcripts, _, _ = zip(*self.entries)
-            self.text_featurizer.load_model(all_transcripts)
+        #if self.text_featurizer.model_type == "text":
+        #    _, _, all_transcripts, _, _ = zip(*self.entries)
+        #    self.text_featurizer.load_model(all_transcripts)
 
         # apply some filter
         self.filter_sample_by_unk()
