@@ -17,21 +17,21 @@
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member
 r""" a script for switchboard dataset to transform decode result into ctm file """
-import os
 import sys
+import re
 from absl import logging
 import sentencepiece as spm
-import re
 
 
 def reformat_number(number):
-    # e.g. reformat number "0" into "0.00" 
+    # e.g. reformat number "0" into "0.00"
     num = str(int(number))
     decimal_num = (num[:-2] if len(num) > 2 else "0") + "." + (num[-2:] if len(num) > 1 else "00")
     return decimal_num
 
 
 def main(decode_list_file, utt_key_file, spm_model_file, ctm_file):
+    # decode bpe pieces' ids into words and reformat results
     utt_keys = []
     decode_results = []
     sp = spm.SentencePieceProcessor()
@@ -47,7 +47,7 @@ def main(decode_list_file, utt_key_file, spm_model_file, ctm_file):
         lines = decode_list.readlines()
         for line in lines:
             # modify "2000" if you use different bpe amount rather than 2000
-            decode_result_ids = [int(item) for item in line.split("[[")[1].split("]]")[0].split() if item != "2000" ]
+            decode_result_ids = [int(item) for item in line.split("[[")[1].split("]]")[0].split() if item != "2000"]
             decode_result_words = sp.DecodeIds(decode_result_ids)
             decode_results.append(decode_result_words)
 
@@ -79,5 +79,4 @@ if __name__ == "__main__":
     if len(sys.argv) != 5:
         logging.warning('Usage: python {} decode_list_file utt_key_file spm_model_file ctm_file(w)'.format(sys.argv[0]))
         sys.exit()
-    _, decode_list_file, utt_key_file, spm_model_file, ctm_file = sys.argv
-    main(decode_list_file, utt_key_file, spm_model_file, ctm_file)
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
