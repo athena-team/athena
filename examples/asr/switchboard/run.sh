@@ -37,7 +37,7 @@ dataset_dir=/nfs/cold_project/dataset/opensource/switchboard_fisher
 sctk_path=/nfs/private/luone/kaldi/tools/sctk
 
 bpe_prefix=examples/asr/switchboard/data/switchboard_bpe2000
-score_dir=examples/asr/switchboard/score_all
+score_dir=examples/asr/switchboard/score
 decode_log=${score_dir}/decode.log
 mkdir -p ${score_dir}
 
@@ -55,7 +55,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # calculate cmvn
     cp examples/asr/switchboard/data/switchboard.csv examples/asr/switchboard/data/all.csv
     tail -n +2 examples/asr/switchboard/data/hub500.csv >> examples/asr/switchboard/data/all.csv
-    python athena/cmvn_main.py \
+    CUDA_VISIBLE_DEVICES='' python athena/cmvn_main.py \
         examples/asr/switchboard/configs/mpc.json examples/asr/switchboard/data/all.csv || exit 1
 fi
 
@@ -111,7 +111,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         awk -F '\t' '{print $3"\t"$3}' >> examples/asr/switchboard/data/train.trans.csv
     cat examples/asr/switchboard/data/hub500.csv | \
         awk -F '\t' '{print $3"\t"$3}' > examples/asr/switchboard/data/dev.trans.csv
-    $horovod_cmd python athena/${horovod_prefix}main.py \
+    python athena/main.py \
         examples/asr/switchboard/configs/rnnlm.json || exit 1
 fi
 
@@ -135,4 +135,3 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # sclite should be installed
     ./examples/asr/switchboard/local/score_sclite_hub.sh ${decode_log} ${bpe_prefix}.model ${score_dir} ${sctk_path}
 fi
-
