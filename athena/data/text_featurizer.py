@@ -131,7 +131,7 @@ class TextTokenizer:
     def __init__(self, csv=None):
         self.tokenizer = tf.keras.preprocessing.text.Tokenizer()
         if csv is not None:
-            text = self.load_text_from_csvs(csv)
+            text = self.load_text_from_csv(csv)
             self.model = self.load_model(text)
 
     def load_text_from_csv(self, csv):
