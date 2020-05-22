@@ -35,14 +35,15 @@ SUPPORTED_MODEL = {
     "speech_transformer2": SpeechTransformer2,
     "mtl_transformer_ctc": MtlTransformerCtc,
     "mpc": MaskedPredictCoding,
-    "apc": AutoregressivePredictCoding,
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
 }
 
 SUPPORTED_OPTIMIZER = {
     "warmup_adam": WarmUpAdam,
-    "expdecay_adam": ExponentialDecayAdam
+    "expdecay_adam": ExponentialDecayAdam,
+    "adam": tf.keras.optimizers.Adam,
+    "warmup_adam_per_layer": WarmUpAdamPerLayer,
 }
 
 DEFAULT_CONFIGS = {
@@ -64,7 +65,7 @@ DEFAULT_CONFIGS = {
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
-    "decode_config": None
+    "decode_config": None,
 }
 
 def parse_config(config):
@@ -95,6 +96,8 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
         model=model,
         optimizer=optimizer,
     )
+    # to restart iteration
+    #optimizer = SUPPORTED_OPTIMIZER[p.optimizer](p.optimizer_config)
     if pre_run or p.pretrained_model is not None:
         # pre_run for lazy initilize in keras
         solver = BaseSolver(
@@ -137,23 +140,21 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
         config=p.solver_config,
     )
     loss = 0.0
-    metrics = {}
+    skip_step = 1
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
         if epoch >= p.sorta_epoch:
             trainset_builder.batch_wise_shuffle(p.batch_size)
         solver.train(trainset_builder.as_dataset(p.batch_size, p.num_data_threads))
-
-        if p.devset_config is not None:
+        if p.devset_config is not None and epoch % skip_step == 0: 
             if rank == 0:
                 logging.info(">>>>> start evaluate in epoch %d" % epoch)
             devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
             devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-            loss, metrics = solver.evaluate(devset, epoch)
-
-        if rank == 0:
-            checkpointer(loss, metrics)
+            loss = solver.evaluate(devset, epoch)
+        if rank == 0 and epoch % skip_step == 0:
+            checkpointer(loss)
 
         epoch = epoch + 1
 

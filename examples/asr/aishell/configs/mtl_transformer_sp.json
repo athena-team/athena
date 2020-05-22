@@ -41,7 +41,7 @@
     "lm_path":"examples/asr/aishell/configs/rnnlm.json"
   },
 
-  "optimizer":"warmup_adam",
+  "optimizer":"warmup_adam_per_layer",
   "optimizer_config":{
     "d_model":512,
     "warmup_steps":25000,

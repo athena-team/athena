@@ -21,11 +21,11 @@ import warnings
 import time
 import tensorflow as tf
 from absl import logging
+import horovod.tensorflow as hvd
 from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
-
 
 class BaseSolver(tf.keras.Model):
     """Base Solver.
@@ -39,7 +39,10 @@ class BaseSolver(tf.keras.Model):
         super().__init__(**kwargs)
         self.model = model
         self.optimizer = optimizer
-        self.metric_checker = MetricChecker(self.optimizer)
+        if hasattr(self.optimizer, 'opts'):
+            self.metric_checker = MetricChecker(self.optimizer.opts[-1])
+        else:
+            self.metric_checker = MetricChecker(self.optimizer)
         self.sample_signature = sample_signature
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
@@ -49,9 +52,8 @@ class BaseSolver(tf.keras.Model):
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        # means we're running in GPU mode
-        if len(gpus) != 0:
-            assert len(gpus) >= len(visible_gpu_idx)
+        if gpus is not None:
+            assert len(gpus) > len(visible_gpu_idx)
             for idx in visible_gpu_idx:
                 tf.config.experimental.set_visible_devices(gpus[idx], "GPU")
 
@@ -70,13 +72,42 @@ class BaseSolver(tf.keras.Model):
         """ train the model 1 step """
         with tf.GradientTape() as tape:
             logits = self.model(samples, training=True)
-            loss, metrics = self.model.get_loss(logits, samples, training=True)
+            loss, metrics = self.model.get_loss(logits, samples, training=True) 
+        """
+        var_list = []
+        dense_id = [(140 + i * 6,i + 12) for i in range(12)]
+        dense_id += [(141 + i * 6,i + 12) for i in range(12)]
+        dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
+        dense_layers['dense_135'] = 12
+        cnn_id = [2,3]
+        cnn_layers = dict([("conv2d_%d"%i, 12)for i in cnn_id])
+        norm_id = [2,3]
+        norm_layers = dict([("batch_normalization_%d"%i, 12)for i in norm_id])
+        freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
+        for item in self.model.trainable_variables:
+            if item.name.startswith('masked_predict_coding') or item.name.split('/')[0] in freeze_layers.keys():
+                if "masked_predict_coding" in item.name:
+                    layer = int(item.name.split('/')[2].split('_')[-1])
+                else:
+                    layer = freeze_layers[item.name.split('/')[0]]
+                epoch = samples["epoch"]
+                if layer + epoch < 23:
+                    continue
+                else:
+                    var_list.append(item)
+            else:
+                var_list.append(item)
+        grads = tape.gradient(loss, var_list)
+        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+        self.optimizer.apply_gradients(zip(grads, var_list))
+        """
         grads = tape.gradient(loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+        #"""
         return loss, metrics
 
-    def train(self, dataset, total_batches=-1):
+    def train(self, dataset, total_batches=-1, epoch=0):
         """ Update the model in 1 epoch """
         train_step = self.train_step
         if self.hparams.enable_tf_function:
@@ -85,6 +116,7 @@ class BaseSolver(tf.keras.Model):
         for batch, samples in enumerate(dataset.take(total_batches)):
             # train 1 step
             samples = self.model.prepare_samples(samples)
+            samples["epoch"] = epoch
             loss, metrics = train_step(samples)
             if batch % self.hparams.log_interval == 0:
                 logging.info(self.metric_checker(loss, metrics))
@@ -100,6 +132,8 @@ class BaseSolver(tf.keras.Model):
         """ evaluate the model """
         loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
         loss, metrics = None, None
+        #import pdb
+        #pdb.set_trace()
         evaluate_step = self.evaluate_step
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
@@ -107,20 +141,123 @@ class BaseSolver(tf.keras.Model):
         self.model.reset_metrics()  # init metric.result() with 0
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
+            samples["epoch"] = epoch
             loss, metrics = evaluate_step(samples)
             if batch % self.hparams.log_interval == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
             loss_metric.update_state(loss)
         logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
         self.model.reset_metrics()
-        return loss_metric.result(), metrics
+        return loss_metric.result()
+
+class HorovodSolver(BaseSolver):
+    """ A multi-processer solver based on Horovod """
+
+    @staticmethod
+    def initialize_devices(visible_gpu_idx=None):
+        """ initialize hvd devices, should be called firstly """
+        if visible_gpu_idx is not None:
+            warnings.warn("we can not set the visible gpu idx like this")
+        hvd.init()
+        gpus = tf.config.experimental.list_physical_devices("GPU")
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        if gpus:
+            tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], "GPU")
+
+    def train_step(self, samples):
+        """ train the model 1 step """
+        with tf.GradientTape() as tape:
+            logits = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(logits, samples, training=True)
+        # Horovod: add Horovod Distributed GradientTape.
+        tape = hvd.DistributedGradientTape(tape)
+        """
+        var_list = []
+        dense_id = [(140 + i * 6,i + 12) for i in range(12)]
+        dense_id += [(141 + i * 6,i + 12) for i in range(12)]
+        dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
+        dense_layers['dense_135'] = 12
+        cnn_id = [2,3]
+        cnn_layers = dict([("conv2d_%d"%i, 12)for i in cnn_id])
+        norm_id = [2,3]
+        norm_layers = dict([("batch_normalization_%d"%i, 12)for i in norm_id])
+        freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
+        for item in self.model.trainable_variables:
+            if item.name.startswith('masked_predict_coding') or item.name.split('/')[0] in freeze_layers.keys():
+                if "masked_predict_coding" in item.name:
+                    layer = int(item.name.split('/')[2].split('_')[-1])
+                else:
+                    layer = freeze_layers[item.name.split('/')[0]]
+                epoch = samples["epoch"]
+                if layer + epoch < 23:
+                    continue
+                else:
+                    var_list.append(item)
+            else:
+                var_list.append(item)
+        grads = tape.gradient(loss, var_list)
+        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+        self.optimizer.apply_gradients(zip(grads, var_list))
+        """
+        grads = tape.gradient(loss, self.model.trainable_variables)
+        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+        self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+        #"""
+        return loss, metrics
+
+    def train(self, dataset, total_batches=-1, epoch=0):
+        """ Update the model in 1 epoch """
+        train_step = self.train_step
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            train_step = tf.function(train_step, input_signature=self.sample_signature)
+        for batch, samples in enumerate(dataset.take(total_batches)):
+            # train 1 step
+            #if batch == 1000:
+            #    break
+            samples = self.model.prepare_samples(samples)
+            samples["epoch"] = epoch
+            loss, metrics = train_step(samples)
+            # Horovod: broadcast initial variable states from rank 0 to all other processes.
+            # This is necessary to ensure consistent initialization of all workers when
+            # training is started with random weights or restored from a checkpoint.
+            #
+            # Note: broadcast should be done after the first gradient step to ensure optimizer
+            # initialization.
+            if batch == 0:
+                hvd.broadcast_variables(self.model.trainable_variables, root_rank=0)
+                hvd.broadcast_variables(self.optimizer.variables(), root_rank=0)
+            if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
+                logging.info(self.metric_checker(loss, metrics))
+                self.model.reset_metrics()
+
+    def evaluate(self, dataset, epoch=0):
+        """ evaluate the model """
+        loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
+        loss, metrics = None, None
+        evaluate_step = self.evaluate_step
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
+        self.model.reset_metrics()
+        for batch, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            samples["epoch"] = epoch
+            loss, metrics = evaluate_step(samples)
+            if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
+                logging.info(self.metric_checker(loss, metrics, -2))
+            loss_metric.update_state(loss)
+        if hvd.local_rank() == 0:
+            logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
+            self.model.reset_metrics()
+        return loss_metric.result()
 
 
 class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
-        "model_avg_num": 1,
         "beam_search": True,
         "beam_size": 4,
         "ctc_weight": 0.0,
