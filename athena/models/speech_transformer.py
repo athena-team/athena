@@ -29,8 +29,6 @@ from ..utils.misc import generate_square_subsequent_mask, insert_sos_in_labels
 from ..layers.commons import PositionalEncoding
 from ..layers.transformer import Transformer
 from ..utils.hparam import register_and_parse_hparams
-from ..tools.beam_search import BeamSearchDecoder
-from ..tools.lm_scorer import NGramScorer, RNNScorer
 
 
 class SpeechTransformer(BaseModel):
@@ -197,7 +195,7 @@ class SpeechTransformer(BaseModel):
         history_logits = history_logits.write(step - 1, logits)
         return logits, history_logits, step
 
-    def decode(self, samples, hparams, lm_model=None, return_encoder=False):
+    def decode(self, samples, hparams, decoder, return_encoder=False):
         """ beam search decoding """
         x0 = samples["input"]
         batch = tf.shape(x0)[0]
@@ -217,28 +215,7 @@ class SpeechTransformer(BaseModel):
         history_predictions = history_predictions.stack()
         init_cand_states = [history_predictions]
 
-        beam_size = 1 if not hparams.beam_search else hparams.beam_size
-        beam_search_decoder = BeamSearchDecoder(
-            self.num_class, self.sos, self.eos, beam_size=beam_size
-        )
-        beam_search_decoder.build(self.time_propagate)
-        if hparams.lm_weight != 0:
-            if hparams.lm_path is None:
-                raise ValueError("lm path should not be none")
-            if hparams.lm_type == "ngram":
-                lm_scorer = NGramScorer(
-                    hparams.lm_path,
-                    self.sos,
-                    self.eos,
-                    self.num_class,
-                    lm_weight=hparams.lm_weight,
-                )
-            elif hparams.lm_type == "rnn":
-                lm_scorer = RNNScorer(
-                    lm_model,
-                    lm_weight=hparams.lm_weight)
-            beam_search_decoder.add_scorer(lm_scorer)
-        predictions = beam_search_decoder(
+        predictions = decoder(
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions
