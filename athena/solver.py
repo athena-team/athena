@@ -69,8 +69,9 @@ class BaseSolver(tf.keras.Model):
     def train_step(self, samples):
         """ train the model 1 step """
         with tf.GradientTape() as tape:
-            logits = self.model(samples, training=True)
-            loss, metrics = self.model.get_loss(logits, samples, training=True)
+            # outputs of a forward run of model, potentially contains more than one item
+            outputs = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(outputs, samples, training=True)
         grads = tape.gradient(loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
@@ -92,8 +93,9 @@ class BaseSolver(tf.keras.Model):
 
     def evaluate_step(self, samples):
         """ evaluate the model 1 step """
-        logits = self.model(samples, training=False)
-        loss, metrics = self.model.get_loss(logits, samples, training=False)
+        # outputs of a forward run of model, potentially contains more than one item
+        outputs = self.model(samples, training=False)
+        loss, metrics = self.model.get_loss(outputs, samples, training=False)
         return loss, metrics
 
     def evaluate(self, dataset, epoch):
