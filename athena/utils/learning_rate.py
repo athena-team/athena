@@ -189,7 +189,8 @@ class WarmUpAdamPerLayer(tf.keras.optimizers.Adam):
             amsgrad=amsgrad,
             name=name,
         )
-        factors = [3,4,5,6,6,6,5,4,3,2,1,0,0]
+        # We found the adaptive learning rate schedule by probing task
+        factors = [abs(5.5 - abs(5.5-i)) for i in range(12)]
         self.opts = []
         for i in factors:
             opt = tf.keras.optimizers.Adam(
