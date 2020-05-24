@@ -196,7 +196,24 @@ class SpeechTransformer(BaseModel):
         return logits, history_logits, step
 
     def decode(self, samples, hparams, decoder, return_encoder=False):
-        """ beam search decoding """
+        """ beam search decoding
+        Args:
+            samples: the data source to be decoded
+            hparams: decoding configs are included here
+            decoder: it contains the main decoding operations
+            return_encoder: if it is True,
+                encoder_output and input_mask will be returned
+        Returns:
+            predictions: the corresponding decoding results
+                shape: [batch_size, seq_length]
+                it will be returned only if return_encoder is False
+            encoder_output: the encoder output computed in decode mode
+                shape: [batch_size, seq_length, hsize]
+            input_mask: it is masked by input length
+                shape: [batch_size, 1, 1, seq_length]
+                encoder_output and input_mask will be returned
+                only if return_encoder is True
+        """
         x0 = samples["input"]
         batch = tf.shape(x0)[0]
         x = self.x_net(x0, training=False)

@@ -29,16 +29,17 @@ CandidateHolder = namedtuple(
 class BeamSearchDecoder:
     r""" Beam search decoding used in seq2seq decoder layer
     This layer is used for evaluation
-
-    Args:
-        num_syms: the size of the vocab
-        sos: the representation of the start symbol, should be an id
-        eos: the representation of the end symbol, should be an id
-        beam_size: the beam size
     """
 
-    def __init__(self, num_syms, sos, eos, beam_size):
-        self.num_syms = num_syms
+    def __init__(self, num_class, sos, eos, beam_size):
+        """
+        Args:
+            num_class: the size of the vocab
+            sos: start symbol, should be an id
+            eos: end symbol, should be an id
+            beam_size: the beam size
+        """
+        self.num_class = num_class
         self.sos = sos
         self.eos = eos
         self.beam_size = beam_size
@@ -53,7 +54,14 @@ class BeamSearchDecoder:
         """ Allocate the time propagating function of the decoder,
             initialize the decoder
         Args:
+            hparams: the decoding configs are included here
+            num_class: the size of the vocab
+            sos: the start symbol index
+            eos: the end symbol index
             decoder_one_step: the time propagating function of the decoder
+            lm_model: the initialized languange model
+        Returns:
+            beam_search_decoder: the initialized beam search decoder
         """
         beam_size = 1 if not hparams.beam_search else hparams.beam_size
         beam_search_decoder = BeamSearchDecoder(
@@ -130,7 +138,7 @@ class BeamSearchDecoder:
         cand_scores = tf.expand_dims(candidate_holder.cand_scores, axis=1)
         Z = tf.reduce_logsumexp(logits, axis=(1,), keepdims=True)
         logprobs = logits - Z
-        new_scores = logprobs + cand_scores  # shape: (cand_num, num_syms)
+        new_scores = logprobs + cand_scores  # shape: (cand_num, num_class)
         if self.scorers:
             for scorer in self.scorers:
                 other_scores, new_states = scorer.score(candidate_holder, new_scores)
@@ -210,10 +218,10 @@ class BeamSearchDecoder:
         num_cands = tf.shape(candidate_holder.cand_seqs)[0]
 
         # Deal with non-completed candidates
-        not_eos = tf.range(self.num_syms) != self.eos
-        not_eos = tf.range(self.num_syms)[not_eos]
+        not_eos = tf.range(self.num_class) != self.eos
+        not_eos = tf.range(self.num_class)[not_eos]
         parents, syms = tf.meshgrid(
-            tf.range(num_cands), tf.range(self.num_syms), indexing="ij"
+            tf.range(num_cands), tf.range(self.num_class), indexing="ij"
         )
         new_scores = tf.gather(new_scores, not_eos, axis=1)
         parents = tf.gather(parents, not_eos, axis=1)
@@ -252,7 +260,7 @@ class BeamSearchDecoder:
         Returns:
             completed_seqs: the sequence with highest score
         """
-        cand_logits = tf.fill([tf.shape(cand_seqs)[0], 0, self.num_syms], 0.0)
+        cand_logits = tf.fill([tf.shape(cand_seqs)[0], 0, self.num_class], 0.0)
         cand_scores = tf.fill([tf.shape(cand_seqs)[0]], 0.0)
         cand_scores = tf.cast(cand_scores, tf.float32)
         cand_parents = tf.fill([1], 0)
@@ -287,8 +295,8 @@ class BeamSearchDecoder:
             )
             if (pos + 1) >= max_seq_len:
                 break
-            not_eos = tf.range(self.num_syms) != self.eos
-            not_eos = tf.range(self.num_syms)[not_eos]
+            not_eos = tf.range(self.num_class) != self.eos
+            not_eos = tf.range(self.num_class)[not_eos]
             new_scores = tf.gather(new_scores, not_eos, axis=1)
             # Terminate if all candidates are already worse than all completed seqs
             min_completed_score = tf.reduce_min(completed_scores)
