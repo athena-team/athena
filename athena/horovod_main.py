@@ -45,8 +45,9 @@ class HorovodSolver(BaseSolver):
     def train_step(self, samples):
         """ train the model 1 step """
         with tf.GradientTape() as tape:
-            logits = self.model(samples, training=True)
-            loss, metrics = self.model.get_loss(logits, samples, training=True)
+            # outputs of a forward run of model, potentially contains more than one item
+            outputs = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(outputs, samples, training=True)
         # Horovod: add Horovod Distributed GradientTape.
         tape = hvd.DistributedGradientTape(tape)
         grads = tape.gradient(loss, self.model.trainable_variables)
