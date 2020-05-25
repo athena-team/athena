@@ -54,7 +54,8 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         "audio_config": {"type": "Fbank"},
         "cmvn_file": None,
         "input_length_range": [20, 50000],
-        "data_csv": None
+        "data_csv": None,
+        "num_cmvn_workers": 1
     }
 
     def __init__(self, config=None):
@@ -203,7 +204,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         with tf.device("/cpu:0"):
             self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim
+                self.entries, self.speakers, self.audio_featurizer, feature_dim, self.hparams.num_cmvn_workers
             )
         self.feature_normalizer.save_cmvn()
         return self

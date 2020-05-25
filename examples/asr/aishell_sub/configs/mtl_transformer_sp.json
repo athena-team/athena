@@ -71,7 +71,6 @@
     "data_csv": "examples/asr/aishell/data/test.csv",
     "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
-    "input_length_range":[10, 8000]
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"}
   }
 }

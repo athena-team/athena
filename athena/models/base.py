@@ -34,17 +34,17 @@ class BaseModel(tf.keras.Model):
         raise NotImplementedError()
 
     #pylint: disable=not-callable
-    def get_loss(self, logits, samples, training=None):
+    def get_loss(self, outputs, samples, training=None):
         """ get loss """
         if self.loss_function is None:
             loss = 0.0
         else:
             logit_length = self.compute_logit_length(samples)
-            loss = self.loss_function(logits, samples, logit_length)
+            loss = self.loss_function(outputs, samples, logit_length)
         if self.metric is None:
             metrics = {}
         else:
-            self.metric(logits, samples, logit_length)
+            self.metric(outputs, samples, logit_length)
             metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
@@ -68,7 +68,7 @@ class BaseModel(tf.keras.Model):
         """
         logging.info("restore from pretrained model")
 
-    def decode(self, samples, hparams):
+    def decode(self, samples, hparams, decoder):
         """ decode interface
         """
         logging.info("sorry, this model do not support decode")

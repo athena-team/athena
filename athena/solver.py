@@ -29,6 +29,7 @@ from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
+from .tools.beam_search import BeamSearchDecoder
 
 
 class BaseSolver(tf.keras.Model):
@@ -73,8 +74,9 @@ class BaseSolver(tf.keras.Model):
     def train_step(self, samples):
         """ train the model 1 step """
         with tf.GradientTape() as tape:
-            logits = self.model(samples, training=True)
-            loss, metrics = self.model.get_loss(logits, samples, training=True)
+            # outputs of a forward run of model, potentially contains more than one item
+            outputs = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(outputs, samples, training=True)
         grads = tape.gradient(loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
@@ -96,8 +98,9 @@ class BaseSolver(tf.keras.Model):
 
     def evaluate_step(self, samples):
         """ evaluate the model 1 step """
-        logits = self.model(samples, training=False)
-        loss, metrics = self.model.get_loss(logits, samples, training=False)
+        # outputs of a forward run of model, potentially contains more than one item
+        outputs = self.model(samples, training=False)
+        loss, metrics = self.model.get_loss(outputs, samples, training=False)
         return loss, metrics
 
     def evaluate(self, dataset, epoch):
@@ -137,8 +140,9 @@ class HorovodSolver(BaseSolver):
     def train_step(self, samples):
         """ train the model 1 step """
         with tf.GradientTape() as tape:
-            logits = self.model(samples, training=True)
-            loss, metrics = self.model.get_loss(logits, samples, training=True)
+            # outputs of a forward run of model, potentially contains more than one item
+            outputs = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(outputs, samples, training=True)
         # Horovod: add Horovod Distributed GradientTape.
         tape = hvd.DistributedGradientTape(tape)
         grads = tape.gradient(loss, self.model.trainable_variables)
@@ -188,7 +192,12 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        self.lm_model = lm_model
+        self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
+                                                       self.model.num_class,
+                                                       self.model.sos,
+                                                       self.model.eos,
+                                                       self.model.time_propagate,
+                                                       lm_model=lm_model)
 
     def decode(self, dataset):
         """ decode the model """
@@ -198,7 +207,7 @@ class DecoderSolver(BaseSolver):
         for _, samples in enumerate(dataset):
             begin = time.time()
             samples = self.model.prepare_samples(samples)
-            predictions = self.model.decode(samples, self.hparams, lm_model=self.lm_model)
+            predictions = self.model.decode(samples, self.hparams, self.decoder)
             validated_preds = validate_seqs(predictions, self.model.eos)[0]
             validated_preds = tf.cast(validated_preds, tf.int64)
             num_errs, _ = metric.update_state(validated_preds, samples)
