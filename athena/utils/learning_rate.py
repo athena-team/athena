@@ -191,6 +191,7 @@ class WarmUpAdamPerLayer(tf.keras.optimizers.Adam):
         )
         # We found the adaptive learning rate schedule by probing task
         factors = [abs(5.5 - abs(5.5-i)) for i in range(12)]
+        factors += [0.0]
         self.opts = []
         for i in factors:
             opt = tf.keras.optimizers.Adam(
@@ -212,13 +213,20 @@ class WarmUpAdamPerLayer(tf.keras.optimizers.Adam):
 
     def apply_gradients(self, grads_variables):
         opts2gv = {}
-        #"""mpc start to train mtl
+        """
+        To train encoder with discriminative learning rate,
+        we give each encoder layer a individual optimizer.
+        """
+        # Transformer feedforward layer id
         dense_id = [(140 + i * 6,i + 12) for i in range(12)]
-        dense_id += [(141 + i * 6,i + 12) for i in range(12)]
+        dense_id += [(141 + i * 6,i + 12) for i in range(12)] 
         dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
+        # layer id betweem CNN and Transformer layer
         dense_layers['dense_135'] = 12
+        # CNN layer id
         cnn_id = [2,3]
         cnn_layers = dict([("conv2d_%d"%i, 12)for i in cnn_id])
+        # batchnorm layer id
         norm_id = [2,3]
         norm_layers = dict([("batch_normalization_%d"%i, 12)for i in norm_id])
         freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
@@ -228,6 +236,7 @@ class WarmUpAdamPerLayer(tf.keras.optimizers.Adam):
                     layer = int(item.name.split('/')[2].split('_')[-1])
                 else:
                     layer = freeze_layers[item.name.split('/')[0]]
+                # Transformer attention layer id start from 12 to 23
                 if layer <= 23:
                     opt = self.opts[layer-12]
             else:
@@ -236,66 +245,7 @@ class WarmUpAdamPerLayer(tf.keras.optimizers.Adam):
                 opts2gv[opt] = [[],[]]
             opts2gv[opt][0].append(g)
             opts2gv[opt][1].append(item)
-        #"""
-        """#mpc start to train mpc
-        dense_id = [(5 + i * 6,i) for i in range(12)]
-        dense_id += [(6 + i * 6,i) for i in range(12)]
-        dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
-        dense_layers['dense'] = 0
-        cnn_id = ['','_1']
-        cnn_layers = dict([("conv2d%s"%i, 0) for i in cnn_id])
-        norm_id = ['','_1']
-        norm_layers = dict([("batch_normalization%s"%i, 0)for i in norm_id])
-        freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
-        for g, item in grads_variables:
-            if item.name.startswith('masked_predict_coding/transformer_encoder') or item.name.split('/')[0] in freeze_layers.keys():
-                if "masked_predict_coding" in item.name:
-                    if "transformer_encoder_layer" == item.name.split('/')[2]:
-                        layer = 0
-                    else:
-                        layer = int(item.name.split('/')[2].split('_')[-1])
-                else:
-                    layer = freeze_layers[item.name.split('/')[0]]
-                if layer <= 11:
-                    opt = self.opts[layer]
-            else:
-                opt = self.opts[12]
-            if opt not in opts2gv.keys():
-                opts2gv[opt] = [[],[]]
-            opts2gv[opt][0].append(g)
-            opts2gv[opt][1].append(item)
-        """
-        """# mtl restart
-        dense_id = [(5 + i * 6,i) for i in range(12)]
-        dense_id += [(6 + i * 6,i) for i in range(12)]
-        dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
-        dense_layers['dense'] = 0
-        cnn_id = ['','_1']
-        cnn_layers = dict([("conv2d%s"%i, 0) for i in cnn_id])
-        norm_id = ['','_1']
-        norm_layers = dict([("batch_normalization%s"%i, 0)for i in norm_id])
-        freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
-        for g, item in grads_variables:
-            if item.name.startswith('mtl_transformer_ctc/speech_transformer/transformer/transformer_encoder') or item.name.split('/')[0] in freeze_layers.keys():
-                if "mtl_transformer_ctc" in item.name:
-                    if "transformer_encoder_layer" == item.name.split('/')[4]:
-                        #import pdb
-                        #pdb.set_trace()
-                        layer = 0
-                    else:
-                        layer = int(item.name.split('/')[4].split('_')[-1])
-                else:
-                    layer = freeze_layers[item.name.split('/')[0]]
-                if layer <= 11:
-                    opt = self.opts[layer]
-            else:
-                opt = self.opts[12]
-            if opt not in opts2gv.keys():
-                opts2gv[opt] = [[],[]]
-            opts2gv[opt][0].append(g)
-            opts2gv[opt][1].append(item)
 
-        """
         for opt, gvs in opts2gv.items():
             opt.apply_gradients(zip(gvs[0],gvs[1]))
 

@@ -73,38 +73,9 @@ class BaseSolver(tf.keras.Model):
         with tf.GradientTape() as tape:
             logits = self.model(samples, training=True)
             loss, metrics = self.model.get_loss(logits, samples, training=True) 
-        """
-        var_list = []
-        dense_id = [(140 + i * 6,i + 12) for i in range(12)]
-        dense_id += [(141 + i * 6,i + 12) for i in range(12)]
-        dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
-        dense_layers['dense_135'] = 12
-        cnn_id = [2,3]
-        cnn_layers = dict([("conv2d_%d"%i, 12)for i in cnn_id])
-        norm_id = [2,3]
-        norm_layers = dict([("batch_normalization_%d"%i, 12)for i in norm_id])
-        freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
-        for item in self.model.trainable_variables:
-            if item.name.startswith('masked_predict_coding') or item.name.split('/')[0] in freeze_layers.keys():
-                if "masked_predict_coding" in item.name:
-                    layer = int(item.name.split('/')[2].split('_')[-1])
-                else:
-                    layer = freeze_layers[item.name.split('/')[0]]
-                epoch = samples["epoch"]
-                if layer + epoch < 23:
-                    continue
-                else:
-                    var_list.append(item)
-            else:
-                var_list.append(item)
-        grads = tape.gradient(loss, var_list)
-        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
-        self.optimizer.apply_gradients(zip(grads, var_list))
-        """
         grads = tape.gradient(loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
-        #"""
         return loss, metrics
 
     def train(self, dataset, total_batches=-1, epoch=0):
@@ -116,7 +87,6 @@ class BaseSolver(tf.keras.Model):
         for batch, samples in enumerate(dataset.take(total_batches)):
             # train 1 step
             samples = self.model.prepare_samples(samples)
-            samples["epoch"] = epoch
             loss, metrics = train_step(samples)
             if batch % self.hparams.log_interval == 0:
                 logging.info(self.metric_checker(loss, metrics))
@@ -141,7 +111,6 @@ class BaseSolver(tf.keras.Model):
         self.model.reset_metrics()  # init metric.result() with 0
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
-            samples["epoch"] = epoch
             loss, metrics = evaluate_step(samples)
             if batch % self.hparams.log_interval == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
@@ -172,38 +141,9 @@ class HorovodSolver(BaseSolver):
             loss, metrics = self.model.get_loss(logits, samples, training=True)
         # Horovod: add Horovod Distributed GradientTape.
         tape = hvd.DistributedGradientTape(tape)
-        """
-        var_list = []
-        dense_id = [(140 + i * 6,i + 12) for i in range(12)]
-        dense_id += [(141 + i * 6,i + 12) for i in range(12)]
-        dense_layers = dict([("dense_%d"%i[0], i[1]) for i in dense_id])
-        dense_layers['dense_135'] = 12
-        cnn_id = [2,3]
-        cnn_layers = dict([("conv2d_%d"%i, 12)for i in cnn_id])
-        norm_id = [2,3]
-        norm_layers = dict([("batch_normalization_%d"%i, 12)for i in norm_id])
-        freeze_layers = {**cnn_layers,**norm_layers,**dense_layers}
-        for item in self.model.trainable_variables:
-            if item.name.startswith('masked_predict_coding') or item.name.split('/')[0] in freeze_layers.keys():
-                if "masked_predict_coding" in item.name:
-                    layer = int(item.name.split('/')[2].split('_')[-1])
-                else:
-                    layer = freeze_layers[item.name.split('/')[0]]
-                epoch = samples["epoch"]
-                if layer + epoch < 23:
-                    continue
-                else:
-                    var_list.append(item)
-            else:
-                var_list.append(item)
-        grads = tape.gradient(loss, var_list)
-        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
-        self.optimizer.apply_gradients(zip(grads, var_list))
-        """
         grads = tape.gradient(loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
-        #"""
         return loss, metrics
 
     def train(self, dataset, total_batches=-1, epoch=0):
@@ -217,7 +157,6 @@ class HorovodSolver(BaseSolver):
             #if batch == 1000:
             #    break
             samples = self.model.prepare_samples(samples)
-            samples["epoch"] = epoch
             loss, metrics = train_step(samples)
             # Horovod: broadcast initial variable states from rank 0 to all other processes.
             # This is necessary to ensure consistent initialization of all workers when
@@ -243,7 +182,6 @@ class HorovodSolver(BaseSolver):
         self.model.reset_metrics()
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
-            samples["epoch"] = epoch
             loss, metrics = evaluate_step(samples)
             if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
