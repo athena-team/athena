@@ -73,20 +73,22 @@ def validate_seqs(seqs, eos):
       validated_preds: tf.SparseTensor
     """
     eos = tf.cast(eos, tf.int64)
-    if eos != 0:
-        indexes = tf.TensorArray(tf.bool, size=0, dynamic_size=True)
-        a = tf.not_equal(eos, seqs)
-        res = a[:, 0]
-        indexes = indexes.write(0, res)
-        for i in tf.range(1, tf.shape(a)[1]):
-            res = tf.logical_and(res, a[:, i])
-            indexes = indexes.write(i, res)
-        res = tf.transpose(indexes.stack(), [1, 0])
-        validated_preds = tf.where(tf.logical_not(res), tf.zeros_like(seqs), seqs)
-        validated_preds = tf.sparse.from_dense(validated_preds)
+    if tf.shape(seqs)[1] == 0:
+        validated_preds = tf.zeros([tf.shape(seqs)[0], 1], dtype=tf.int64)
     else:
-        validated_preds = tf.where(tf.equal(eos, seqs), tf.zeros_like(seqs), seqs)
-        validated_preds = tf.sparse.from_dense(validated_preds)
+        if eos != 0:
+            indexes = tf.TensorArray(tf.bool, size=0, dynamic_size=True)
+            a = tf.not_equal(eos, seqs)
+            res = a[:, 0]
+            indexes = indexes.write(0, res)
+            for i in tf.range(1, tf.shape(a)[1]):
+                res = tf.logical_and(res, a[:, i])
+                indexes = indexes.write(i, res)
+            res = tf.transpose(indexes.stack(), [1, 0])
+            validated_preds = tf.where(tf.logical_not(res), tf.zeros_like(seqs), seqs)
+        else:
+            validated_preds = tf.where(tf.equal(eos, seqs), tf.zeros_like(seqs), seqs)
+    validated_preds = tf.sparse.from_dense(validated_preds)
     counter = tf.cast(tf.shape(validated_preds.values)[0], tf.float32)
     return validated_preds, counter
 
