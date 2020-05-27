@@ -8,5 +8,5 @@ The training config we used is mtl_transformer_sp.json. The batch size was set t
 #### Results
 Model                                              |   WER 
 |:-| :- |
-Transformer (Ours without pre-training)            |   8.8%
-Transformer (Ours pre-trained on Librispeech 960h) |   8.5%
+Transformer (Ours without pre-training)            |   8.6%
+Transformer (Ours pre-trained on Librispeech 960h) |   8.2%
