@@ -29,7 +29,7 @@ from athena.main import (
 )
 
 
-def decode(jsonfile):
+def decode(jsonfile, rank_size=1, rank=0):
     """ entry point for model decoding, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
     avg_num = 1 if 'model_avg_num' not in p.decode_config else p.decode_config['model_avg_num']
@@ -42,8 +42,9 @@ def decode(jsonfile):
     solver = DecoderSolver(model, config=p.decode_config, lm_model=lm_model)
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
-    dataset_builder = dataset_builder.compute_cmvn_if_necessary(True)
-    solver.decode(dataset_builder.as_dataset(batch_size=1))
+    dataset_builder.shard(rank_size, rank)
+    logging.info("shard result: %d" % len(dataset_builder))
+    solver.decode(dataset_builder.as_dataset(batch_size=1), rank_size=rank_size)
 
 
 if __name__ == "__main__":
