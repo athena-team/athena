@@ -85,7 +85,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     #             > examples/asr/switchboard/data/text
     #     spm_encode --model=${bpe_prefix}.model --output_format=piece < examples/asr/switchboard/data/text > \
     #             examples/asr/switchboard/data/text.encoded
-    #     sed -i '1 i\transcript' text.encoded
+    #     sed -i '1 i\transcript' examples/asr/switchboard/data/text.encoded
     #     awk -F "\t" '{getline trans < "examples/asr/switchboard/data/text.encoded"; print $1"\t"$2"\t"trans"\t"$4}' < \
     #             examples/asr/switchboard/data/${set}.csv > examples/asr/switchboard/data/${set}.bpe2000.csv
     #     mv examples/asr/switchboard/data/${set}.csv examples/asr/switchboard/data/${set}.csv.bk
