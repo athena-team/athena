@@ -1,4 +1,5 @@
- # Copyright (C) 2017 Beijing Didi Infinity Technology and Development Co.,Ltd.
+# coding=utf-8
+# Copyright (C) 2017 Beijing Didi Infinity Technology and Development Co.,Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,11 +27,22 @@ import tensorflow as tf
 from absl import logging
 from athena import get_wave_file_length
 
-SUBSETS = ['train', 'test', 'core-test']
-CORE_TESTSET_SPEAKER = ['MDAB0', 'MWBT0', 'FELC0', 'MTAS1', 'MWEW0', 'FPAS0', 'MJMP0',
-                        'MLNT0', 'FPKT0', 'MLLL0', 'MTLS0', 'FJLM0', 'MBPM0', 'MKLT0',
-                        'FNLP0', 'MCMJ0', 'MJDH0', 'FMGD0', 'MGRT0', 'MNJM0', 'FDHC0',
-                        'MJLN0', 'MPAM0', 'FMLD0']
+# 'TEST' set here is the standard core-test set
+SUBSETS = ['TRAIN', 'DEV', 'TEST']
+
+def get_speakers(set_name):
+    """Get speaker lists.
+    Args:
+        set_name: should be 'dev' or 'test'
+    """
+    speaker_list = []
+    speaker_list_file = "examples/asr/timit/local/" + set_name + "_spk.list"
+    if os.path.exists(speaker_list_file):
+        with open(speaker_list_file, "r") as f:
+            lines = f.readlines()
+            speaker_list = [item.strip() for item in lines]
+    return speaker_list
+
 
 def convert_audio_and_split_transcript(dataset_dir,
                                        subset,
@@ -46,21 +58,12 @@ def convert_audio_and_split_transcript(dataset_dir,
         phone_map_amount: convert phones according to "phones.60-48-39.map",
                           should be None or "48" or "39".
     """
-
     logging.info("Processing audio and transcript for %s" % subset)
-    csv_file_path = os.path.join(output_dir, subset + ".csv")
-
-    core_test = False
-    if subset == "core-test":
-        core_test = True
-        subset = "test"
-
-    subset_dir = os.path.join(dataset_dir, subset)
+    csv_file_path = os.path.join(output_dir, subset.lower() + ".csv")
     output_wav_dir = os.path.join(output_dir, "wav", subset)
-    gfile = tf.compat.v1.gfile
+    speaker_sets = get_speakers(subset.lower())
     sph2pipe = os.path.join(os.path.dirname(__file__), "../../../../tools/sph2pipe/sph2pipe")
     phone_map_file = "examples/asr/timit/local/phones.60-48-39.map"
-
     if not os.path.exists(output_wav_dir):
         os.makedirs(output_wav_dir)
 
@@ -71,14 +74,18 @@ def convert_audio_and_split_transcript(dataset_dir,
     else:
         raise ValueError(fnmatch_pattern, "is not an effective transcript type in TIMIT")
 
+    # utterances of "dev" and "test" (core-test) sets come from "test" set
+    if subset == "DEV":
+        subset = "TEST" 
+    subset_dir = os.path.join(dataset_dir, subset)
+
     phone_map = {}
     with codecs.open(phone_map_file, "r", "utf-8") as phones:
         for line in phones:
             # handle phones that are mapped to empty
             if len(line.strip().split("\t")) == 1:
                 phone = line.strip()
-                phone_48 = ""
-                phone_39 = ""
+                phone_48, phone_39 = "", ""
             else:
                 phone, phone_48, phone_39 = line.strip().split("\t", 2)
             if phone_map_amount == "48":
@@ -89,9 +96,11 @@ def convert_audio_and_split_transcript(dataset_dir,
                 phone_map[phone] = phone
 
     files = []
-    for root, _, filenames in gfile.Walk(subset_dir):
+    for root, _, filenames in tf.compat.v1.gfile.Walk(subset_dir):
         for filename in fnmatch.filter(filenames, fnmatch_pattern):
             trans_file = os.path.join(root, filename)
+            if filename.startswith("SA") or filename.startswith("."):
+                continue
             with codecs.open(trans_file, "r", "utf-8") as fin:
                 if trans_type == "char":
                     for line in fin:
@@ -108,16 +117,14 @@ def convert_audio_and_split_transcript(dataset_dir,
 
             speaker = os.path.basename(root)
             file_name = os.path.splitext(filename)[0]
-            utt_key = speaker + "-" + file_name
 
             # sphere to wav
             sph_file = os.path.join(root, file_name + ".WAV")
-            wav_file = os.path.join(output_wav_dir, utt_key + ".WAV")
-            channel = 1
-            if not gfile.Exists(wav_file):
+            wav_file = os.path.join(output_wav_dir, speaker + "-" + file_name + ".WAV")
+            if not tf.compat.v1.gfile.Exists(wav_file):
                 sph2pipe_cmd = (
                     sph2pipe
-                    + " -f wav -c {} -p ".format(str(channel))
+                    + " -f wav -c 1 -p "
                     + sph_file
                     + " "
                     + wav_file
@@ -125,11 +132,12 @@ def convert_audio_and_split_transcript(dataset_dir,
                 os.system(sph2pipe_cmd)
 
             wav_length = get_wave_file_length(wav_file)
-            if core_test:
-                if speaker in CORE_TESTSET_SPEAKER and not file_name.startswith("SA"):
+            if speaker_sets != []:
+                if speaker in speaker_sets:
                     files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
             else:
                 files.append((os.path.abspath(wav_file), wav_length, transcript, speaker))
+
     # Write to CSV file which contains four columns:
     # "wav_filename", "wav_length_ms", "transcript", "speaker".
     df = pandas.DataFrame(
@@ -156,7 +164,7 @@ def processor(dataset_dir, subset, output_dir, force_process):
         subset,
         output_dir,
         trans_type="phn",
-        phone_map_amount="39"
+        phone_map_amount=None
     )
     logging.info("Finished processing TIMIT subset {}".format(subset))
     return subset_csv
@@ -172,4 +180,4 @@ if __name__ == "__main__":
     DATASET_DIR = sys.argv[1]
     OUTPUT_DIR = sys.argv[2]
     for SUBSET in SUBSETS:
-        processor(DATASET_DIR, SUBSET, OUTPUT_DIR, False)
+        processor(DATASET_DIR, SUBSET, OUTPUT_DIR, True)
