@@ -15,7 +15,7 @@
 # limitations under the License.
 # ==============================================================================
 
-if [ "athena_timit" != $(basename "$PWD") ]; then
+if [ "athena" != $(basename "$PWD") ]; then
     echo "You should run this script in athena directory!!"
     exit 1
 fi
