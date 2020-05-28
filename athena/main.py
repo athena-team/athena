@@ -25,7 +25,9 @@ from athena import *
 
 SUPPORTED_DATASET_BUILDER = {
     "speech_recognition_dataset": SpeechRecognitionDatasetBuilder,
+    "speech_recognition_dataset_kaldiio": SpeechRecognitionDatasetKaldiIOBuilder,
     "speech_dataset": SpeechDatasetBuilder,
+    "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
     "language_dataset": LanguageDatasetBuilder,
 }
 
