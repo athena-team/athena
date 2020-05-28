@@ -16,7 +16,9 @@
 # ==============================================================================
 """ data """
 from .datasets.speech_recognition import SpeechRecognitionDatasetBuilder
+from .datasets.speech_recognition_kaldiio import SpeechRecognitionDatasetKaldiIOBuilder
 from .datasets.speech_set import SpeechDatasetBuilder
+from .datasets.speech_set_kaldiio import SpeechDatasetKaldiIOBuilder
 from .datasets.language_set import LanguageDatasetBuilder
 from .feature_normalizer import FeatureNormalizer
 from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer

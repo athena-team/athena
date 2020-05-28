@@ -16,16 +16,18 @@
 # pylint: disable=no-member, invalid-name
 """ audio dataset """
 import os
+import sys
 from absl import logging
 import tensorflow as tf
+import kaldiio
 from athena.transform import AudioFeaturizer
 from ...utils.hparam import register_and_parse_hparams
 from ..feature_normalizer import FeatureNormalizer
 from .base import BaseDatasetBuilder
 
 
-class SpeechDatasetBuilder(BaseDatasetBuilder):
-    """ SpeechDatasetBuilder
+class SpeechDatasetKaldiIOBuilder(BaseDatasetBuilder):
+    """ SpeechDatasetKaldiIOBuilder
 
     Args:
         for __init__(self, config=None)
@@ -55,7 +57,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         "cmvn_file": None,
         "input_length_range": [20, 50000],
         "data_csv": None,
-        "num_cmvn_workers": 1
+        "data_scps_dir": None
     }
 
     def __init__(self, config=None):
@@ -67,47 +69,50 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
-        if self.hparams.data_csv is not None:
-            self.load_csv(self.hparams.data_csv)
+
+        if self.hparams.data_scps_dir is not None:
+            self.load_scps(self.hparams.data_scps_dir)
 
     def reload_config(self, config):
         """ reload the config """
         if config is not None:
             self.hparams.override_from_dict(config)
 
-    def preprocess_data(self, file_path):
-        """Generate a list of tuples (wav_filename, wav_length_ms, speaker)."""
-        logging.info("Loading data from {}".format(file_path))
-        with open(file_path, "r", encoding='utf-8') as file:
-            lines = file.read().splitlines()
-        headers = lines[0]
-        lines = lines[1:]
+    def preprocess_data(self, file_dir, apply_sort_filter=True):
+        """ Generate a list of tuples (feat_key, speaker). """
+        logging.info("Loading kaldi-format feats.scp and utt2spk (optional) from {}".format(file_dir))
+        self.kaldi_io_feats = kaldiio.load_scp(os.path.join(file_dir, "feats.scp"))
+
+        # initialize all speakers with 'global' unless 'utterance_key speaker' is specified in "utt2spk"
+        self.speakers = dict.fromkeys(self.kaldi_io_feats.keys(), 'global')
+        if os.path.exists(os.path.join(file_dir, "utt2spk")):
+            with open(os.path.join(file_dir, "utt2spk"), "r") as f:
+                lines = f.readlines()
+                for line in lines:
+                    key, spk = line.strip().split(" ", 1)
+                    self.speakers[key] = spk
 
         self.entries = []
-        for line in lines:
-            items = line.split("\t")
-            wav_filename, length, speaker = items[0], items[1], 'global'
-            if 'speaker' in headers.split("\t"):
-                speaker = items[-1]
-            self.entries.append(tuple([wav_filename, length, speaker]))
-        self.entries.sort(key=lambda item: float(item[1]))
-
-        self.speakers = []
-        for _, _, speaker in self.entries:
-            if speaker not in self.speakers:
-                self.speakers.append(speaker)
-
-        self.filter_sample_by_input_length()
+        for key in self.kaldi_io_feats.keys():
+            self.entries.append(tuple([key, self.speakers[key]]))
+        
+        if apply_sort_filter:
+            logging.info("Sorting and filtering data, this is very slow, please be patient ...")
+            self.entries.sort(key=lambda item: self.kaldi_io_feats[item[0]].shape[0])
+            self.filter_sample_by_input_length()
         return self
 
-    def load_csv(self, file_path):
-        """ load csv file """
-        return self.preprocess_data(file_path)
+    def load_scps(self, file_dir):
+        """ load kaldi-format feats.scp and utt2spk (optional) """
+        return self.preprocess_data(file_dir)
 
     def __getitem__(self, index):
-        audio_file, _, speaker = self.entries[index]
-        feat = self.audio_featurizer(audio_file)
+        key, speaker = self.entries[index]
+        feat = self.kaldi_io_feats[key]
+        feat = feat.reshape(feat.shape[0], feat.shape[1], 1)
+        feat = tf.convert_to_tensor(feat)
         feat = self.feature_normalizer(feat, speaker)
+            
         input_data = feat
         output_data = tf.reshape(
             feat, [-1, self.audio_featurizer.dim * self.audio_featurizer.num_channels]
@@ -180,8 +185,8 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
         Args:
             self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length(ms)
-            max_len: the maximal length(ms)
+            min_len: the minimal length (ms for csv-format data, and frame amount for scp-format data)
+            max_len: the maximal length (ms for csv-format data, and frame amount for scp-format data)
         returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, speaker)
@@ -189,9 +194,9 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         min_len = self.hparams.input_length_range[0]
         max_len = self.hparams.input_length_range[1]
         filter_entries = []
-        for wav_filename, wav_len, speaker in self.entries:
-            if int(wav_len) in range(min_len, max_len):
-                filter_entries.append(tuple([wav_filename, wav_len, speaker]))
+        for items in self.entries:
+            if self.kaldi_io_feats[items[0]].shape[0] in range(min_len, max_len):
+                filter_entries.append(items)
         self.entries = filter_entries
 
     def compute_cmvn_if_necessary(self, is_necessary=True):
@@ -203,8 +208,8 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             return self
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         with tf.device("/cpu:0"):
-            self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim, self.hparams.num_cmvn_workers
+            self.feature_normalizer.compute_cmvn_kaldiio(
+                self.entries, self.speakers, self.kaldi_io_feats, feature_dim
             )
         self.feature_normalizer.save_cmvn()
         return self
