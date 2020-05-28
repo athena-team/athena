@@ -39,10 +39,10 @@ class ScaledDotProductAttention(tf.keras.layers.Layer):
     Returns:
         output, attention_weights
     """
-    def __init__(self, unidirectional=False, look_forward=0):
+    def __init__(self, unidirectional=False, look_ahead=0):
         super().__init__()
         self.uni = unidirectional
-        self.look_forward = look_forward
+        self.look_ahead = look_ahead
 
     def call(self, q, k, v, mask):
         """This is where the layer's logic lives."""
@@ -54,7 +54,7 @@ class ScaledDotProductAttention(tf.keras.layers.Layer):
 
         if self.uni:
             uni_mask = tf.ones(tf.shape(scaled_attention_logits))
-            uni_mask = tf.linalg.band_part(uni_mask, -1, self.look_forward)
+            uni_mask = tf.linalg.band_part(uni_mask, -1, self.look_ahead)
             scaled_attention_logits += (1 - uni_mask) * -1e9
         # add the mask to the scaled tensor.
         if mask is not None:
@@ -88,7 +88,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     dimensionality.
     """
 
-    def __init__(self, d_model, num_heads, unidirectional=False, look_forward=0):
+    def __init__(self, d_model, num_heads, unidirectional=False, look_ahead=0):
         super().__init__()
         self.num_heads = num_heads
         self.d_model = d_model
@@ -113,7 +113,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
             input_shape=(d_model,),
         )
 
-        self.attention = ScaledDotProductAttention(unidirectional, look_forward=look_forward)
+        self.attention = ScaledDotProductAttention(unidirectional, look_ahead=look_ahead)
 
         self.dense = tf.keras.layers.Dense(
             d_model,
