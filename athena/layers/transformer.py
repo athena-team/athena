@@ -258,11 +258,11 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 
     def __init__(
         self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu", unidirectional=False,
-            look_forward=0
+            look_ahead=0
 
     ):
         super().__init__()
-        self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_forward=look_forward)
+        self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
         # Implementation of Feedforward model
         layers = tf.keras.layers
         self.ffn = tf.keras.Sequential(
