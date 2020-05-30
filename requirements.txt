@@ -8,4 +8,5 @@ sentencepiece
 librosa
 jieba
 pandas
+kaldiio
 https://github.com/kpu/kenlm/archive/master.zip
