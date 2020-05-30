@@ -131,6 +131,44 @@ class FeatureNormalizer:
                 self.cmvn_dict[tar_speaker] = (list(mean_i.numpy()), list(variance_i.numpy()))
         logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
 
+    def compute_cmvn_kaldiio(self, entries, speakers, kaldi_io_feats, feature_dim):
+        """ Compute cmvn for filtered entries using kaldi-format data"""
+        start = time.time()
+        for tar_speaker in set(speakers.values()):
+            logging.info("processing %s" % tar_speaker)
+            initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+            initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+            total_num = tf.Variable(0, dtype=tf.int32)
+
+            tq_entries = tqdm.tqdm(entries)
+            for items in tq_entries:
+                key, speaker = items
+                if speaker != tar_speaker:
+                    continue
+                feat_data = kaldi_io_feats[key]
+                feat_data = tf.convert_to_tensor(feat_data)
+                temp_frame_num = feat_data.shape[0]
+                total_num.assign_add(temp_frame_num)
+
+                temp_feat = tf.reshape(feat_data, [-1, feature_dim])
+                temp_feat2 = tf.square(temp_feat)
+
+                temp_mean = tf.reduce_sum(temp_feat, axis=[0])
+                temp_var = tf.reduce_sum(temp_feat2, axis=[0])
+
+                initial_mean.assign_add(temp_mean)
+                initial_var.assign_add(temp_var)
+
+            # compute mean and var
+            if total_num == 0:
+                continue
+            total_num = tf.cast(total_num, tf.float32)
+            mean = initial_mean / total_num
+            variance = initial_var / total_num - tf.square(mean)
+            self.cmvn_dict[tar_speaker] = (list(mean.numpy()), list(variance.numpy()))
+
+        logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
+
     def load_cmvn(self):
         """ TODO: docstring """
         if not os.path.exists(self.cmvn_file):
