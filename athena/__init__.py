@@ -16,7 +16,9 @@
 """ module """
 # data
 from .data import SpeechRecognitionDatasetBuilder
+from .data import SpeechRecognitionDatasetKaldiIOBuilder
 from .data import SpeechDatasetBuilder
+from .data import SpeechDatasetKaldiIOBuilder
 from .data import LanguageDatasetBuilder
 from .data import FeatureNormalizer
 from .data.text_featurizer import TextFeaturizer
