@@ -63,6 +63,7 @@ class Transformer(tf.keras.layers.Layer):
         dropout=0.1,
         activation="gelu",
         unidirectional=False,
+        look_ahead=0,
         custom_encoder=None,
         custom_decoder=None,
     ):
@@ -72,7 +73,8 @@ class Transformer(tf.keras.layers.Layer):
         else:
             encoder_layers = [
                 TransformerEncoderLayer(
-                    d_model, nhead, dim_feedforward, dropout, activation, unidirectional
+                    d_model, nhead, dim_feedforward,
+                    dropout, activation, unidirectional, look_ahead
                 )
                 for _ in range(num_encoder_layers)
             ]
@@ -257,9 +259,8 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
     """
 
     def __init__(
-        self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu", unidirectional=False,
-            look_ahead=0
-
+        self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu",
+            unidirectional=False, look_ahead=0
     ):
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
