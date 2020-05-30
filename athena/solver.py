@@ -199,11 +199,11 @@ class DecoderSolver(BaseSolver):
                                                        self.model.time_propagate,
                                                        lm_model=lm_model)
 
-    def decode(self, dataset):
+    def decode(self, dataset, rank_size=1):
         """ decode the model """
         if dataset is None:
             return
-        metric = CharactorAccuracy()
+        metric = CharactorAccuracy(rank_size=rank_size)
         for _, samples in enumerate(dataset):
             begin = time.time()
             samples = self.model.prepare_samples(samples)
