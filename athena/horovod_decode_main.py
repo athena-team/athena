@@ -16,14 +16,14 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member
-r""" a sample implementation of LAS for HKUST """
+
 import sys
 import json
 import tensorflow as tf
 import horovod.tensorflow as hvd
 from absl import logging
-from athena import HorovodSolver
-from athena.main import parse_config, train
+from athena.solver import HorovodSolver
+from athena.decode_main import parse_config, decode
 
 
 if __name__ == "__main__":
@@ -34,11 +34,9 @@ if __name__ == "__main__":
     tf.random.set_seed(1)
 
     json_file = sys.argv[1]
-    #config = None
-    #with open(json_file) as f:
-    #    config = json.load(f)
-    #p = parse_config(config)
+    config = None
+    with open(json_file) as f:
+        config = json.load(f)
+    p = parse_config(config)
     HorovodSolver.initialize_devices()
-    #multi-servers training should use hvd.rank()
-    train(json_file, HorovodSolver, hvd.size(), hvd.rank())
-
+    decode(json_file, rank_size=hvd.size(), rank=hvd.rank())
