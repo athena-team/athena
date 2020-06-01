@@ -236,6 +236,7 @@ REGISTER_OP("Fbank")
     .Attr("upper_frequency_limit: float = 0")
     .Attr("lower_frequency_limit: float = 20")
     .Attr("filterbank_channel_count: int = 23")
+    .Attr("is_log10: bool = false")
     .Output("output: float")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c){
         return Status::OK();
