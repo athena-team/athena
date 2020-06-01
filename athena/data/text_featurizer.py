@@ -100,6 +100,17 @@ class Vocabulary:
         else:
             raise ValueError("unsupported input")
 
+class EnglishVocabulary(Vocabulary):
+    def __init__(self, vocab_file):
+        super().__init__(vocab_file)
+
+    def decode(self, ids):
+        """Convert a list of ids to a sentence."""
+        return " ".join([self.itos[id] for id in ids])
+
+    def encode(self, sentence):
+        """Convert a sentence to a list of ids, with special tokens added."""
+        return [self.stoi[token.lower()] for token in sentence.strip().split(' ')]
 
 class SentencePieceFeaturizer:
     """ TODO: docstring """
@@ -154,6 +165,7 @@ class TextFeaturizer:
     """ The main text featurizer interface """
     supported_model = {
         "vocab": Vocabulary,
+        "eng_vocab": EnglishVocabulary,
         "spm": SentencePieceFeaturizer,
         "text": TextTokenizer
     }
