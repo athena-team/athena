@@ -45,7 +45,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     tail -n +2 examples/asr/timit/data/dev.csv >> examples/asr/timit/data/all.csv
     tail -n +2 examples/asr/timit/data/test.csv >> examples/asr/timit/data/all.csv
     python  athena/cmvn_main.py \
-        examples/asr/timit/configs/mtl_transformer_sp.json examples/asr/timit/data/char/all.csv || exit 1
+        examples/asr/timit/configs/mtl_transformer_sp.json examples/asr/timit/data/all.csv || exit 1
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then

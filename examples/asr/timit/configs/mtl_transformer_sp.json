@@ -53,7 +53,7 @@
     "data_csv": "examples/asr/timit/data/train.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/timit/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/timit/data/vocab"},
+    "text_config": {"type":"eng_vocab", "model":"examples/asr/timit/data/vocab"},
     "speed_permutation": [0.9, 1.0, 1.1],
     "input_length_range":[10, 8000]
   },
@@ -61,13 +61,13 @@
     "data_csv": "examples/asr/timit/data/dev.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/timit/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/timit/data/vocab"},
+    "text_config": {"type":"eng_vocab", "model":"examples/asr/timit/data/vocab"},
     "input_length_range":[10, 8000]
   },
   "testset_config":{
     "data_csv": "examples/asr/timit/data/test.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/timit/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/timit/data/vocab"}
+    "text_config": {"type":"eng_vocab", "model":"examples/asr/timit/data/vocab"}
   }
 }
