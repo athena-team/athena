@@ -26,9 +26,11 @@ const double kDefaultUpperFrequencyLimit = 4000;
 const double kDefaultLowerFrequencyLimit = 20;
 const double kFilterbankFloor = 1e-12;
 const int kDefaultFilterbankChannelCount = 40;
+const bool kDefaultIsLog10 = false;
 
 Fbank::Fbank()
     : initialized_(false),
+      is_log10_(kDefaultIsLog10),
       lower_frequency_limit_(kDefaultLowerFrequencyLimit),
       upper_frequency_limit_(kDefaultUpperFrequencyLimit),
       filterbank_channel_count_(kDefaultFilterbankChannelCount) {}

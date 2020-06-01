@@ -35,6 +35,8 @@ class FbankOp : public OpKernel {
                                              &lower_frequency_limit_));
     OP_REQUIRES_OK(context, context->GetAttr("filterbank_channel_count",
                                              &filterbank_channel_count_));
+    OP_REQUIRES_OK(context, context->GetAttr("is_log10",
+                                             &is_log10_));
   }
 
   void Compute(OpKernelContext* context) override {
@@ -63,6 +65,7 @@ class FbankOp : public OpKernel {
     fbank.set_upper_frequency_limit(upper_frequency_limit_);
     fbank.set_lower_frequency_limit(lower_frequency_limit_);
     fbank.set_filterbank_channel_count(filterbank_channel_count_);
+    fbank.set_is_log10(is_log10_);
     OP_REQUIRES(context, fbank.Initialize(spectrogram_channels, sample_rate),
                 errors::InvalidArgument(
                     "Fbank initialization failed for channel count ",
@@ -109,6 +112,7 @@ class FbankOp : public OpKernel {
   float upper_frequency_limit_;
   float lower_frequency_limit_;
   int32 filterbank_channel_count_;
+  bool is_log10_;
 };
 
 REGISTER_KERNEL_BUILDER(Name("Fbank").Device(DEVICE_CPU), FbankOp);
