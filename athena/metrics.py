@@ -20,6 +20,10 @@ from absl import logging
 import numpy as np
 import tensorflow as tf
 from .utils.misc import validate_seqs
+try:
+    import horovod.tensorflow as hvd
+except ImportError:
+    print("There is some problem with your horovod installation. But it wouldn't affect single-gpu training")
 
 
 class CharactorAccuracy:
@@ -27,11 +31,12 @@ class CharactorAccuracy:
     Base class for Word Error Rate calculation
     """
 
-    def __init__(self, name="CharactorAccuracy"):
+    def __init__(self, name="CharactorAccuracy", rank_size=1):
         self.name = name
         self.inf = tf.constant(np.inf, dtype=tf.float32)
         self.error_count = tf.keras.metrics.Sum(dtype=tf.float32)
         self.total_count = tf.keras.metrics.Sum(dtype=tf.float32)
+        self.rank_size = rank_size
 
     def reset_states(self):
         """reset num_err and num_total to zero"""
@@ -49,6 +54,9 @@ class CharactorAccuracy:
             sparse_predictions, validated_label, normalize=False
         )
         num_errs = tf.reduce_sum(num_errs)
+        if self.rank_size > 1:
+            num_errs = hvd.allreduce(num_errs, average=False)
+            labels_counter = hvd.allreduce(labels_counter, average=False)
         self.error_count(num_errs)
         self.total_count(labels_counter)
         return num_errs, labels_counter

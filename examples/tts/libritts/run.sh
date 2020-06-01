@@ -14,11 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-""" data """
-from .datasets.speech_recognition import SpeechRecognitionDatasetBuilder
-from .datasets.speech_recognition_kaldiio import SpeechRecognitionDatasetKaldiIOBuilder
-from .datasets.speech_set import SpeechDatasetBuilder
-from .datasets.speech_set_kaldiio import SpeechDatasetKaldiIOBuilder
-from .datasets.language_set import LanguageDatasetBuilder
-from .feature_normalizer import FeatureNormalizer
-from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer
+
+if [ "athena" != $(basename "$PWD") ]; then
+    echo "You should run this script in athena directory!!"
+    exit 1
+fi
+
+source tools/env.sh
+
+stage=0
+stop_stage=100
+horovod_cmd="horovodrun -np 4 -H localhost:4"
+horovod_prefix="horovod_"
+dataset_dir=examples/tts/libritts/data
+
+if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
+    # prepare data
+    echo "Creating csv"
+    mkdir -p $dataset_dir
+    python examples/tts/libritts/local/prepare_data.py \
+        $dataset_dir || exit 1
+fi
