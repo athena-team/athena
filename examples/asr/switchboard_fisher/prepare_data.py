@@ -164,13 +164,14 @@ def split_line_and_norm_hub_rts(line, filename=""):
     return sph_key, speaker, float(time_start), float(time_end), norm_trans
 
 
-def convert_audio_and_split_transcript(directory, subset):
+def convert_audio_and_split_transcript(directory, subset, output_dir):
     """Convert SPH to WAV and split the transcript.
-  Args:
-      directory: the directory which holds the input dataset.
-      subset: the name of the specified dataset. supports train 
-        (switchboard+fisher), switchboard, fisher, hub500 and rt03s.
-  """
+    Args:
+        directory: the directory which holds the input dataset.
+        subset: the name of the specified dataset. supports train 
+                (switchboard+fisher), switchboard, fisher, hub500 and rt03s.
+        output_dir: the directory to place the newly generated csv files.
+    """
     logging.info("Processing audio and transcript for %s" % subset)
     gfile = tf.compat.v1.gfile
     sph2pip = os.path.join(os.path.dirname(__file__), "../utils/sph2pipe")
@@ -314,35 +315,36 @@ def convert_audio_and_split_transcript(directory, subset):
                                 tfm = Transformer()
                                 tfm.trim(time_start, time_end)
                                 tfm.build(wav_file, sub_wav_file)
-                            wav_filesize = os.path.getsize(sub_wav_file)
 
+                            # wav_filesize = os.path.getsize(sub_wav_file)
                             wav_length = get_wave_file_length(sub_wav_file)
+                            speaker_name = sph_key + "-" + speaker
                             files.append(
-                                (os.path.abspath(sub_wav_file), wav_length, norm_trans)
+                                (os.path.abspath(sub_wav_file), wav_length, norm_trans, speaker_name)
                             )
 
-    # Write to CSV file which contains three columns:
-    # "wav_filename", "wav_length_ms", "transcript".
-    out_csv_file = os.path.join(directory, subset + ".csv")
+    # Write to CSV file which contains four columns:
+    # "wav_filename", "wav_length_ms", "transcript", "speaker".
+    out_csv_file = os.path.join(output_dir, subset + ".csv")
     df = pandas.DataFrame(
-        data=files, columns=["wav_filename", "wav_length_ms", "transcript"]
+        data=files, columns=["wav_filename", "wav_length_ms", "transcript", "speaker"]
     )
     df.to_csv(out_csv_file, index=False, sep="\t")
     logging.info("Successfully generated csv file {}".format(out_csv_file))
 
 
-def processor(dircetory, subset, force_process):
+def processor(dircetory, subset, output_dir, force_process):
     """ process """
     if subset not in SUBSETS:
         raise ValueError(subset, "is not in switchboard_fisher")
 
-    subset_csv = os.path.join(dircetory, subset + ".csv")
+    subset_csv = os.path.join(output_dir, subset + ".csv")
     if not force_process and os.path.exists(subset_csv):
         return subset_csv
     logging.info(
         "Processing the switchboard_fisher subset {} in {}".format(subset, dircetory)
     )
-    convert_audio_and_split_transcript(dircetory, subset)
+    convert_audio_and_split_transcript(dircetory, subset, output_dir)
     logging.info("Finished processing switchboard_fisher subset {}".format(subset))
     return subset_csv
 
@@ -350,5 +352,8 @@ def processor(dircetory, subset, force_process):
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
     DIR = sys.argv[1]
+    OUTPUT_DIR = sys.argv[2]
+    if len(sys.argv) == 4:
+        SUBSETS = [sys.argv[3]]
     for SUBSET in SUBSETS:
-        processor(DIR, SUBSET, True)
+        processor(DIR, SUBSET, OUTPUT_DIR, False)
