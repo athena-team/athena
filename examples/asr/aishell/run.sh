@@ -87,5 +87,5 @@ fi
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     # score-computing stage
     echo "computing score with sclite ..."
-    . ./tools/score_computer.sh decode.log examples/asr/aishell/data/vocab score_save || exit 1
+    . ./athena/tools/score_computer.sh decode.log examples/asr/aishell/data/vocab score_save || exit 1
 fi
