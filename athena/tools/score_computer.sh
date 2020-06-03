@@ -34,7 +34,7 @@ tr '\n' ' ' < "$log_file" > "$score_dir"/tmp1.list || exit 1
 sed 's|INFO:absl:|\nINFO:absl:|g' "$score_dir"/tmp1.list > "$score_dir"/tmp2.list || exit 1
 grep 'INFO:absl:predictions' "$score_dir"/tmp2.list > "$score_dir"/decode.list || exit 1
 
-python tools/split_hyp_ref.py --decode_result "$score_dir"/decode.list \
+python athena/tools/split_hyp_ref.py --decode_result "$score_dir"/decode.list \
         --vocab_dir "$vocab_file" || exit 1
 rm "$score_dir"/*.list
 
