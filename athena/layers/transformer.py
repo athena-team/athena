@@ -62,6 +62,8 @@ class Transformer(tf.keras.layers.Layer):
         dim_feedforward=2048,
         dropout=0.1,
         activation="gelu",
+        unidirectional=False,
+        look_ahead=0,
         custom_encoder=None,
         custom_decoder=None,
     ):
@@ -71,7 +73,8 @@ class Transformer(tf.keras.layers.Layer):
         else:
             encoder_layers = [
                 TransformerEncoderLayer(
-                    d_model, nhead, dim_feedforward, dropout, activation
+                    d_model, nhead, dim_feedforward,
+                    dropout, activation, unidirectional, look_ahead
                 )
                 for _ in range(num_encoder_layers)
             ]
@@ -182,6 +185,10 @@ class TransformerEncoder(tf.keras.layers.Layer):
             output = self.layers[i](output, src_mask=src_mask, training=training)
         return output
 
+    def set_unidirectional(self, uni=False):
+        for layer in self.layers:
+            layer.set_unidirectional(uni)
+
 
 class TransformerDecoder(tf.keras.layers.Layer):
     """TransformerDecoder is a stack of N decoder layers
@@ -252,10 +259,11 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
     """
 
     def __init__(
-        self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu"
+        self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu",
+            unidirectional=False, look_ahead=0
     ):
         super().__init__()
-        self.self_attn = MultiHeadAttention(d_model, nhead)
+        self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
         # Implementation of Feedforward model
         layers = tf.keras.layers
         self.ffn = tf.keras.Sequential(
@@ -299,6 +307,9 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         out = self.norm2(out + self.ffn(out, training=training))
 
         return out
+
+    def set_unidirectional(self, uni=False):
+        self.self_attn.attention.uni = uni
 
 
 class TransformerDecoderLayer(tf.keras.layers.Layer):
