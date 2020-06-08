@@ -15,6 +15,7 @@
 # ==============================================================================
 from athena.transform.feats.read_wav import ReadWav
 from athena.transform.feats.spectrum import Spectrum
+from athena.transform.feats.mel_spectrum import MelSpectrum
 from athena.transform.feats.framepow import Framepow
 from athena.transform.feats.pitch import Pitch
 from athena.transform.feats.mfcc import Mfcc
