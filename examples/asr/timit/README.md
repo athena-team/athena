@@ -10,4 +10,4 @@ The training config we used is mtl_transformer_sp.json. Models are trained with 
 #### Results
 Model                                              |   PER 
 |:-| :- |
-Transformer (Ours without pre-training)            |   18.184%
+Transformer (Ours without pre-training)            |   16.798%
