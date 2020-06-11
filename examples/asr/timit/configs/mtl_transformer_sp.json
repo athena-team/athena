@@ -21,13 +21,13 @@
       "return_encoder_output":true,
       "num_filters":256,
       "d_model":256,
-      "num_heads":4,
-      "num_encoder_layers":3,
-      "num_decoder_layers":1,
-      "dff":256,
+      "num_heads":8,
+      "num_encoder_layers":9,
+      "num_decoder_layers":3,
+      "dff":1024,
       "rate":0.2,
       "label_smoothing_rate":0.0,
-      "schedual_sampling_rate":0.9
+      "schedual_sampling_rate":1.0
     },
     "mtl_weight":0.5
   },
@@ -35,7 +35,7 @@
   "decode_config":{
     "beam_search":true,
     "beam_size":10,
-    "ctc_weight":0.5,
+    "ctc_weight":0.7,
     "model_avg_num":10
   },
 
