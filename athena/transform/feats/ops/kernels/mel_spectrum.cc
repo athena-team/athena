@@ -164,6 +164,8 @@ void MelSpectrum::Compute(const std::vector<double> &input,
     double coeff = 0.0;
     for (int j = 0; j < input.size(); j++)
         coeff += input[j] * filterbank[i][j];
+    if (coeff < 1e-10)
+        coeff = 1e-10;
     (*output)[i] = log10(coeff);
   }
 }

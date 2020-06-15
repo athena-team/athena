@@ -45,8 +45,6 @@ class MelSpectrumTest(tf.test.TestCase):
                       'window_length': 0.025, 'frame_length': 0.010,
                       'remove_dc_offset': False, 'preEph_coeff': 0.0,
                       'output_type': 3}
-            # config = {'type': 'MelSpectrum', 'lower_frequency_limit': 80,
-            #           'upper_frequency_limit': 7600, 'filterbank_channel_count': 80}
             mel_spectrum = MelSpectrum.params(config).instantiate()
             mel_spectrum_test = mel_spectrum(input_data, sample_rate)
             if tf.executing_eagerly():
