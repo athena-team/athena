@@ -55,31 +55,33 @@ class MelSpectrum(BaseFrontend):
                                               windowing. If 2,  compute frame energy after
                                               preemphasis and windowing. (int, default = 1)
                 --preEph_coeff				: Coefficient for use in frame-signal preemphasis.
-                                             (float, default = 0.97)
+                                             (float, default = 0.0)
                 --window_type				: Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
-                                             (string, default = "povey")
+                                             (string, default = "hann")
                 --remove_dc_offset			: Subtract mean from waveform on each frame.
-                                              (bool, default = true)
+                                              (bool, default = false)
                 --is_fbank					: If true, compute power spetrum without frame energy.
                                               If false, using the frame energy instead of the
                                               square of the constant component of the signal.
                                               (bool, default = true)
                 --output_type				: If 1, return power spectrum. If 2, return log-power
-                                              spectrum. If 3, return magnitude spectrum. (int, default = 1)
+                                              spectrum. If 3, return magnitude spectrum. (int, default = 3)
                 --upper_frequency_limit		: High cutoff frequency for mel bins (if <= 0, offset
                                              from Nyquist) (float, default = 0)
                 --lower_frequency_limit		: Low cutoff frequency for mel bins (float, default = 20)
                 --filterbank_channel_count	: Number of triangular mel-frequency bins.
                                              (float, default = 23)
                 --dither			    	: Dithering constant (0.0 means no dither).
-                                             (float, default = 1) [add robust to training]
+                                             (float, default = 0) [add robust to training]
         :return: An object of class HParams, which is a set of hyperparameters as name-value pairs.
         """
 
         hparams = HParams(cls=cls)
 
         # spectrum
-        hparams.append(Spectrum.params({'output_type': 3, 'is_fbank': True}))
+        hparams.append(Spectrum.params({'output_type': 3, 'is_fbank': True,
+                                        'preEph_coeff':0.0, 'window_type': 'hann',
+                                        'dither': 0.0, 'remove_dc_offset':False}))
 
         # mel_spectrum
         upper_frequency_limit = 0

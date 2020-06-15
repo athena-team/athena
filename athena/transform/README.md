@@ -170,7 +170,7 @@ mfcc_test = mfcc(input_data, sample_rate)
 "window_type"                : "Type of window ('hamm'|'hann'|'povey'|'rect'|'blac'|'tria'). (string, default='povey')"
 "remove_dc_offset"           : "Subtract mean from waveform on each frame (bool, default = true)"
 "is_fbank"                   : "If true, compute power spetrum without frame energy. If false, using the frame energy instead of the square of the constant component of the signal. (bool, default = true)"
-"output_type"                : "If 1, return power spectrum. If 2, return log-power spectrum. (int, default = 1)"
+"output_type"                : "If 1, return power spectrum. If 2, return log-power spectrum. If 3, return magnitude spectrum. (int, default = 1)"
 "upper_frequency_limit"      : "High cutoff frequency for mel bins (if < 0, offset from Nyquist) (float, default = 0)"
 "lower_frequency_limit"      : "Low cutoff frequency for mel bins (float, default = 20)"
 "filterbank_channel_count"   : "Number of triangular mel-frequency bins (float, default = 23)"
@@ -224,4 +224,38 @@ mfcc_test = fbank_pitch(input_data, sample_rate)
 "simulate-first-pass-online"  : If true, compute-kaldi-pitch-feats will output features that correspond to what an online decoder would see in the first pass of decoding-- not the final version of the features, which is the default.  Relevant if --frames-per-chunk > 0 (bool, default = false)
 "soft-min-f0"                 : Minimum f0, applied in soft way, must not exceed min-f0 (float, default = 10)
 "upsample-filter-width"       : Integer that determines filter width when upsampling NCCF (int, default = 5)
+```
+
+## 7. MelSpectrum
+
+This model extracts log melspectrum per frame.
+
+### 7.1 melspectrum.py
+
+#### 7.1.1 Usage
+
+```python
+from athena.transform.feats.mel_spectrum import MelSpectrum
+conf = {'delta_delta':False, 'window_length':0.025}
+melspectrum = MelSpectrum.params(conf).instantiate()
+fbank_feats = melspectrum(input_data, sample_rate)
+```
+
+#### 7.1.2 Configures Setting [Options]
+
+```python
+"window_length"         : "Window length in seconds. (float, default = 0.025)"
+"frame_length"          : "Hop length in seconds. (float, default = 0.010)"
+"snip_edges"            : "If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)"
+"raw_energy"            : "If 1, compute frame energy before preemphasis and windowing. If 2, compute frame energy after preemphasis and windowing. (int, default = 1)"
+"preEph_coeff"          : "Coefficient for use in frame-signal preemphasis. (float, default = 0.0)"
+"window_type"           : "Type of window ('hamm'|'hann'|'povey'|'rect'|'blac'|'tria'). (string, default='hann')"
+"remove_dc_offset"      : "Subtract mean from waveform on each frame (bool, default = false)"
+"is_fbank"              : "If true, compute power spetrum without frame energy. If false, using the frame energy instead of the square of the constant component of the signal. (bool, default = true)"
+"output_type"           : "If 1, return power spectrum. If 2, return log-power spectrum. If 3, return magnitude spectrum. (int, default = 3)"
+"upper_frequency_limit" : "High cutoff frequency for mel bins (if <= 0, offset from Nyquist) (float, default = 0)"
+"lower_frequency_limit" : "Low cutoff frequency for mel bins (float, default = 20)"
+"filterbank_channel_count" : "Number of triangular mel-frequency bins (float, default = 23)"
+"dither"                : "Dithering constant (0.0 means no dither) (float, default = 0) [add robust to training]"
+
 ```
