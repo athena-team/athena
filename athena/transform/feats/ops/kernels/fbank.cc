@@ -65,7 +65,10 @@ void Fbank::Compute(const std::vector<double>& spectrogram_frame,
     if (val < kFilterbankFloor) {
       val = kFilterbankFloor;
     }
-    (*output)[i] = log(val);
+    if (is_log10_)
+        (*output)[i] = log10(val);
+    else
+        (*output)[i] = log(val);
   }
 }
 
