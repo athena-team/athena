@@ -173,6 +173,26 @@ class HorovodSolver(BaseSolver):
                 logging.info(self.metric_checker(loss, metrics))
                 self.model.reset_metrics()
 
+    def evaluate(self, dataset, epoch=0):
+        """ evaluate the model """
+        loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
+        loss, metrics = None, None
+        evaluate_step = self.evaluate_step
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
+        self.model.reset_metrics()
+        for batch, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            loss, metrics = evaluate_step(samples)
+            if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
+                logging.info(self.metric_checker(loss, metrics, -2))
+            loss_metric.update_state(loss)
+        if hvd.local_rank() == 0:
+            logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
+            self.model.reset_metrics()
+        return loss_metric.result()
+
 
 class DecoderSolver(BaseSolver):
     """ DecoderSolver
