@@ -169,7 +169,7 @@ class HorovodSolver(BaseSolver):
             if batch == 0:
                 hvd.broadcast_variables(self.model.trainable_variables, root_rank=0)
                 hvd.broadcast_variables(self.optimizer.variables(), root_rank=0)
-            if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
+            if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
                 logging.info(self.metric_checker(loss, metrics))
                 self.model.reset_metrics()
 
@@ -185,10 +185,10 @@ class HorovodSolver(BaseSolver):
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
             loss, metrics = evaluate_step(samples)
-            if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
+            if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
             loss_metric.update_state(loss)
-        if hvd.local_rank() == 0:
+        if hvd.rank() == 0:
             logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
             self.model.reset_metrics()
         return loss_metric.result()
