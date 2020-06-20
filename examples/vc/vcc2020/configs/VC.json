@@ -11,7 +11,7 @@
     "enable_tf_function":true
   },
 
-  "model":"StarGAN",
+  "model":"stargan",
   "num_classes": null,
   "pretrained_model": null,
   "model_config":{
