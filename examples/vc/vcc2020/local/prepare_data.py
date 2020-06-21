@@ -22,12 +22,8 @@ import codecs
 import pandas
 from absl import logging
 
-import tensorflow as tf
-# import tensorflow.compat.v1 as tf
-# tf.disable_v2_behavior()
-# from athena import get_wave_file_length
 
-SUBSETS =["dev"]# ["train", "dev", "test"]
+SUBSETS = ["train", "dev", "test"]
 
 def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
     """Convert tar.gz to WAV and split the transcript.
@@ -36,38 +32,8 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
     subset       : the name of the specified dataset. e.g. dev.
     out_csv_file : the resulting output csv file.
   """
-    gfile = tf.compat.v1.gfile
     logging.info("Processing audio and transcript for {}".format(subset))
-    audio_dir = dataset_dir   #os.path.join(dataset_dir, "wav/")
-    # trans_dir = os.path.join(dataset_dir, "transcript/")
-
-    files = []
-    # char_dict = {}
-    # if not gfile.Exists(os.path.join(audio_dir, subset)): # not unzip wav yet
-    #     for filename in os.listdir(audio_dir):
-    #         os.system("tar -zxvf " + audio_dir + filename + " -C " + audio_dir)
-    # with codecs.open(os.path.join(trans_dir, "VCC2020_transcript_v0.8.txt"), "r", encoding="utf-8") as f:
-    #     for line in f:
-    #         items = line.strip().split(" ")
-    #         wav_filename = items[0]
-    #         labels = ""
-    #         # for item in items[1:]:
-    #         #     labels += item
-    #         #     if item in char_dict:
-    #         #         char_dict[item] += 1
-    #         #     else:
-    #         #         char_dict[item] = 0
-    #         files.append((wav_filename + ".wav", labels))
-    files_size_dict = {}
-    output_wav_dir = os.path.join(audio_dir, subset)   #vcc2020/train
-
-    for root, subdirs, _ in gfile.Walk(output_wav_dir):
-        for subdir in subdirs:
-            for filename in os.listdir(os.path.join(root, subdir)):
-                files_size_dict[filename] = (
-                    # get_wave_file_length(os.path.join(root, subdir, filename)),
-                    subdir,
-                )
+    output_wav_dir = os.path.join(dataset_dir, subset)
 
     content = []
 
@@ -75,15 +41,9 @@ def convert_audio_and_split_transcript(dataset_dir, subset, out_csv_file):
     for spk in spks:
         files = os.listdir(os.path.join(output_wav_dir,spk))
         for wav_filename in files:
-            # if wav_filename in files_size_dict: # wav which has trans is valid
-            #     filesize = files_size_dict[wav_filename]
             abspath = os.path.join(output_wav_dir, spk, wav_filename)
-            content.append((abspath,  spk))  # filesize, trans,
+            content.append((abspath,  spk))
     files = content
-    # import random
-    # random.shuffle(files)
-    # Write to CSV file which contains three columns:
-    # "wav_filename", "wav_length_ms", "transcript", "speakers".
     df = pandas.DataFrame(
         data=files, columns=["wav_filename", "source_speaker"]
     )
@@ -116,7 +76,5 @@ if __name__ == "__main__":
     DATASET_DIR = sys.argv[1]
     OUTPUT_DIR = sys.argv[2]
 
-    # DATASET_DIR = '../data/vcc2020/'
-    # OUTPUT_DIR = '../data/'
     for SUBSET in SUBSETS:
         processor(DATASET_DIR, SUBSET, True, OUTPUT_DIR)

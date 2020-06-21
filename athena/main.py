@@ -29,6 +29,7 @@ SUPPORTED_DATASET_BUILDER = {
     "speech_dataset": SpeechDatasetBuilder,
     "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
     "language_dataset": LanguageDatasetBuilder,
+    "voice_conversion_dataset": VoiceConversionDatasetBuilder
 }
 
 SUPPORTED_MODEL = {
@@ -39,6 +40,7 @@ SUPPORTED_MODEL = {
     "mpc": MaskedPredictCoding,
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
+    "stargan" : StarganModel
 }
 
 SUPPORTED_OPTIMIZER = {
