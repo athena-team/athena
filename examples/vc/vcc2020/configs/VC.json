@@ -1,7 +1,11 @@
 {
-  "batch_size":32,
+  "batch_size":1,
+  "speaker_num":2,
+  "coded_sp_dim":36,
   "num_epochs":50,
   "sorta_epoch":1,
+  "fft_size": 1024,
+  "fs": 16000,
   "ckpt":"examples/vc/vcc2020/ckpts/StarGAN/",
   "summary_dir":"examples/vc/vcc2020/ckpts/StarGAN/event",
   "solver_gpu":[0],
