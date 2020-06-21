@@ -74,6 +74,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
 
+        # creat one-hot speaker embedding
         self.spker_num = len(self.speakers)
         self.spk_one_hot = {}
         onehot_arr = np.eye(self.spker_num)
@@ -83,25 +84,24 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             spk_count = spk_count + 1
 
     def load_csv(self, file_path):
-        """Generate a list of tuples (src_wav_filename, src_speaker, src_wav_length,
-                                      tar_wav_filename, tar_speaker, tar_wav_length)."""
+        """Generate a list of tuples (src_wav_filename, src_speaker,
+                                      tar_wav_filename, tar_speaker)."""
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.read().splitlines()
-        headers = lines[0]
         lines = lines[1:]
         lines.shuffle(lines)  # shuffle the wav file
 
         self.entries = []
         for line in lines:
             items = line.split("\t")
-            src_wav_filename, src_speaker, src_wav_length = items[0], items[1], items[2]
+            src_wav_filename, src_speaker = items[0], items[1]
             for line2 in lines:
                 items2 = line2.split("\t")
-                tar_wav_filename, tar_speaker, tar_wav_length = items2[0], items2[1], items2[2]
+                tar_wav_filename, tar_speaker = items2[0], items2[1]
                 if src_speaker != tar_speaker:
-                    self.entries.append(tuple([src_wav_filename, src_speaker, src_wav_length,
-                                               tar_wav_filename, tar_speaker, tar_wav_length]))
+                    self.entries.append(tuple([src_wav_filename, src_speaker,
+                                               tar_wav_filename, tar_speaker]))
 
         self.speakers = []
         for _, speaker, _  in self.entries:
@@ -134,7 +134,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         return np.asarray(x, dtype=np.float), np.asarray(y, dtype=np.float), paded_len
 
     def __getitem__(self, index):
-        src_wav_filename, src_speaker, src_wav_length, tar_wav_filename, tar_speaker, tar_wav_length = \
+        src_wav_filename, src_speaker, tar_wav_filename, tar_speaker = \
             self.entries[index]
 
         srcwav, _ = librosa.load(src_wav_filename, sr=self.hparams.fs, mono=True, dtype=np.float32)
@@ -292,14 +292,22 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
 
         spk_num = len(self.speakers)
         cmvns = []
-        self.hparams.fs, sp_dim = 16000, 36
-        fft_size = 1024
+        sp_dim = self.hparams.coded_sp_dim
+        fft_size = self.hparams.fft_size
+
+        with open(self.hparams.data_csv, "r", encoding='utf-8') as file:
+            lines = file.read().splitlines()
+        lines = lines[1:]
+        self.entries_person = []
+        for line in lines:
+            items = line.split("\t")
+            wav_filename, speaker = items[0], items[1]
+            self.entries_person.append(tuple([wav_filename, speaker]))
 
         for i in range(spk_num):
             coded_sps, f0s = [], []
-            #  The number of sentences per speaker is 10
-            for j in range(10):
-                audio_file, speaker = self.entries[i * 70 + j]
+            for j in range(self.hparams.people_sentences):
+                audio_file, speaker = self.entries_person[i * self.hparams.people_sentences + j]
                 wav, _ = librosa.load(audio_file, sr=self.hparams.fs, mono=True, dtype=np.float64)
                 f0, timeaxis = pyworld.harvest(wav, self.hparams.fs)
                 # CheapTrick harmonic spectral envelope estimation algorithm.
