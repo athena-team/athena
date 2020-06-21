@@ -347,3 +347,65 @@ class MatchAttention(tf.keras.layers.Layer):
         exp_sum = tf.reduce_sum(exp_attn_scores, axis=-1, keepdims=True)
         attention_weights = exp_attn_scores / exp_sum
         return tf.matmul(attention_weights, right)
+
+
+class LocationAttention(tf.keras.layers.Layer):
+    """location-aware attention
+
+    Reference: Attention-Based Models for Speech Recognition
+        (https://arxiv.org/pdf/1506.07503.pdf)
+
+    """
+
+    def __init__(self, attn_dim, conv_channel, aconv_filts):
+        super().__init__()
+        layers = tf.keras.layers
+        self.attn_dim = attn_dim
+        self.encode_dense_layer = layers.Dense(attn_dim)
+        self.decode_dense_layer = layers.Dense(attn_dim, use_bias=False)
+        self.location_dense_layer = layers.Dense(attn_dim, use_bias=False)
+
+        self.location_conv = layers.Conv1D(filters = conv_channel,
+                                           kernel_size = 2 * aconv_filts + 1,
+                                           strides = 1,
+                                           padding = "same",
+                                           use_bias = False,
+                                           data_format = "channels_last")
+        self.e_function = layers.Dense(1, name='e_function') # attn_dim
+
+    def call(self, inputs, scaling=2.0):
+        """
+        Args:
+            inputs (tuple) : it contains 4 params:
+                encoder_output, shape: [batch, x_steps, eunits]
+                input_length, shape: [batch]
+                decode_s: previous rnn state, shape: [batch, dunits]
+                prev_attn_weight: previous attention weights, shape: [batch, x_steps]
+            scaling: used to scale softmax scores
+        Returns:
+            attn_c: attended vector, shape: [batch, eunits]
+            attn_weight: attention scores, shape: [batch, x_steps]
+
+        """
+        encoder_output, input_length, decode_s, prev_attn_weight = inputs
+        batch = tf.shape(encoder_output)[0]
+        x_steps = tf.shape(encoder_output)[1]
+        # encodes shape: [batch, x_step, attn_dim]
+        attn_encodes = self.encode_dense_layer(encoder_output)
+        # att_conv: (batch, x_steps, 1)
+        prev_attn_weight = tf.reshape(prev_attn_weight, [batch, x_steps, 1])
+        attn_location = self.location_conv(prev_attn_weight) # (batch, x_steps, channel)
+        attn_location = self.location_dense_layer(attn_location) # (batch, x_steps, attn_dim)
+        prev_attn_s = tf.reshape(self.decode_dense_layer(decode_s), [batch, 1, self.attn_dim])
+
+        # shape: [batch, x_step]
+        unscaled_weights = tf.squeeze(self.e_function(tf.nn.tanh(attn_location +
+                                                                 attn_encodes +
+                                                                 prev_attn_s)), axis=2)
+        masks = tf.sequence_mask(input_length, maxlen=x_steps) # (batch, x_steps)
+        masks = (1 - tf.cast(masks, dtype=tf.float32)) * -1e9
+        unscaled_weights += masks
+        attn_weight = tf.nn.softmax(scaling * unscaled_weights, axis=-1)
+        attn_c = tf.reduce_sum(encoder_output * tf.reshape(attn_weight, [batch, x_steps, 1]), axis=1)
+        return attn_c, attn_weight
+
