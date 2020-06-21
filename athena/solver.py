@@ -29,6 +29,7 @@ from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
+from .models.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
 
 
@@ -77,7 +78,8 @@ class BaseSolver(tf.keras.Model):
             # outputs of a forward run of model, potentially contains more than one item
             outputs = self.model(samples, training=True)
             loss, metrics = self.model.get_loss(outputs, samples, training=True)
-        grads = tape.gradient(loss, self.model.trainable_variables)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss, metrics
@@ -117,7 +119,8 @@ class BaseSolver(tf.keras.Model):
             loss, metrics = evaluate_step(samples)
             if batch % self.hparams.log_interval == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
-            loss_metric.update_state(loss)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+            loss_metric.update_state(total_loss)
         logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
         self.model.reset_metrics()
         return loss_metric.result(), metrics
@@ -143,9 +146,10 @@ class HorovodSolver(BaseSolver):
             # outputs of a forward run of model, potentially contains more than one item
             outputs = self.model(samples, training=True)
             loss, metrics = self.model.get_loss(outputs, samples, training=True)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
         # Horovod: add Horovod Distributed GradientTape.
         tape = hvd.DistributedGradientTape(tape)
-        grads = tape.gradient(loss, self.model.trainable_variables)
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss, metrics
@@ -223,3 +227,39 @@ class DecoderSolver(BaseSolver):
             )
             logging.info(reports)
         logging.info("decoding finished")
+
+
+class SynthesisSolver(BaseSolver):
+
+    default_config = {
+        "model_avg_num": 1,
+        "max_output_length": 15,
+        "end_prob": 0.5,
+        "gl_iters": 64,
+        "synthesize_from_true_fbank": True,
+        "output_directory": None
+    }
+
+    def __init__(self, model, data_descriptions=None, config=None):
+        super().__init__(model, None, None)
+        self.model = model
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.feature_normalizer = data_descriptions.feature_normalizer
+        self.speakers_ids_dict = data_descriptions.speakers_ids_dict
+        self.vocoder = GriffinLim(data_descriptions)
+
+    def synthesize(self, dataset):
+        if dataset is None:
+            return
+        for i, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            speaker = samples['speaker']
+            speaker = self.speakers_ids_dict[int(speaker[0])]
+            outputs = self.model.synthesize(samples, self.hparams)
+            features, _ = outputs
+            if self.hparams.synthesize_from_true_fbank:
+                samples_outputs = self.feature_normalizer(samples['output'][0],
+                                                          speaker, reverse=True)
+                self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
+            features = self.feature_normalizer(features[0], speaker, reverse=True)
+            self.vocoder(features.numpy(), self.hparams, name=i)

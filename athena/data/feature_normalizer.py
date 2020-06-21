@@ -69,10 +69,10 @@ class FeatureNormalizer:
         if cmvn_file is not None:
             self.load_cmvn()
 
-    def __call__(self, feat_date, speaker):
-        return self.apply_cmvn(feat_date, speaker)
+    def __call__(self, feat_date, speaker, reverse=False):
+        return self.apply_cmvn(feat_date, speaker, reverse=reverse)
 
-    def apply_cmvn(self, feat_data, speaker):
+    def apply_cmvn(self, feat_data, speaker, reverse=False):
         """ TODO: docstring"""
         if speaker not in self.cmvn_dict:
             return feat_data
@@ -81,7 +81,10 @@ class FeatureNormalizer:
         shape = feat_data.get_shape().as_list()[1:]
         mean = tf.reshape(tf.convert_to_tensor(mean, dtype=tf.float32), shape)
         var = tf.reshape(tf.convert_to_tensor(var, dtype=tf.float32), shape)
-        feat_data = (feat_data - mean) / tf.sqrt(var)
+        if reverse:
+            feat_data = feat_data * tf.sqrt(var) + mean
+        else:
+            feat_data = (feat_data - mean) / tf.sqrt(var)
         return feat_data
 
     def compute_cmvn(self, entries, speakers, featurizer, feature_dim, num_cmvn_workers=1):
