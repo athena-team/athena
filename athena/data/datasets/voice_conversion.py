@@ -69,12 +69,13 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         self.hparams = register_and_parse_hparams(
             self.default_config, config, cls=self.__class__)
         logging.info("hparams: {}".format(self.hparams))
-        self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
+        # self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         # self.feature_normalizer = FeatureNormalizer2(self.hparams.cmvn_file)
+        self.entries, self.entries_person_wavs = [], {}
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
 
-        # creat one-hot speaker embedding
+        # create one-hot speaker embedding
         self.spker_num = len(self.speakers)
         self.spk_one_hot = {}
         onehot_arr = np.eye(self.spker_num)
@@ -83,7 +84,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             self.spk_one_hot[name] = onehot_arr[:, spk_count]
             spk_count = spk_count + 1
 
-    def load_csv(self, file_path):
+    def preprocess_data(self, file_path):
         """Generate a list of tuples (src_wav_filename, src_speaker,
                                       tar_wav_filename, tar_speaker)."""
         logging.info("Loading data from {}".format(file_path))
@@ -92,10 +93,12 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         lines = lines[1:]
         lines.shuffle(lines)  # shuffle the wav file
 
-        self.entries = []
+        # In the VC task, it is necessary to construct the paired training corpus of
+        # the original speaker and the target speaker and the multi-segment speech of the speaker entries
         for line in lines:
             items = line.split("\t")
             src_wav_filename, src_speaker = items[0], items[1]
+            self.entries_person_wavs[src_speaker] = src_wav_filename
             for line2 in lines:
                 items2 = line2.split("\t")
                 tar_wav_filename, tar_speaker = items2[0], items2[1]
@@ -104,11 +107,15 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
                                                tar_wav_filename, tar_speaker]))
 
         self.speakers = []
-        for _, speaker, _  in self.entries:
+        for speaker in self.entries_person_wavs:
             if speaker not in self.speakers:
                 self.speakers.append(speaker)
 
         return self
+
+    def load_csv(self, file_path):
+        """ load csv file """
+        return self.preprocess_data(file_path)
 
     def reload_config(self, config):
         """ reload the config """
@@ -116,6 +123,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             self.hparams.override_from_dict(config)
 
     def pad_wav_to_get_fixed_frames(x: np.ndarray, y: np.ndarray):
+        # Apply the original speaker's speech padding to the same length as the target speaker's speech padding
         wav_len_x = len(x)
         wav_len_y = len(y)
         if wav_len_x > wav_len_y:
@@ -141,35 +149,41 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         tarwav, _ = librosa.load(tar_wav_filename, sr=self.hparams.fs, mono=True, dtype=np.float32)
         src_wav, tar_wav, wav_len = self.pad_wav_to_get_fixed_frames(srcwav, tarwav)
 
+        # World Vocoder parameterizes speech into three components:
+        #     Pitch (fundamental frequency, F0) contour
+        #     Harmonic spectral envelope(sp)
+        #     Aperiodic spectral envelope (relative to the harmonic spectral envelope,ap)
+        # Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
         # extract the world features of the source speaker
         src_f0, timeaxis = pyworld.harvest(src_wav, self.hparams.fs)
         src_sp = pyworld.cheaptrick(src_wav, src_f0, timeaxis, self.hparams.fs, fft_size=self.hparams.fft_size)
         src_ap = pyworld.d4c(src_wav, src_f0, timeaxis, self.hparams.fs, fft_size=self.hparams.fft_size)
         src_coded_sp = pyworld.code_spectral_envelope(src_sp, self.hparams.fs, self.hparams.coded_sp_dim)
-        src_coded_sp = src_coded_sp.T  # dim x n
+        src_coded_sp = src_coded_sp.T  # sp_features x T
 
         # extract the world features of the target speaker
         tar_f0, timeaxis = pyworld.harvest(tar_wav, self.hparams.fs)
         tar_sp = pyworld.cheaptrick(tar_wav, tar_f0, timeaxis, self.hparams.fs, fft_size=self.hparams.fft_size)
         tar_ap = pyworld.d4c(tar_wav, tar_f0, timeaxis, self.hparams.fs, fft_size=self.hparams.fft_size)
         tar_coded_sp = pyworld.code_spectral_envelope(tar_sp, self.hparams.fs, self.hparams.coded_sp_dim)
-        tar_coded_sp = tar_coded_sp.T  # dim x n
+        tar_coded_sp = tar_coded_sp.T  # sp_features x T
 
+        # Convert the speaker names to one-hot
         src_one_hot = self.spk_one_hot[src_speaker]
         tar_one_hot = self.spk_one_hot[tar_speaker]
 
         return {
-            'src_coded_sp': src_coded_sp,  # dim * n
-            'tar_coded_sp': tar_coded_sp,  # dim * n
+            'src_coded_sp': src_coded_sp,  # sp_features x T
+            'tar_coded_sp': tar_coded_sp,  # sp_features x T
             "src_speaker": src_one_hot,
             "tar_speaker": tar_one_hot,
             "input_length": src_coded_sp.shape[1],
-            'src_f0': src_f0,  # n
-            'src_ap': src_ap,  # n*fftsize//2+1
-            'src_sp': src_sp,  # n*fftsize//2+1
-            'tar_f0': tar_f0,  # n
-            'tar_ap': tar_ap,  # n*fftsize//2+1
-            'tar_sp': tar_sp,  # n*fftsize//2+1
+            'src_f0': src_f0,  # T
+            'src_ap': src_ap,  # sp_features*fftsize//2+1
+            'src_sp': src_sp,  # sp_features*fftsize//2+1
+            'tar_f0': tar_f0,  # sp_features
+            'tar_ap': tar_ap,  # sp_features*fftsize//2+1
+            'tar_sp': tar_sp,  # sp_features*fftsize//2+1
             
         }
 
@@ -178,20 +192,14 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         return len(self.entries)
 
     @property
-    def num_class(self):
-        """ return the max_index of the vocabulary """
-        target_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
-        return target_dim
-
-    @property
     def speaker_list(self):
         """ return the speaker list """
         return self.speakers
 
-    @property
-    def audio_featurizer_func(self):
-        """ return the audio_featurizer function """
-        return self.audio_featurizer
+    # @property
+    # def audio_featurizer_func(self):
+    #     """ return the audio_featurizer function """
+    #     return self.audio_featurizer
 
     @property
     def sample_type(self):
@@ -201,63 +209,60 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             "src_speaker": tf.float32,
             "tar_speaker": tf.float32,
             "input_length": tf.int32,
-            "src_f0": tf.float32,# n
-            "src_ap": tf.float32,  # n*fftsize//2+1
-            "src_sp": tf.float32,  # n*fftsize//2+1
-            "tar_f0": tf.float32, # n
-            "tar_ap": tf.float32,  # n*fftsize//2+1
-            "tar_sp": tf.float32,  # n*fftsize//2+1
+            "src_f0": tf.float32,
+            "src_ap": tf.float32,
+            "src_sp": tf.float32,
+            "tar_f0": tf.float32,
+            "tar_ap": tf.float32,
+            "tar_sp": tf.float32,
         }
 
     @property
     def sample_shape(self):
         sp_dim = self.hparams.coded_sp_dim
-        nc = self.audio_featurizer.num_channels
         spk_num = self.hparams.speaker_num
         inc = self.hparams.fft_size/2+1
         return {
-            #  num_features, frames, 1
             "src_coded_sp": tf.TensorShape(
-                [None, sp_dim, nc]
+                [None, sp_dim, None]
             ),
             "tar_coded_sp": tf.TensorShape(
-                [None, sp_dim, nc]
+                [None, sp_dim, None]
             ),
             "src_speaker": tf.TensorShape([spk_num]),
             "tar_speaker": tf.TensorShape([spk_num]),
             "input_length": tf.TensorShape([]),
-            "src_f0": tf.TensorShape([None]),  # n
-            "src_ap": tf.TensorShape([None,inc]),  # n*fftsize//2+1
-            "src_sp": tf.TensorShape([None,inc]),  # n*fftsize//2+1
-            "tar_f0": tf.TensorShape([None]),  # n
-            "tar_ap": tf.TensorShape([None,inc]),  # n*fftsize//2+1
-            "tar_sp": tf.TensorShape([None,inc]),  # n*fftsize//2+1
+            "src_f0": tf.TensorShape([None]),       # T
+            "src_ap": tf.TensorShape([None, inc]),  # T*fftsize//2+1
+            "src_sp": tf.TensorShape([None, inc]),  # T*fftsize//2+1
+            "tar_f0": tf.TensorShape([None]),       # T
+            "tar_ap": tf.TensorShape([None, inc]),  # T*fftsize//2+1
+            "tar_sp": tf.TensorShape([None, inc]),  # T*fftsize//2+1
             
         }
 
     @property
     def sample_signature(self):
         sp_dim = self.hparams.coded_sp_dim
-        nc = self.audio_featurizer.num_channels
         spk_num = self.hparams.speaker_num
         inc = self.hparams.fft_size / 2 + 1
         return (
             {
                 "src_coded_sp": tf.TensorShape(
-                    [None, None,sp_dim, nc]
+                    [None, None, sp_dim, None]
                 ),
                 "tar_coded_sp": tf.TensorShape(
-                    [None, None,sp_dim, nc]
+                    [None, None, sp_dim, None]
                 ),
-                "src_speaker": tf.TensorShape([None,spk_num]),
-                "tar_speaker": tf.TensorShape([None,spk_num]),
+                "src_speaker": tf.TensorShape([None, spk_num]),
+                "tar_speaker": tf.TensorShape([None, spk_num]),
                 "input_length": tf.TensorShape([None]),
-                "src_f0": tf.TensorShape([None,None]),  # n
-                "src_ap": tf.TensorShape([None,None, inc]),  # n*fftsize//2+1
-                "src_sp": tf.TensorShape([None,None, inc]),  # n*fftsize//2+1
-                "tar_f0": tf.TensorShape([None,None]),  # n
-                "tar_ap": tf.TensorShape([None,None, inc]),  # n*fftsize//2+1
-                "tar_sp": tf.TensorShape([None,None, inc]),  # n*fftsize//2+1
+                "src_f0": tf.TensorShape([None, None]),       # T
+                "src_ap": tf.TensorShape([None, None, inc]),  # T*fftsize//2+1
+                "src_sp": tf.TensorShape([None, None, inc]),  # T*fftsize//2+1
+                "tar_f0": tf.TensorShape([None, None]),       # T
+                "tar_ap": tf.TensorShape([None, None, inc]),  # T*fftsize//2+1
+                "tar_sp": tf.TensorShape([None, None, inc]),  # T*fftsize//2+1
             },
         )
 
@@ -290,35 +295,29 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         if os.path.exists(self.hparams.cmvn_file):
             return self
 
-        spk_num = len(self.speakers)
         cmvns = []
         sp_dim = self.hparams.coded_sp_dim
         fft_size = self.hparams.fft_size
 
-        with open(self.hparams.data_csv, "r", encoding='utf-8') as file:
-            lines = file.read().splitlines()
-        lines = lines[1:]
-        self.entries_person = []
-        for line in lines:
-            items = line.split("\t")
-            wav_filename, speaker = items[0], items[1]
-            self.entries_person.append(tuple([wav_filename, speaker]))
-
-        for i in range(spk_num):
+        for speaker in self.speakers:
             coded_sps, f0s = [], []
-            for j in range(self.hparams.people_sentences):
-                audio_file, speaker = self.entries_person[i * self.hparams.people_sentences + j]
-                wav, _ = librosa.load(audio_file, sr=self.hparams.fs, mono=True, dtype=np.float64)
+            for audio_file in self.entries_person_wavs[speaker]:
+                wav, _ = librosa.load(audio_file, sr=self.hparams.fs, mono=True, dtype=np.float32)
+                # World Vocoder parameterizes speech into three components:
+                #     Pitch (fundamental frequency, F0) contour
+                #     Harmonic spectral envelope(sp)
+                #     Aperiodic spectral envelope (relative to the harmonic spectral envelope,ap)
+                # Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
                 f0, timeaxis = pyworld.harvest(wav, self.hparams.fs)
                 # CheapTrick harmonic spectral envelope estimation algorithm.
                 sp = pyworld.cheaptrick(wav, f0, timeaxis, self.hparams.fs, fft_size=fft_size)
-                # feature reduction nxdim
+                # feature reduction
                 coded_sp = pyworld.code_spectral_envelope(sp, self.hparams.fs, sp_dim)
-                coded_sp = coded_sp.T  # dim x n
+                coded_sp = coded_sp.T  # sp_features x T
                 coded_sps.append(coded_sp)
                 f0_ = np.reshape(f0, [-1, 1])
                 f0s.append(f0_)
-
+            # Calculate the mean and standard deviation of the World features
             coded_sps_concatenated = np.concatenate(coded_sps, axis=1)
             coded_sps_mean = list(np.mean(coded_sps_concatenated, axis=1, keepdims=False))
             coded_sps_std = list(np.std(coded_sps_concatenated, axis=1, keepdims=False))
