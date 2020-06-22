@@ -1,0 +1,67 @@
+{
+  "batch_size":1,
+  "speaker_num":2,
+  "people_sentences": 70,
+  "coded_sp_dim":36,
+  "num_epochs":50,
+  "sorta_epoch":1,
+  "fft_size": 1024,
+  "fs": 16000,
+  "ckpt":"examples/vc/vcc2020/ckpts/StarGAN/",
+  "summary_dir":"examples/vc/vcc2020/ckpts/StarGAN/event",
+  "solver_gpu":[0],
+  "solver_config":{
+    "clip_norm":100,
+    "log_interval":10,
+    "enable_tf_function":true
+  },
+
+  "model":"stargan",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "model":"speech_transformer",
+    "model_config":{
+      "return_encoder_output":true,
+      "num_filters":512,
+      "d_model":512,
+      "num_heads":8,
+      "num_encoder_layers":12,
+      "num_decoder_layers":6,
+      "dff":1280,
+      "rate":0.1,
+      "label_smoothing_rate":0.0,
+      "schedual_sampling_rate":0.9
+    },
+    "mtl_weight":0.5
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":25000,
+    "k":1.0,
+    "decay_steps": 100000000,
+    "decay_rate": 0.1
+  },
+
+  "dataset_builder": "voice_conversion_dataset",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/vc/vcc2020/data/train.csv",
+    "audio_config": {"type":"World", "codedsp_dim":40},
+    "cmvn_file":"examples/vc/vcc2020/data/cmvn",
+    "input_length_range":[10, 8000]
+  },
+  "devset_config":{
+    "data_csv": "examples/vc/vcc2020/data/dev.csv",
+    "audio_config": {"type":"World", "codedsp_dim":40},
+    "cmvn_file":"examples/vc/vcc2020/data/cmvn",
+    "input_length_range":[10, 8000]
+  },
+  "testset_config":{
+    "data_csv": "examples/vc/vcc2020/data/test.csv",
+    "audio_config": {"type":"World", "codedsp_dim":40},
+    "cmvn_file":"examples/vc/vcc2020/data/cmvn"
+  }
+}

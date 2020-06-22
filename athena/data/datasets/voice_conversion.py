@@ -72,6 +72,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         # self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         # self.feature_normalizer = FeatureNormalizer2(self.hparams.cmvn_file)
         self.entries, self.entries_person_wavs = [], {}
+        self.speakers = []
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
 
@@ -98,18 +99,16 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         for line in lines:
             items = line.split("\t")
             src_wav_filename, src_speaker = items[0], items[1]
-            self.entries_person_wavs[src_speaker] = src_wav_filename
+            if src_speaker not in self.speakers:
+                self.entries_person_wavs[src_speaker] = []
+                self.speakers.append(src_speaker)
+            self.entries_person_wavs[src_speaker].append(src_wav_filename)
             for line2 in lines:
                 items2 = line2.split("\t")
                 tar_wav_filename, tar_speaker = items2[0], items2[1]
                 if src_speaker != tar_speaker:
                     self.entries.append(tuple([src_wav_filename, src_speaker,
                                                tar_wav_filename, tar_speaker]))
-
-        self.speakers = []
-        for speaker in self.entries_person_wavs:
-            if speaker not in self.speakers:
-                self.speakers.append(speaker)
 
         return self
 
@@ -344,7 +343,7 @@ if __name__ == "__main__":
     from absl import logging
     from athena.main import parse_config, SUPPORTED_DATASET_BUILDER
 
-    jsonfile, csv_file = "examples/vc/vcc2020/configs/VC.json", "examples/vc/vcc2020/data/train.csv"
+    jsonfile, csv_file = "examples/vc/vcc2020/configs/stargan_voice_conversion.json", "examples/vc/vcc2020/data/train.csv"
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
