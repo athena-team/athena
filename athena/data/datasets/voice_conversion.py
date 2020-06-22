@@ -77,9 +77,9 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             self.load_csv(self.hparams.data_csv)
 
         # create one-hot speaker embedding
-        self.spker_num = len(self.speakers)
+        self.spk_num = len(self.speakers)
         self.spk_one_hot = {}
-        onehot_arr = np.eye(self.spker_num)
+        onehot_arr = np.eye(self.spk_num)
         spk_count = 0
         for name in self.speakers:
             self.spk_one_hot[name] = onehot_arr[:, spk_count]
