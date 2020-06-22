@@ -112,7 +112,7 @@ class EnglishVocabulary(Vocabulary):
 
     def encode(self, sentence):
         """Convert a sentence to a list of ids, with special tokens added."""
-        return [self.stoi[token.lower()] for token in sentence.strip().split(' ')]
+        return [self.stoi[token] for token in sentence.strip().split(' ')]
 
 class SentencePieceFeaturizer:
     """ TODO: docstring """
