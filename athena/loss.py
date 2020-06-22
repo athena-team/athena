@@ -97,3 +97,71 @@ class MPCLoss(tf.keras.losses.Loss):
         loss = tf.reduce_sum(tf.abs(loss, name="L1_loss"), axis=-1)
         loss = tf.reduce_mean(loss)
         return loss
+
+def GeneratorLoss(inputs):
+    lambda_cycle = 10
+    lambda_identity = 5
+    lambda_classifier = 3
+    discirmination, input_real, generated_back,identity_map,target_label_reshaped,domain_out_real = inputs
+    # ============================Domain classify loss=============================
+    domain_real_loss = lambda_classifier * \
+                            tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=target_label_reshaped,
+                                                                                      logits=domain_out_real))
+    # ============================Generator loss================================
+    # Cycle loss
+    cycle_loss = tf.reduce_mean(tf.abs(input_real - generated_back))
+    identity_loss = lambda_identity * tf.reduce_mean(tf.abs(input_real - identity_map))
+    # combine discriminator and generator
+
+    generator_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discirmination), logits=discirmination))
+
+    generator_loss_all = generator_loss + lambda_cycle * cycle_loss + \
+                              identity_loss + \
+                              domain_real_loss
+    return generator_loss_all
+
+
+def DiscriminatorLoss( inputs):
+    discrimination_real, discirmination_fake, target_label_reshaped, domain_out_fake = inputs
+
+    discrimination_real_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discrimination_real),
+                                                logits=discrimination_real))
+
+    discrimination_fake_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(discirmination_fake),
+                                                logits=discirmination_fake))
+    # _gradient_penalty = 10.0 * tf.square(tf.norm(gradients[0], ord=2) - 1.0)
+
+    domain_fake_loss = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits_v2(labels=target_label_reshaped, logits=domain_out_fake))
+
+    discrimator_loss = discrimination_fake_loss + discrimination_real_loss + domain_fake_loss#+_gradient_penalty
+    return discrimator_loss
+
+def ClassifyLoss(inputs):
+    target_label_reshaped, domain_out_real = inputs
+    domain_real_loss = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits_v2(labels=target_label_reshaped, logits=domain_out_real))
+    return domain_real_loss
+
+class StarganLoss(tf.python.keras.Layer):
+    def __init__(self, **kwargs):
+        super(StarganLoss, self).__init__(**kwargs)
+
+    def call(self, outputs,samples, logit_length=None):
+        input_real, target_real, target_label, source_label = samples["input_real"], \
+                                                              samples["target_real"], samples["target_label"], samples[
+                                                                  "source_label"]
+        domain_classifier, discirmination, generated_forward, generated_back, \
+        domain_out_real, identity_map, discrimination_real, discirmination_fake, \
+        domain_out_fake,target_label_reshaped =outputs
+
+        domain_real_loss = ClassifyLoss(target_label_reshaped, domain_out_real)
+        generator_loss_all = GeneratorLoss(discirmination, input_real, generated_back,identity_map,
+                                           target_label_reshaped,domain_out_real)
+        discrimator_loss = DiscriminatorLoss(discrimination_real, discirmination_fake, target_label_reshaped,
+                                             domain_out_fake)
+        loss_all = domain_real_loss + generator_loss_all + discrimator_loss
+        return  loss_all
