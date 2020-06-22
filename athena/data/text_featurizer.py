@@ -52,8 +52,8 @@ class Vocabulary:
 
         self.stoi = defaultdict(self._default_unk_index)
         self.itos = defaultdict(self._default_unk_symbol)
-        self.space, self.unk = "<space>", "<unk>"
-        self.unk_index, self.max_index = 0, 0
+        self.space, self.unk, self.eos = "<space>", "<unk>", "~"
+        self.unk_index, self.max_index, self.eos_index = 0, 0, 0
 
         with open(vocab_file, "r", encoding="utf-8") as vocab:
             for line in vocab:
@@ -65,6 +65,8 @@ class Vocabulary:
                 self.stoi[word] = index
                 if word == self.unk:
                     self.unk_index = index
+                if word == self.eos:
+                    self.eos_index = index
                 if index > self.max_index:
                     self.max_index = index
 
@@ -110,7 +112,7 @@ class EnglishVocabulary(Vocabulary):
 
     def encode(self, sentence):
         """Convert a sentence to a list of ids, with special tokens added."""
-        return [self.stoi[token.lower()] for token in sentence.strip().split(' ')]
+        return [self.stoi[token] for token in sentence.strip().split(' ')]
 
 class SentencePieceFeaturizer:
     """ TODO: docstring """
