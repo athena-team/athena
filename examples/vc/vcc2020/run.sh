@@ -47,7 +47,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 3 ]; then
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # training stage
     echo "training stargan"
     $horovod_cmd python athena/${horovod_prefix}main.py \
@@ -55,7 +55,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 3 ]; then
 fi
 
 
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 5 ]; then
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # convert stage
     echo "convert wavs ..."
     python athena/convert_wavs.py \
