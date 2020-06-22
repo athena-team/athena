@@ -94,16 +94,21 @@ class ExponentialDecayLearningRateSchedule(tf.keras.optimizers.schedules.Learnin
         initial_lr * (0.5 ** (step // decay_steps))
     """
 
-    def __init__(self, initial_lr=0.005, decay_steps=10000, decay_rate=0.5):
+    def __init__(self, initial_lr=0.005, decay_steps=10000, decay_rate=0.5,
+                 start_decay_steps=30000, final_lr=1e-5):
         super().__init__()
         self.initial_lr = initial_lr
         self.decay_steps = tf.cast(decay_steps, tf.float32)
         self.decay_rate = tf.cast(decay_rate, tf.float32)
+        self.start_decay_steps = start_decay_steps
+        self.final_lr = final_lr
 
     def __call__(self, step):
-        step = tf.cast(step, tf.float32)
-        factor = tf.cast(self.decay_rate ** (step // self.decay_steps), tf.float32)
-        return self.initial_lr * factor
+        factor = tf.cond(step < self.start_decay_steps,
+                         lambda : tf.cast(1, tf.float32),
+                         lambda : self.decay_rate ** ((step - self.start_decay_steps) // self.decay_steps))
+        lr = self.initial_lr * factor
+        return tf.minimum(tf.maximum(lr, self.final_lr), self.initial_lr)
 
 
 class ExponentialDecayAdam(tf.keras.optimizers.Adam):
@@ -111,17 +116,21 @@ class ExponentialDecayAdam(tf.keras.optimizers.Adam):
     default_config = {
         "initial_lr": 0.005,
         "decay_steps": 10000,
-        "decay_rate": 0.5
+        "decay_rate": 0.5,
+        "start_decay_steps": 30000,
+        "final_lr": 1e-5
     }
 
-    def __init__(self, config=None, beta_1=0.9, beta_2=0.999, epsilon=1e-7,
+    def __init__(self, config=None, beta_1=0.9, beta_2=0.999, epsilon=1e-6,
                  amsgrad=False, name="WarmUpAdam", **kwargs):
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
         super().__init__(
             learning_rate=ExponentialDecayLearningRateSchedule(
                 self.hparams.initial_lr,
                 self.hparams.decay_steps,
-                self.hparams.decay_rate
+                self.hparams.decay_rate,
+                self.hparams.start_decay_steps,
+                self.hparams.final_lr
             ),
             beta_1=beta_1,
             beta_2=beta_2,
