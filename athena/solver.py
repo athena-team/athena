@@ -29,7 +29,7 @@ from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
-from .models.vocoder import GriffinLim
+from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
 
 
