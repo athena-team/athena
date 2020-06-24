@@ -60,6 +60,10 @@ class MtlTransformerCtc(BaseModel):
         self.time_propagate = self.model.time_propagate
         self.decoder = Dense(self.num_class)
 
+        # for deployment
+        self.deploy_encoder = None
+        self.deploy_decoder = None
+
     def call(self, samples, training=None):
         """ call function in keras layers """
         attention_logits, encoder_output = self.model(samples, training=training)
@@ -125,3 +129,9 @@ class MtlTransformerCtc(BaseModel):
             history_predictions, init_cand_states, step, (encoder_output, input_mask)
         )
         return predictions
+
+    def deploy(self):
+        """ deployment function """
+        self.model.deploy()
+        self.deploy_encoder = self.model.deploy_encoder
+        self.deploy_decoder = self.model.deploy_decoder
