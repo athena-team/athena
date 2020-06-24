@@ -21,6 +21,12 @@ int initSession(tensorflow::Session *&session, const std::string &graph_path, te
 
 tensorflow::Tensor getMatrixFromFile(const std::string &filename);
 
+Eigen::Tensor<float, 1> computeLogSoftmax(tensorflow::Tensor score);
+
 void createInputStructureEncoder(std::vector <std::pair<std::string, tensorflow::Tensor>> &inputs);
 
 void createOutputNameStructureEncoder(std::vector<std::string> &output_names);
+
+void createInputStructureDecoder(std::vector <std::pair<std::string, tensorflow::Tensor>> &inputs);
+
+void createOutputNameStructureDecoder(std::vector<std::string> &output_names);
