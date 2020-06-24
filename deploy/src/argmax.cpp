@@ -108,17 +108,14 @@ int main(int argc, char** argv) {
         // update history_prediction and step
         completed_seqs.push_back(max_score_index);
         completed_seqs_len = completed_seqs.size();
-        
         tensorflow::Tensor update_history_predictions(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, completed_seqs_len}));
         auto last_history_predictions = update_history_predictions.tensor<float, 2>();
-        
         for (int i = 0; i < completed_seqs_len; i++) {
             last_history_predictions(0, i) = float(completed_seqs[i]);
         }
-
         dec_inputs[2].second = update_history_predictions;
         step(0) += 1;
-        
+
         // judge should stop or not
         // stop if seq_len exceeds max_len or meets eos
         if (completed_seqs_len > max_seq_len || max_score_index == sos_eos) {
