@@ -58,7 +58,9 @@ class Tacotron2(BaseModel):
         "clip_max_value": 4,
         "l1_loss_weight": 0.0,
         "batch_norm_position": "after",
-        "mask_decoder": False
+        "mask_decoder": False,
+        "max_output_length": 15,
+        "end_prob": 0.5
     }
 
     def __init__(self, data_descriptions, config=None):
@@ -340,30 +342,30 @@ class Tacotron2(BaseModel):
         metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
-    def synthesize(self, samples, hparams):
+    def synthesize(self, samples):
         """
         Synthesize acoustic features from the input texts
         Args:
             samples: the data source to be synthesized
-            hparams: synthesis configs are included here
         Returns:
             after_outs: the corresponding synthesized acoustic features
             attn_weights_stack: the corresponding attention weights
         """
         x0 = samples["input"]
         input_length = samples["input_length"]
+        batch = tf.shape(x0)[0]
         encoder_output = self.encoder(x0, training=False) # shape: [batch, x_steps, eunits]
-        y0 = self.initialize_input_y(samples['output'])
         prev_rnn_states, prev_attn_weight, prev_context = \
             self.initialize_states(encoder_output, input_length)
         outs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
+        initial_y = tf.zeros([batch, 1, self.feat_dim * self.reduction_factor])
         out, logit, prev_rnn_states, prev_attn_weight, prev_context = \
             self.time_propagate(encoder_output,
                                 input_length,
-                                y0[:, 0, :],
+                                initial_y,
                                 prev_rnn_states,
                                 prev_attn_weight,
                                 prev_context,
@@ -373,7 +375,8 @@ class Tacotron2(BaseModel):
         logits = logits.write(0, logit)
         attn_weights = attn_weights.write(0, prev_attn_weight)
         y_index = 0
-        while True:
+        max_output_len = self.hparams.max_output_length * input_length[0] // self.reduction_factor
+        for _ in tf.range(max_output_len):
             y_index += self.reduction_factor
 
             out, logit, prev_rnn_states, new_weight, prev_context = \
@@ -390,11 +393,24 @@ class Tacotron2(BaseModel):
             attn_weights = attn_weights.write(y_index, new_weight)
             prev_attn_weight += new_weight
 
-            prob = tf.nn.sigmoid(logit)[0][0]
-            if prob >= hparams.end_prob or y_index >= hparams.max_output_length * input_length[0]:
+            probs = tf.nn.sigmoid(logit)
+            time_to_end = probs > self.hparams.end_prob
+            time_to_end = tf.reduce_any(time_to_end)
+            if time_to_end:
                 break
 
-        before_outs = tf.transpose(outs.stack(), [1, 0, 2]) # [batch, y_steps, feat_dim]
+        logits_stack = tf.transpose(logits.stack(), [1, 0, 2]) # [batch, y_steps, reduction_factor]
+        # before_outs: [batch, y_steps, feat_dim*reduction_factor]
+        before_outs = tf.transpose(outs.stack(), [1, 0, 2])
+        output_lens = tf.shape(before_outs)[1] * self.reduction_factor
+        padded_logits = self._pad_and_reshape(logits_stack, output_lens, reverse=True)
+        # paddings should be discarded or the end of the wav may contains noises
+        paddings = 0
+        for i in tf.range(self.reduction_factor):
+            if padded_logits[:, -2-i, :] > self.hparams.end_prob:
+                paddings += 1
+        real_lens = output_lens - paddings
+        before_outs = self._pad_and_reshape(before_outs, real_lens, reverse=True)
         # attn_weights_stack: [batch, y_steps, x_steps]
         attn_weights_stack = tf.transpose(attn_weights.stack(), [1, 0, 2])
         # after_outs: [batch, y_steps, feat_dim]
