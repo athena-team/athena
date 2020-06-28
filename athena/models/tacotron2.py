@@ -58,7 +58,9 @@ class Tacotron2(BaseModel):
         "clip_max_value": 4,
         "l1_loss_weight": 0.0,
         "batch_norm_position": "after",
-        "mask_decoder": False
+        "mask_decoder": False,
+        "max_output_length": 15,
+        "end_prob": 0.5
     }
 
     def __init__(self, data_descriptions, config=None):
@@ -340,12 +342,11 @@ class Tacotron2(BaseModel):
         metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
-    def synthesize(self, samples, hparams):
+    def synthesize(self, samples):
         """
         Synthesize acoustic features from the input texts
         Args:
             samples: the data source to be synthesized
-            hparams: synthesis configs are included here
         Returns:
             after_outs: the corresponding synthesized acoustic features
             attn_weights_stack: the corresponding attention weights
@@ -373,7 +374,8 @@ class Tacotron2(BaseModel):
         logits = logits.write(0, logit)
         attn_weights = attn_weights.write(0, prev_attn_weight)
         y_index = 0
-        while True:
+        max_output_len = self.hparams.max_output_length * input_length[0] // self.reduction_factor
+        for _ in tf.range(max_output_len):
             y_index += self.reduction_factor
 
             out, logit, prev_rnn_states, new_weight, prev_context = \
@@ -391,7 +393,7 @@ class Tacotron2(BaseModel):
             prev_attn_weight += new_weight
 
             prob = tf.nn.sigmoid(logit)[0][0]
-            if prob >= hparams.end_prob or y_index >= hparams.max_output_length * input_length[0]:
+            if prob >= self.hparams.end_prob:
                 break
 
         before_outs = tf.transpose(outs.stack(), [1, 0, 2]) # [batch, y_steps, feat_dim]
