@@ -252,3 +252,103 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         masks = tf.math.logical_and(input_masks, output_masks)
         masks = tf.cast(masks, dtype=tf.float32)
         return masks
+
+
+class SoftmaxLoss(tf.keras.losses.Loss):
+    def __init__(self, embedding_size, num_classes, name="SoftmaxLoss"):
+        super().__init__(name=name)
+        self.embedding_size = embedding_size
+        self.num_classes = num_classes
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+        self.dense = tf.keras.layers.Dense(
+            num_classes,
+            kernel_initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02),
+            input_shape=(embedding_size,),
+        )
+
+    def __call__(self, inputs, labels):
+        inputs = self.dense(inputs)
+        label_onehot = tf.one_hot(labels, self.num_classes)
+        loss = tf.reduce_mean(self.criterion(label_onehot, inputs))
+        return loss
+
+
+class AMSoftmaxLoss(tf.keras.losses.Loss):
+    """ Additive Margin Softmax
+        Reference to paper "In defence of metric learning for speaker recognition"
+                            and "CosFace: Large Margin Cosine Loss for Deep Face Recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, embedding_size, num_classes, m=0.3, s=15, name="AMSoftmaxLoss"):
+        super().__init__(name=name)
+        self.embedding_size = embedding_size
+        self.num_classes = num_classes
+        self.m = m
+        self.s = s
+        initializer = tf.initializers.GlorotNormal()
+        self.weight = tf.Variable(initializer(
+                             shape=[embedding_size, num_classes], dtype=tf.float32),
+                             name="AMSoftmaxLoss_weight")
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+
+    def __call__(self, inputs, labels):
+        assert tf.shape(inputs)[0] == tf.shape(labels)[0]
+        assert tf.shape(inputs)[1] == self.embedding_size
+        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+        weight_norm = tf.math.l2_normalize(self.weight, axis=0)
+        costh = tf.matmul(inputs_norm, weight_norm)
+
+        label_onehot = tf.one_hot(labels, self.num_classes)
+        costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
+        m_reshape = tf.constant(self.m, shape=costh_shape)
+        delt_costh = tf.math.multiply(label_onehot, m_reshape)
+        
+        costh_m = costh - delt_costh
+        costh_m_s = self.s * costh_m
+        loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
+        return loss
+
+
+class AAMSoftmaxLoss(tf.keras.losses.Loss):
+    """ Additive Angular Margin Softmax
+        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition" 
+                            and "In defence of metric learning for speaker recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, embedding_size, num_classes, 
+                 m=0.3, s=15, easy_margin=False, name="AAMSoftmaxLoss"):
+        super().__init__(name=name)
+        self.embedding_size = embedding_size
+        self.num_classes = num_classes
+        self.m = m
+        self.s = s
+        initializer = tf.initializers.GlorotNormal()
+        self.weight = tf.Variable(initializer(
+                             shape=[embedding_size, num_classes], dtype=tf.float32),
+                             name="AMSoftmaxLoss_weight")
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+        self.easy_margin = easy_margin
+        self.cos_m = math.cos(m)
+        self.sin_m = math.sin(m)
+
+        # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
+        self.th = math.cos(math.pi - m)
+        self.mm = math.sin(math.pi - m) * m
+
+    def __call__(self, inputs, labels=None):
+        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+        weight_norm = tf.math.l2_normalize(self.weight, axis=0)
+        cosine = tf.matmul(inputs_norm, weight_norm)
+        sine = tf.clip_by_value(tf.math.sqrt(1.0 - tf.math.pow(cosine, 2)), 0, 1)
+        phi = cosine * self.cos_m - sine * self.sin_m
+
+        if self.easy_margin:
+            phi = tf.where(cosine > 0, phi, cosine)
+        else:
+            phi = tf.where((cosine - self.th) > 0, phi, cosine - self.mm)
+
+        label_onehot = tf.one_hot(labels, self.num_classes)
+        output = (label_onehot * phi) + ((1.0 - label_onehot) * cosine)
+        output = output * self.s
+        loss = tf.reduce_mean(self.criterion(label_onehot, output))
+        return loss
