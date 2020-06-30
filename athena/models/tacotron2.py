@@ -361,7 +361,7 @@ class Tacotron2(BaseModel):
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
-        initial_y = tf.zeros([batch, 1, self.feat_dim * self.reduction_factor])
+        initial_y = tf.zeros([batch, self.feat_dim * self.reduction_factor])
         out, logit, prev_rnn_states, prev_attn_weight, prev_context = \
             self.time_propagate(encoder_output,
                                 input_length,
@@ -377,7 +377,7 @@ class Tacotron2(BaseModel):
         y_index = 0
         max_output_len = self.hparams.max_output_length * input_length[0] // self.reduction_factor
         for _ in tf.range(max_output_len):
-            y_index += self.reduction_factor
+            y_index += 1
 
             out, logit, prev_rnn_states, new_weight, prev_context = \
                 self.time_propagate(encoder_output,
