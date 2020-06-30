@@ -459,7 +459,8 @@ class GE2ELoss(tf.keras.losses.Loss):
             cosine_all.write(utt, tf.clip_by_value(cosine_update, tf.constant(1e-6), tf.float32.max))
 
         self.w = tf.clip_by_value(self.w, tf.constant(1e-6), tf.float32.max)
-        cosine_w_b = self.w * cosine_all.stack() + self.b
+        cosine_stack = tf.transpose(cosine_all.stack(), perm=[1,0,2])
+        cosine_w_b = self.w * cosine_stack + self.b
         cosine_w_b_reshape = tf.reshape(cosine_w_b, [-1, step_size])
 
         labels_repeat = tf.reshape(tf.tile(tf.expand_dims(tf.range(step_size), -1), 
