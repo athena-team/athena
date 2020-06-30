@@ -26,7 +26,7 @@ from ..metrics import StarganAccuracy
 from ..layers.commons import SUPPORTED_RNNS
 
 
-def gated_linear_layer(inputs, gates=None, name=None):
+def gated_linear_layer(inputs, name=None):
     h1_glu = tf.keras.layers.multiply(inputs=[inputs, tf.sigmoid(inputs)], name=name)
     return h1_glu
 
@@ -49,7 +49,7 @@ class DownSampleBlock(tf.keras.layers.Layer):
     def call(self, x,padding=None):
         h1 = self.conv1(x)
         h1_norm=self.norm1(h1)
-        h1_glu = gated_linear_layer(inputs=h1_norm)#, gates=h1_gates)
+        h1_glu = gated_linear_layer(inputs=h1_norm)
         return h1_glu
 
 
@@ -59,6 +59,7 @@ class UpSampleBlock(tf.keras.layers.Layer):
         self.conv1= tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
                                             padding="same")
         self.norm1 = tf.keras.layers.BatchNormalization(epsilon=1e-8)
+
     def call(self, x):
         h1 = self.conv1(x)
         h1_norm=self.norm1(h1)
@@ -76,7 +77,7 @@ class generator(tf.keras.layers.Layer):
         inner3 = DownSampleBlock(filters=128, kernel_size=[4, 8], strides=[2, 2])(inner2)
         inner4 = DownSampleBlock(filters=64, kernel_size=[3, 5], strides=[1, 1])(inner3)
         inner5 = DownSampleBlock(filters=5, kernel_size=[9, 5], strides=[9, 1])(inner4)
-        self.conv_layer = tf.keras.Model(inputs=inner, outputs=inner5, name="discriminator_net")
+        self.conv_layer = tf.keras.Model(inputs=inner, outputs=inner5)
 
         self.upsample_1 = UpSampleBlock(filters=64, kernel_size=[9, 5], strides=[9, 1])
         self.upsample_2 = UpSampleBlock(filters=128, kernel_size=[3, 5], strides=[1, 1])
@@ -94,7 +95,6 @@ class generator(tf.keras.layers.Layer):
 
         u1 = self.upsample_1(concated)
         c1 = tf.tile(c_cast, [1, u1.shape.dims[1].value, u1.shape.dims[2].value, 1])
-        # print(f'c1 shape: {c1.shape}')
         u1_concat = tf.keras.layers.concatenate(inputs=[u1, c1], axis=-1)
 
         u2 = self.upsample_2(u1_concat)
@@ -111,7 +111,6 @@ class generator(tf.keras.layers.Layer):
 
         u5 = tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=[3, 9], strides=[1, 1], padding='same',
                                              name='generator_last_deconv')(u4_concat)
-        # print("u5:", u5.shape.as_list())
         return u5
 
 class discriminator(tf.keras.layers.Layer):
@@ -145,7 +144,6 @@ class discriminator(tf.keras.layers.Layer):
         c1 = conv2d_layer(inputs=d4_concat, filters=1, kernel_size=[36, 5], strides=[36, 1], padding=[0, 1],
                           activation="sigmoid")
 
-        # print("c1_shape:",c1.shape.as_list())
         out = tf.reduce_mean(c1, keepdims=True)
         return out
 
@@ -209,25 +207,29 @@ class StarganModel(BaseModel):
 
         target_label_reshaped = tf.reshape(target_label, [target_label.shape[0], 1, 1, self.speaker_num])
 
+        # Classifier training process
         self.domain_out_real = self.classifier(target_real)
 
+        # Generator training process
         self.generated_forward = self.generator(input_real, target_label)
         self.discirmination = self.discriminator(self.generated_forward, target_label)
         self.generated_back = self.generator(self.generated_forward, source_label)
         self.domain_out_real = self.classifier(target_real)
-        # Identity loss
         self.identity_map = self.generator(input_real, source_label)
 
+        # Discriminator training process
         self.discrimination_real = self.discriminator(target_real, target_label)
         self.discirmination_fake = self.discriminator(self.generated_forward, target_label)
         self.domain_out_fake = self.classifier(self.generated_forward)
 
-        return {"domain_classifier": domain_classifier, "discirmination": self.discirmination,
+        return {
                 "generated_forward": self.generated_forward, "generated_back": self.generated_back,
                 "domain_out_real": self.domain_out_real, "identity_map": self.identity_map,
                 "discrimination_real": self.discrimination_real, "discirmination_fake": self.discirmination_fake,
-                "domain_out_fake": self.domain_out_fake, "target_label_reshaped": target_label_reshaped
+                "domain_out_fake": self.domain_out_fake, "target_label_reshaped": target_label_reshaped,
+                "discirmination": self.discirmination
                 }
+
 
     def convert(self, src_coded_sp, src_speaker):
         """
@@ -235,11 +237,8 @@ class StarganModel(BaseModel):
         Args:
             samples: the data source to be convert
         Returns:
-            after_outs: the corresponding synthesized acoustic features
-            attn_weights_stack: the corresponding attention weights
+            tar_coded_sp: the converted acoustic features
         """
-        # src_coded_sp = samples["src_coded_sp"]
-        # src_speaker = samples["src_speaker"]
         tar_coded_sp = self.generator(src_coded_sp, src_speaker)
 
         return tar_coded_sp
