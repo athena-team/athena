@@ -214,7 +214,7 @@ class StarganModel(BaseModel):
         self.generated_forward = self.generator(input_real, target_label)
         self.discirmination = self.discriminator(self.generated_forward, target_label)
         self.generated_back = self.generator(self.generated_forward, source_label)
-        self.domain_out_real = self.classifier(target_real)
+        # self.domain_out_real = self.classifier(target_real)
         self.identity_map = self.generator(input_real, source_label)
 
         # Discriminator training process
