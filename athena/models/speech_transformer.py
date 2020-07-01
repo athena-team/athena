@@ -266,8 +266,10 @@ class SpeechTransformer(BaseModel):
         """ deployment function """
         layers = tf.keras.layers
         input_samples = {
-            "input": layers.Input(shape=self.data_descriptions.sample_shape["input"], dtype=tf.float32, name="deploy_encoder_input_seq"),
-            "input_length": layers.Input(shape=self.data_descriptions.sample_shape["input_length"], dtype=tf.int32, name="deploy_encoder_input_length")
+            "input": layers.Input(shape=self.data_descriptions.sample_shape["input"],
+                                    dtype=tf.float32, name="deploy_encoder_input_seq"),
+            "input_length": layers.Input(shape=self.data_descriptions.sample_shape["input_length"],
+                                    dtype=tf.int32, name="deploy_encoder_input_length")
         }
         x = self.x_net(input_samples["input"], training=False)
         input_length = self.compute_logit_length(input_samples)
@@ -280,10 +282,13 @@ class SpeechTransformer(BaseModel):
         print(self.deploy_encoder.summary())
 
 
-        decoder_encoder_output = layers.Input(shape=tf.TensorShape([None, self.hparams.d_model]), dtype=tf.float32, name="deploy_decoder_encoder_output")
-        memory_mask = layers.Input(shape=tf.TensorShape([None, None, None]), dtype=tf.float32, name="deploy_decoder_memory_mask")
+        decoder_encoder_output = layers.Input(shape=tf.TensorShape([None, self.hparams.d_model]),
+                                        dtype=tf.float32, name="deploy_decoder_encoder_output")
+        memory_mask = layers.Input(shape=tf.TensorShape([None, None, None]),
+                                        dtype=tf.float32, name="deploy_decoder_memory_mask")
         step = layers.Input(shape=tf.TensorShape([]), dtype=tf.int32, name="deploy_decoder_step")
-        history_predictions = layers.Input(shape=tf.TensorShape([None]), dtype=tf.float32, name="deploy_decoder_history_predictions")
+        history_predictions = layers.Input(shape=tf.TensorShape([None]),
+                                        dtype=tf.float32, name="deploy_decoder_history_predictions")
 
         # propagate one step
         output_mask = generate_square_subsequent_mask(step[0])
