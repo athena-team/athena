@@ -20,7 +20,8 @@ limitations under the License.
 #include <Eigen/Dense>
 
 
-int initSession(tensorflow::Session *&session, const std::string &graph_path, tensorflow::Status &status) {
+int initSession(tensorflow::Session *&session, 
+                const std::string &graph_path, tensorflow::Status &status) {
     status = tensorflow::NewSession(tensorflow::SessionOptions(), &session);
     if (!status.ok()) {
         std::cout << status.ToString() << "\n";
@@ -55,7 +56,8 @@ tensorflow::Tensor getMatrixFromFile(const std::string &filename) {
 
     int nrows = int(dataPoints.size() / 40);
     int ncols = 40;
-    tensorflow::Tensor feats(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, nrows, ncols, 1}));
+    tensorflow::Tensor feats(tensorflow::DT_FLOAT, 
+                             tensorflow::TensorShape({1, nrows, ncols, 1}));
     auto feats_tensor = feats.tensor<float, 4>();
 
     for (int row = 0; row < nrows; row++) {
@@ -79,12 +81,15 @@ Eigen::Tensor<float, 1> computeLogSoftmax(tensorflow::Tensor score) {
     return log_probs;
 }
 
-void createInputStructureEncoder(std::vector <std::pair<std::string, tensorflow::Tensor>> &inputs) {
+void createInputStructureEncoder(std::vector
+                                 <std::pair<std::string, tensorflow::Tensor>> &inputs) {
     // input_seq: [None, input_seq_len, 40, 1]
     tensorflow::Tensor input_seq(tensorflow::DT_FLOAT);
     tensorflow::Tensor input_len(tensorflow::DT_INT32, tensorflow::TensorShape({1}));
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"deploy_encoder_input_seq", input_seq});
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"deploy_encoder_input_length", input_len});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_encoder_input_seq", input_seq});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_encoder_input_length", input_len});
 }
 
 void createOutputNameStructureEncoder(std::vector<std::string> &output_names) {
@@ -92,11 +97,13 @@ void createOutputNameStructureEncoder(std::vector<std::string> &output_names) {
         encoder_output: [1, input_seq_len // 4, hsize] float
         input_mask: [1, 1, 1, input_seq_len // 4] float
     */
-    output_names.emplace_back("transformer_encoder/transformer_encoder_layer_11/layer_normalization_23/batchnorm/add_1");
+    output_names.emplace_back(
+    "transformer_encoder/transformer_encoder_layer_11/layer_normalization_23/batchnorm/add_1");
     output_names.emplace_back("strided_slice_1");
 }
 
-void createInputStructureDecoder(std::vector <std::pair<std::string, tensorflow::Tensor>> &inputs) {
+void createInputStructureDecoder(std::vector
+                                 <std::pair<std::string, tensorflow::Tensor>> &inputs) {
     /*
         encoder_output: [1, input_seq_len // 4, hsize]
         memory_mask: [1, 1, 1, input_seq_len // 4]
@@ -107,10 +114,14 @@ void createInputStructureDecoder(std::vector <std::pair<std::string, tensorflow:
     tensorflow::Tensor history_predictions(tensorflow::DT_FLOAT);
     tensorflow::Tensor step(tensorflow::DT_INT32, tensorflow::TensorShape({1}));
 
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"deploy_decoder_encoder_output", encoder_output});
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"deploy_decoder_memory_mask", memory_mask});
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"deploy_decoder_history_predictions", history_predictions});
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"deploy_decoder_step", step});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_encoder_output", encoder_output});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_memory_mask", memory_mask});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_history_predictions", history_predictions});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_step", step});
 }
 
 void createOutputNameStructureDecoder(std::vector<std::string> &output_names) {

@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Start argmax decoding ... " << std::endl;
     auto start = std::chrono::system_clock::now();
-    
+
     // Encoder part
     // 1. Place value into input_seq
     enc_inputs[0].second = getMatrixFromFile("../input/feats.txt");
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     // 2. Place value into input_len
     auto input_len = enc_inputs[1].second.tensor<int, 1>();
     input_len(0) = enc_inputs[0].second.shape().dim_size(1);
-    
+
     // 3. Run Session
     status = enc_session->Run(enc_inputs, enc_output_names, {}, &enc_outputs);
 
@@ -83,7 +83,8 @@ int main(int argc, char** argv) {
 
     dec_inputs[0].second = enc_outputs[0];
     dec_inputs[1].second = enc_outputs[1];
-    tensorflow::Tensor init_history_predictions(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, 1}));
+    tensorflow::Tensor init_history_predictions(tensorflow::DT_FLOAT,
+                                                tensorflow::TensorShape({1, 1}));
     auto history_predictions = init_history_predictions.tensor<float, 2>();
     history_predictions(0, 0) = float(sos_eos);
     dec_inputs[2].second = init_history_predictions;
@@ -108,7 +109,9 @@ int main(int argc, char** argv) {
         // update history_prediction and step
         completed_seqs.push_back(max_score_index);
         completed_seqs_len = completed_seqs.size();
-        tensorflow::Tensor update_history_predictions(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, completed_seqs_len}));
+        tensorflow::Tensor update_history_predictions(
+                                    tensorflow::DT_FLOAT, 
+                                    tensorflow::TensorShape({1, completed_seqs_len}));
         auto last_history_predictions = update_history_predictions.tensor<float, 2>();
         for (int i = 0; i < completed_seqs_len; i++) {
             last_history_predictions(0, i) = float(completed_seqs[i]);
