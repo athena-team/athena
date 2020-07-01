@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> index_to_char;
     createMap(index_to_char, "../input/vocab.txt");
 
-    std::cout << "Start argmax decodeing ... " << std::endl;
+    std::cout << "Start argmax decoding ... " << std::endl;
     auto start = std::chrono::system_clock::now();
     
     // Encoder part
