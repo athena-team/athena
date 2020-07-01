@@ -16,6 +16,7 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=too-few-public-methods
 """ some losses """
+import math
 import tensorflow as tf
 from .utils.misc import insert_eos_in_labels
 
@@ -305,7 +306,7 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
         costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
         m_reshape = tf.constant(self.m, shape=costh_shape)
         delt_costh = tf.math.multiply(label_onehot, m_reshape)
-        
+
         costh_m = costh - delt_costh
         costh_m_s = self.s * costh_m
         loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
@@ -331,12 +332,12 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
                              name="AMSoftmaxLoss_weight")
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.easy_margin = easy_margin
-        self.cos_m = math.cos(m)
-        self.sin_m = math.sin(m)
+        self.cos_m = math.cos(self.m)
+        self.sin_m = math.sin(self.m)
 
         # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
-        self.th = math.cos(math.pi - m)
-        self.mm = math.sin(math.pi - m) * m
+        self.th = math.cos(math.pi - self.m)
+        self.mm = math.sin(math.pi - self.m) * self.m
 
     def __call__(self, inputs, labels):
         inputs_norm = tf.math.l2_normalize(inputs, axis=1)
@@ -378,9 +379,11 @@ class ProtoLoss(tf.keras.losses.Loss):
         step_size = tf.shape(out_anchor)[0]
 
         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
-        out_anchor_reshape = tf.transpose(tf.tile(tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
+        out_anchor_reshape = tf.transpose(tf.tile(
+                             tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
 
-        distance = -tf.reduce_sum(tf.math.squared_difference(out_positive_reshape, out_anchor_reshape), axis=1)
+        distance = -tf.reduce_sum(tf.math.squared_difference(
+                                  out_positive_reshape, out_anchor_reshape), axis=1)
         label = tf.one_hot(tf.range(step_size), step_size)
         loss = tf.reduce_mean(self.criterion(label, distance))
         return loss
@@ -393,8 +396,8 @@ class AngleProtoLoss(tf.keras.losses.Loss):
     """
     def __init__(self, init_w=10.0, init_b=-5.0, name="AngleProtoLoss"):
         super().__init__(name=name)
-        self.w = tf.Variable(initial_value=init_w)
-        self.b = tf.Variable(initial_value=init_b)
+        self.weight = tf.Variable(initial_value=init_w)
+        self.bias = tf.Variable(initial_value=init_b)
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.cosine_similarity = tf.keras.losses.cosine_similarity
 
@@ -409,10 +412,11 @@ class AngleProtoLoss(tf.keras.losses.Loss):
         step_size = tf.shape(out_anchor)[0]
 
         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
-        out_anchor_reshape = tf.transpose(tf.tile(tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
+        out_anchor_reshape = tf.transpose(tf.tile(
+                             tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
         cosine = -self.cosine_similarity(out_positive_reshape, out_anchor_reshape, axis=1)
-        self.w = tf.clip_by_value(self.w, tf.constant(1e-6), tf.float32.max)
-        cosine_w_b = self.w * cosine + self.b
+        self.weight = tf.clip_by_value(self.weight, tf.constant(1e-6), tf.float32.max)
+        cosine_w_b = self.weight * cosine + self.bias
 
         labels = tf.one_hot(tf.range(step_size), step_size)
         loss = tf.reduce_mean(self.criterion(labels, cosine_w_b))
@@ -427,8 +431,8 @@ class GE2ELoss(tf.keras.losses.Loss):
     """
     def __init__(self, init_w=10.0, init_b=-5.0, name="GE2ELoss"):
         super().__init__(name=name)
-        self.w = tf.Variable(initial_value=init_w)
-        self.b = tf.Variable(initial_value=init_b)
+        self.weight = tf.Variable(initial_value=init_w)
+        self.bias = tf.Variable(initial_value=init_b)
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.cosine_similarity = tf.keras.losses.cosine_similarity
 
@@ -444,26 +448,28 @@ class GE2ELoss(tf.keras.losses.Loss):
         cosine_all = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
         for utt in range(0, num_speaker_utts):
-            index = [*range(0,num_speaker_utts)]
+            index = [*range(0, num_speaker_utts)]
             index.remove(utt)
             out_positive = inputs[:, utt, :]
             out_anchor = tf.math.reduce_mean(tf.gather(inputs, tf.constant(index), axis=1), axis=1)
 
             out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
-            centroids_reshape = tf.transpose(tf.tile(tf.expand_dims(centroids, -1), [1, 1, step_size]), [2, 1, 0])
-        
+            centroids_reshape = tf.transpose(tf.tile(
+                                tf.expand_dims(centroids, -1), [1, 1, step_size]), [2, 1, 0])
+
             cosine_diag = -self.cosine_similarity(out_positive, out_anchor, axis=1)
             cosine = -self.cosine_similarity(out_positive_reshape, centroids_reshape, axis=1)
 
             cosine_update = tf.linalg.set_diag(cosine, cosine_diag)
-            cosine_all.write(utt, tf.clip_by_value(cosine_update, tf.constant(1e-6), tf.float32.max))
+            cosine_all.write(utt,
+                            tf.clip_by_value(cosine_update, tf.constant(1e-6), tf.float32.max))
 
-        self.w = tf.clip_by_value(self.w, tf.constant(1e-6), tf.float32.max)
-        cosine_stack = tf.transpose(cosine_all.stack(), perm=[1,0,2])
-        cosine_w_b = self.w * cosine_stack + self.b
+        self.weight = tf.clip_by_value(self.weight, tf.constant(1e-6), tf.float32.max)
+        cosine_stack = tf.transpose(cosine_all.stack(), perm=[1, 0, 2])
+        cosine_w_b = self.weight * cosine_stack + self.bias
         cosine_w_b_reshape = tf.reshape(cosine_w_b, [-1, step_size])
 
-        labels_repeat = tf.reshape(tf.tile(tf.expand_dims(tf.range(step_size), -1), 
+        labels_repeat = tf.reshape(tf.tile(tf.expand_dims(tf.range(step_size), -1),
                                            [1, num_speaker_utts]), [-1])
         labels_onehot = tf.one_hot(labels_repeat, step_size)
         loss = tf.reduce_mean(self.criterion(labels_onehot, cosine_w_b_reshape))
