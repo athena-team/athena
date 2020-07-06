@@ -203,19 +203,19 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
-	"decoder_type": "wfst_decoder",
+        "decoder_type": "wfst_decoder",
         "model_avg_num": 1,
         "beam_size": 4,
         "ctc_weight": 0.0,
         "lm_weight": 0.1,
         "lm_type": "",
         "lm_path": None,
-	"acoustic_scale": 10.0,
-	"max_active": 80,
-	"min_active": 0,
-	"wfst_beam": 30.0,
-	"max_seq_len": 100,
-	"wfst_graph": None
+        "acoustic_scale": 10.0,
+        "max_active": 80,
+        "min_active": 0,
+        "wfst_beam": 30.0,
+        "max_seq_len": 100,
+        "wfst_graph": None
     }
 
     # pylint: disable=super-init-not-called
@@ -232,8 +232,8 @@ class DecoderSolver(BaseSolver):
                                                            lm_model=lm_model)
         elif self.hparams.decoder_type == "wfst_decoder":
             self.decoder = WFSTDecoder(self.hparams.wfst_graph, acoustic_scale=self.hparams.acoustic_scale,
-	                                   max_active=self.hparams.max_active, min_active=self.hparams.min_active,
-	                                   beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len)
+                                       max_active=self.hparams.max_active, min_active=self.hparams.min_active,
+                                       beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len)
         else:
             raise ValueError("This decoder type is not supported")
 
