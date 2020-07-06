@@ -63,15 +63,15 @@ class BeamSearchDecoder:
         Returns:
             beam_search_decoder: the initialized beam search decoder
         """
-        beam_size = 1 if not hparams.beam_search else hparams.beam_size
+        beam_size = 1 if not hparams.decoder_type == 'beam_search_decoder' else hparams.beam_size
         beam_search_decoder = BeamSearchDecoder(
             num_class, sos, eos, beam_size=beam_size
         )
         beam_search_decoder.decoder_one_step = decoder_one_step
-        if hparams.beam_search and hparams.ctc_weight != 0:
+        if hparams.decoder_type == 'beam_search_decoder' and hparams.ctc_weight != 0:
             ctc_scorer = CTCPrefixScorer(
                 eos,
-                ctc_beam=hparams.beam_size*2,
+                ctc_beam=hparams.beam_size * 2,
                 num_classes=num_class,
                 ctc_weight=hparams.ctc_weight,
             )
