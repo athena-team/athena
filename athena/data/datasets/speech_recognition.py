@@ -55,7 +55,8 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
-        "data_csv": None
+        "data_csv": None,
+	    "words": None
     }
 
     def __init__(self, config=None):
