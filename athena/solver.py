@@ -203,19 +203,19 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
-	    "decoder_type": "wfst_decoder",
+	"decoder_type": "wfst_decoder",
         "model_avg_num": 1,
         "beam_size": 4,
         "ctc_weight": 0.0,
         "lm_weight": 0.1,
         "lm_type": "",
         "lm_path": None,
-	    "acoustic_scale": 10.0,
-	    "max_active": 80,
-	    "min_active": 0,
-	    "wfst_beam": 30.0,
-	    "max_seq_len": 100,
-	    "wfst_graph": None
+	"acoustic_scale": 10.0,
+	"max_active": 80,
+	"min_active": 0,
+	"wfst_beam": 30.0,
+	"max_seq_len": 100,
+	"wfst_graph": None
     }
 
     # pylint: disable=super-init-not-called
@@ -297,3 +297,4 @@ class SynthesisSolver(BaseSolver):
                 self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
             features = self.feature_normalizer(features[0], speaker, reverse=True)
             self.vocoder(features.numpy(), self.hparams, name=i)
+
