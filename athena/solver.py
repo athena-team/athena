@@ -15,7 +15,7 @@
 # ==============================================================================
 # pylint: disable=arguments-differ
 # pylint: disable=no-member
-"""Base class for cross entropy model."""
+""" high-level abstraction of different stages in speech processing """
 
 import warnings
 import time
@@ -250,7 +250,8 @@ class DecoderSolver(BaseSolver):
 
 
 class SynthesisSolver(BaseSolver):
-
+    """ SynthesisSolver
+    """
     default_config = {
         "model_avg_num": 1,
         "max_output_length": 15,
@@ -269,6 +270,7 @@ class SynthesisSolver(BaseSolver):
         self.vocoder = GriffinLim(data_descriptions)
 
     def synthesize(self, dataset):
+        """ synthesize using vocoder on dataset """
         if dataset is None:
             return
         for i, samples in enumerate(dataset):
