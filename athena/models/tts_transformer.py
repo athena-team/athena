@@ -126,7 +126,7 @@ class TTSTransformer(Tacotron2):
         input_mask, output_mask = None, None
         if y is not None:
             output_mask = 1.0 - tf.sequence_mask(
-                output_length, tf.shape(x)[1], dtype=tf.float32
+                output_length, tf.shape(y)[1], dtype=tf.float32
             )
             output_mask = output_mask[:, tf.newaxis, tf.newaxis, :]
             look_ahead_mask = generate_square_subsequent_mask(tf.shape(y)[1])
