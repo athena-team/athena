@@ -104,16 +104,16 @@ class Tacotron2Loss(tf.keras.losses.Loss):
     """Tacotron2 Loss
     """
 
-    def __init__(self, model, guided_attn_weight=0.0, regularization_weight=0.0,
-                 l1_loss_weight=0.0, attn_sigma=0.4, mask_decoder=False,
+    def __init__(self, model, guided_attn_loss_function, regularization_weight=0.0,
+                 l1_loss_weight=0.0, mask_decoder=False, pos_weight=1.0,
                  name="Tacotron2Loss"):
         super().__init__(name=name)
         self.model = model
-        self.guided_attn_weight = guided_attn_weight
         self.regularization_weight = regularization_weight
         self.l1_loss_weight = l1_loss_weight
         self.mask_decoder = mask_decoder
-        self.attn_sigma = attn_sigma
+        self.guided_attn_loss_function = guided_attn_loss_function
+        self.pos_weight = pos_weight
 
     def __call__(self, outputs, samples, logit_length=None):
         """
@@ -151,24 +151,17 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         ones = tf.ones_like(indexes, dtype=tf.float32)
         labels = tf.where(end_index <= indexes, ones, zeroes) # [batch, y_steps]
         # bce_loss is used for stop token prediction
-        bce_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits_stack[:, :, 0])
+        bce_loss = tf.nn.weighted_cross_entropy_with_logits(labels=labels,
+                                                            logits=logits_stack[:, :, 0],
+                                                            pos_weight=self.pos_weight)
         bce_loss = bce_loss[:, :, tf.newaxis]
         bce_loss *= mask
         final_loss['mse_loss'] = tf.reduce_sum(mse_loss) / total_size
         final_loss['bce_loss'] = tf.reduce_sum(bce_loss) / total_size
 
-        input_length = samples["input_length"]
-        if self.guided_attn_weight > 0:
-            # guided_attn_masks shape: [batch_size, y_steps, x_steps]
-            attn_masks = self._create_attention_masks(input_length, output_length)
-            # length_masks shape: [batch_size, y_steps, x_steps]
-            length_masks = self._create_length_masks(input_length, output_length)
-            att_ws_stack = tf.cast(att_ws_stack, dtype=tf.float32)
-            losses = attn_masks * att_ws_stack
-            losses *= length_masks
-            loss = tf.reduce_sum(losses)
-            total_size = tf.cast(tf.reduce_sum(length_masks), dtype=tf.float32)
-            final_loss['guided_attn_loss'] = self.guided_attn_weight * loss / total_size
+        if self.guided_attn_loss_function is not None and \
+                self.guided_attn_loss_function.guided_attn_weight > 0:
+            final_loss['guided_attn_loss'] = self.guided_attn_loss_function(att_ws_stack, samples)
         if self.regularization_weight > 0:
             computed_vars = [var for var in self.model.trainable_variables
                              if 'bias' not in var.name and \
@@ -182,6 +175,33 @@ class Tacotron2Loss(tf.keras.losses.Loss):
 
         return final_loss
 
+
+class GuidedAttentionLoss(tf.keras.losses.Loss):
+
+    def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4,
+                 name='GuidedAttentionLoss'):
+        super().__init__(name=name)
+        self.guided_attn_weight = guided_attn_weight
+        self.reduction_factor = reduction_factor
+        self.attn_sigma = attn_sigma
+
+    def __call__(self, att_ws_stack, samples):
+        output_length = samples["output_length"]
+        input_length = samples["input_length"]
+        reduction_output_length = (output_length - 1) // self.reduction_factor + 1
+        # attn_masks shape: [batch_size, 1, reduction_y_steps, x_steps]
+        attn_masks = self._create_attention_masks(input_length, reduction_output_length)
+        # length_masks shape: [batch_size, 1, reduction_y_steps, x_steps]
+        length_masks = self._create_length_masks(input_length, reduction_output_length)
+        att_ws_stack = tf.cast(att_ws_stack, dtype=tf.float32)
+        if len(tf.shape(att_ws_stack)) == 3:
+            att_ws_stack = tf.expand_dims(att_ws_stack, axis=1)
+        losses = attn_masks * att_ws_stack
+        losses *= length_masks
+        loss = tf.reduce_sum(losses)
+        total_size = tf.cast(tf.reduce_sum(length_masks), dtype=tf.float32)
+        return self.guided_attn_weight * loss / total_size
+
     def _create_attention_masks(self, input_length, output_length):
         """masks created by attention location
 
@@ -190,7 +210,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
             output_length: shape: [batch_size]
 
         Returns:
-            masks: shape: [batch_size, y_steps, x_steps]
+            masks: shape: [batch_size, 1, y_steps, x_steps]
         """
         batch_size = tf.shape(input_length)[0]
         input_max_len = tf.reduce_max(input_length)
@@ -208,6 +228,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         # masks shape: [batch_size, y_steps, x_steps]
         masks = 1.0 - tf.math.exp(-(grid_y / input_length - grid_x / output_length) ** 2
                                  / (2 * (self.attn_sigma ** 2)))
+        masks = tf.expand_dims(masks, axis=1)
         masks = tf.cast(masks, dtype=tf.float32)
         return masks
 
@@ -219,7 +240,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
             output_length: shape: [batch_size]
 
         Returns:
-            masks: shape: [batch_size, output_length, input_length]
+            masks: shape: [batch_size, 1, output_length, input_length]
 
         Examples:
             output_length: [6, 8]
@@ -251,8 +272,30 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         output_masks = tf.sequence_mask(output_length)
         output_masks = tf.tile(tf.expand_dims(output_masks, -1), [1, 1, input_max_len])
         masks = tf.math.logical_and(input_masks, output_masks)
+        masks = tf.expand_dims(masks, axis=1)
         masks = tf.cast(masks, dtype=tf.float32)
         return masks
+
+
+class GuidedMultiHeadAttentionLoss(GuidedAttentionLoss):
+    """Guided multihead attention loss function module for multi head attention."""
+
+    def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4, num_heads=2,
+                 num_layers=2, name='GuidedMultiHeadAttentionLoss'):
+        super().__init__(guided_attn_weight, reduction_factor, attn_sigma, name=name)
+        self.num_heads = num_heads
+        self.num_layers = num_layers
+
+    def __call__(self, att_ws_stack, samples):
+        # att_ws_layer: shape: [batch, head, y_steps, x_steps]
+        total_loss = 0
+        total_layers = len(att_ws_stack)
+        for index, layer_index in enumerate(reversed(range(total_layers))):
+            if index >= self.num_layers:
+                break
+            att_ws_layer = att_ws_stack[layer_index]
+            total_loss += super().__call__(att_ws_layer[:, :self.num_heads], samples)
+        return total_loss
 
 
 class SoftmaxLoss(tf.keras.losses.Loss):

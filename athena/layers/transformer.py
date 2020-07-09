@@ -95,7 +95,7 @@ class Transformer(tf.keras.layers.Layer):
         self.nhead = nhead
 
     def call(self, src, tgt, src_mask=None, tgt_mask=None, memory_mask=None,
-             return_encoder_output=False, training=None):
+             return_encoder_output=False, return_attention_weights=False, training=None):
         """Take in and process masked source/target sequences.
 
         Args:
@@ -143,7 +143,8 @@ class Transformer(tf.keras.layers.Layer):
 
         memory = self.encoder(src, src_mask=src_mask, training=training)
         output = self.decoder(
-            tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training
+            tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
+            return_attention_weights=return_attention_weights, training=training
         )
         if return_encoder_output:
             return output, memory
@@ -211,7 +212,8 @@ class TransformerDecoder(tf.keras.layers.Layer):
         super().__init__()
         self.layers = decoder_layers
 
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, return_attention_weights=False,
+             training=None):
         """Pass the inputs (and mask) through the decoder layer in turn.
 
         Args:
@@ -224,16 +226,19 @@ class TransformerDecoder(tf.keras.layers.Layer):
             see the docs in Transformer class.
         """
         output = tgt
+        attention_weights = []
 
         for i in range(len(self.layers)):
-            output = self.layers[i](
+            output, attention_weight = self.layers[i](
                 output,
                 memory,
                 tgt_mask=tgt_mask,
                 memory_mask=memory_mask,
                 training=training,
             )
-
+            attention_weights.append(attention_weight)
+        if return_attention_weights:
+            return output, attention_weights
         return output
 
 
@@ -384,7 +389,7 @@ class TransformerDecoderLayer(tf.keras.layers.Layer):
         """
         out = self.attn1(tgt, tgt, tgt, mask=tgt_mask)[0]
         out = self.norm1(tgt + self.dropout1(out, training=training))
-        out2 = self.attn2(memory, memory, out, mask=memory_mask)[0]
+        out2, decoder_weights = self.attn2(memory, memory, out, mask=memory_mask)
         out = self.norm2(out + self.dropout2(out2, training=training))
         out = self.norm3(out + self.ffn(out, training=training))
-        return out
+        return out, decoder_weights

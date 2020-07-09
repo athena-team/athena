@@ -23,7 +23,7 @@ import tensorflow as tf
 
 from .base import BaseModel
 from ..utils.hparam import register_and_parse_hparams
-from ..loss import Tacotron2Loss
+from ..loss import Tacotron2Loss, GuidedAttentionLoss
 from ..layers.commons import ZoneOutCell
 from ..layers.attention import LocationAttention, StepwiseMonotonicAttention
 
@@ -60,6 +60,7 @@ class Tacotron2(BaseModel):
         "l1_loss_weight": 0.0,
         "batch_norm_position": "after",
         "mask_decoder": False,
+        "pos_weight": 1.0,
         "step_monotonic": False,
         "sma_mode": 'soft',
         "max_output_length": 15,
@@ -79,11 +80,15 @@ class Tacotron2(BaseModel):
         input_features = layers.Input(shape=data_descriptions.sample_shape["input"],
                                       dtype=tf.float32)
         inner = layers.Embedding(self.num_class, self.hparams.eunits)(input_features)
+        attention_loss_function = GuidedAttentionLoss(self.hparams.guided_attn_weight,
+                                                      self.reduction_factor)
         self.loss_function = Tacotron2Loss(self,
+                                           attention_loss_function,
                                            regularization_weight=self.hparams.regularization_weight,
                                            guided_attn_weight=self.hparams.guided_attn_weight,
                                            l1_loss_weight=self.hparams.l1_loss_weight,
-                                           mask_decoder=self.hparams.mask_decoder)
+                                           mask_decoder=self.hparams.mask_decoder,
+                                           pos_weight=self.hparams.pos_weight)
         self.metric = tf.keras.metrics.Mean(name="AverageLoss")
 
         # encoder definition
@@ -418,18 +423,27 @@ class Tacotron2(BaseModel):
         logits_stack = tf.transpose(logits.stack(), [1, 0, 2]) # [batch, y_steps, reduction_factor]
         # before_outs: [batch, y_steps, feat_dim*reduction_factor]
         before_outs = tf.transpose(outs.stack(), [1, 0, 2])
+        attn_weights_stack = tf.transpose(attn_weights.stack(), [1, 0, 2])
+        after_outs = self._synthesize_post_net(before_outs, logits_stack)
+        return after_outs, attn_weights_stack
+
+    def _synthesize_post_net(self, before_outs, logits_stack):
+        if self.hparams.clip_outputs:
+            maximum = - self.hparams.clip_max_value - self.hparams.clip_lower_bound_decay
+            maximum = tf.maximum(before_outs, maximum)
+            before_outs = tf.minimum(maximum, self.hparams.clip_max_value)
         output_lens = tf.shape(before_outs)[1] * self.reduction_factor
         padded_logits = self._pad_and_reshape(logits_stack, output_lens, reverse=True)
         # paddings should be discarded or the end of the wav may contains noises
-        paddings = 0
-        for i in tf.range(self.reduction_factor):
-            if padded_logits[:, -2-i, :] > self.hparams.end_prob:
-                paddings += 1
-        real_lens = output_lens - paddings
+        end_prob_num = padded_logits[:, -self.reduction_factor:, :] > self.hparams.end_prob
+        end_prob_num = tf.cast(end_prob_num, dtype=tf.int32)
+        end_prob_num = tf.reduce_sum(end_prob_num)
+        real_lens = output_lens - end_prob_num + 1
         before_outs = self._pad_and_reshape(before_outs, real_lens, reverse=True)
-        # attn_weights_stack: [batch, y_steps, x_steps]
-        attn_weights_stack = tf.transpose(attn_weights.stack(), [1, 0, 2])
         # after_outs: [batch, y_steps, feat_dim]
         after_outs = before_outs + self.postnet(before_outs, training=False)
-
-        return after_outs, attn_weights_stack
+        if self.hparams.clip_outputs:
+            maximum = - self.hparams.clip_max_value - self.hparams.clip_lower_bound_decay
+            maximum = tf.maximum(after_outs, maximum)
+            after_outs = tf.minimum(maximum, self.hparams.clip_max_value)
+        return after_outs
