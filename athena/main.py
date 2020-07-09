@@ -40,7 +40,8 @@ SUPPORTED_MODEL = {
     "mpc": MaskedPredictCoding,
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
-    "tacotron2": Tacotron2
+    "tacotron2": Tacotron2,
+    "tts_transformer": TTSTransformer
 }
 
 SUPPORTED_OPTIMIZER = {
