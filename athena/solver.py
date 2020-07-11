@@ -31,6 +31,8 @@ from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
 from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
+from pydecoders import WFSTDecoder
+import time
 
 
 class BaseSolver(tf.keras.Model):
@@ -202,13 +204,19 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
+        "decoder_type": "wfst_decoder",
         "model_avg_num": 1,
-        "beam_search": True,
         "beam_size": 4,
         "ctc_weight": 0.0,
         "lm_weight": 0.1,
         "lm_type": "",
-        "lm_path": None
+        "lm_path": None,
+        "acoustic_scale": 10.0,
+        "max_active": 80,
+        "min_active": 0,
+        "wfst_beam": 30.0,
+        "max_seq_len": 100,
+        "wfst_graph": None
     }
 
     # pylint: disable=super-init-not-called
@@ -216,12 +224,19 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
-                                                       self.model.num_class,
-                                                       self.model.sos,
-                                                       self.model.eos,
-                                                       self.model.time_propagate,
-                                                       lm_model=lm_model)
+        if self.hparams.decoder_type == "beam_search_decoder":
+            self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
+                                                           self.model.num_class,
+                                                           self.model.sos,
+                                                           self.model.eos,
+                                                           self.model.time_propagate,
+                                                           lm_model=lm_model)
+        elif self.hparams.decoder_type == "wfst_decoder":
+            self.decoder = WFSTDecoder(self.hparams.wfst_graph, acoustic_scale=self.hparams.acoustic_scale,
+                                       max_active=self.hparams.max_active, min_active=self.hparams.min_active,
+                                       beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len)
+        else:
+            raise ValueError("This decoder type is not supported")
 
     def decode(self, dataset, rank_size=1):
         """ decode the model """
@@ -254,8 +269,6 @@ class SynthesisSolver(BaseSolver):
     """
     default_config = {
         "model_avg_num": 1,
-        "max_output_length": 15,
-        "end_prob": 0.5,
         "gl_iters": 64,
         "synthesize_from_true_fbank": True,
         "output_directory": None
@@ -268,16 +281,22 @@ class SynthesisSolver(BaseSolver):
         self.feature_normalizer = data_descriptions.feature_normalizer
         self.speakers_ids_dict = data_descriptions.speakers_ids_dict
         self.vocoder = GriffinLim(data_descriptions)
+        self.sample_signature = data_descriptions.sample_signature
 
     def synthesize(self, dataset):
         """ synthesize using vocoder on dataset """
         if dataset is None:
             return
+        total_elapsed = 0
+        synthesize_step = tf.function(self.model.synthesize, input_signature=self.sample_signature)
         for i, samples in enumerate(dataset):
+            start = time.time()
             samples = self.model.prepare_samples(samples)
             speaker = samples['speaker']
             speaker = self.speakers_ids_dict[int(speaker[0])]
-            outputs = self.model.synthesize(samples, self.hparams)
+            outputs = synthesize_step(samples)
+            end = time.time() - start
+            total_elapsed += end
             features, _ = outputs
             if self.hparams.synthesize_from_true_fbank:
                 samples_outputs = self.feature_normalizer(samples['output'][0],
@@ -285,3 +304,4 @@ class SynthesisSolver(BaseSolver):
                 self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
             features = self.feature_normalizer(features[0], speaker, reverse=True)
             self.vocoder(features.numpy(), self.hparams, name=i)
+        logging.info("model computation elapsed: %s" % total_elapsed)

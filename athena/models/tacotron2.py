@@ -394,7 +394,6 @@ class Tacotron2(BaseModel):
         max_output_len = self.hparams.max_output_length * input_length[0] // self.reduction_factor
         for _ in tf.range(max_output_len):
             y_index += 1
-
             out, logit, prev_rnn_states, new_weight, prev_context = \
                 self.time_propagate(encoder_output,
                                     input_length,
@@ -410,7 +409,6 @@ class Tacotron2(BaseModel):
             attn_weights = attn_weights.write(y_index, new_weight)
             prev_attn_weight = new_weight
             accum_attn_weight += new_weight
-
             probs = tf.nn.sigmoid(logit)
             time_to_end = probs > self.hparams.end_prob
             time_to_end = tf.reduce_any(time_to_end)
