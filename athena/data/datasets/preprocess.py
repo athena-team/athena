@@ -16,12 +16,16 @@
 # ==============================================================================
 # pylint: disable=missing-function-docstring, invalid-name
 
+""" preprecessing for speech features """
 import random
 from PIL import Image
 from ...utils.hparam import register_and_parse_hparams
 import tensorflow as tf
 
 class SpecAugment:
+    """ Implementation of specaugument from paper "SpecAugment: A Simple Data
+        Augmentation Method for Automatic Speech Recognition"
+    """
 
     default_config = {
         "time_warping": 0,
