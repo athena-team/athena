@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""This model extracts Fbank features per frame."""
+"""This model extracts MelSpectrum features per frame."""
 
 import tensorflow as tf
 from athena.utils.hparam import HParams
@@ -23,11 +23,11 @@ from athena.transform.feats.spectrum import Spectrum
 from athena.transform.feats.cmvn import CMVN
 
 
-class Fbank(BaseFrontend):
+class MelSpectrum(BaseFrontend):
     """
-    Computing filter banks is applying triangular filters on a Mel-scale to the power
+    Computing filter banks is applying triangular filters on a Mel-scale to the magnitude
      spectrum to extract frequency bands. Return a float tensor with shape
-     (num_channels, num_frames, num_frequencies).
+     (num_frames, num_channels).
     """
     def __init__(self, config: dict):
         super().__init__(config)
@@ -35,14 +35,11 @@ class Fbank(BaseFrontend):
         self.cmvn = CMVN(config)
 
         # global cmvn dim == feature dim
-        if config.type == "Fbank" and self.cmvn.global_cmvn:
-            assert config.filterbank_channel_count * config.channel == len(
-                config.global_mean
-            ), "Error, feature dim {} is not equals to cmvn dim {}".format(
-                config.filterbank_channel_count * config.channel,
-                len(config.global_mean),
-            )
-        print("Fbank params: ", self.config)
+        if config.type == 'MelSpectrum' and self.cmvn.global_cmvn:
+            assert config.filterbank_channel_count * config.channel == len(config.global_mean), \
+                'Error, feature dim {} is not equals to cmvn dim {}'. \
+                    format(config.filterbank_channel_count * config.channel,
+                           len(config.global_mean))
 
     @classmethod
     def params(cls, config=None):
@@ -51,65 +48,63 @@ class Fbank(BaseFrontend):
         :param config: contains thirteen optional parameters:
                 --window_length				: Window length in seconds. (float, default = 0.025)
                 --frame_length				: Hop length in seconds. (float, default = 0.010)
-                --snip_edges				: If 1, the last frame (shorter than window_length) will be
-                                              cutoff. If 2, 1 // 2 frame_length data will be padded
-                                              to data. (int, default = 1)
+                --snip_edges				: If True, the last frame (shorter than window_length) will be
+                                              cutoff. If False, 1 // 2 frame_length data will be padded
+                                              to data. (bool, default = True)
                 ---raw_energy				: If 1, compute frame energy before preemphasis and
                                               windowing. If 2,  compute frame energy after
                                               preemphasis and windowing. (int, default = 1)
                 --preEph_coeff				: Coefficient for use in frame-signal preemphasis.
-                                             (float, default = 0.97)
+                                             (float, default = 0.0)
                 --window_type				: Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
-                                             (string, default = "povey")
+                                             (string, default = "hann")
                 --remove_dc_offset			: Subtract mean from waveform on each frame.
-                                              (bool, default = true)
+                                              (bool, default = false)
                 --is_fbank					: If true, compute power spetrum without frame energy.
                                               If false, using the frame energy instead of the
                                               square of the constant component of the signal.
                                               (bool, default = true)
-                --is_log10                  : If true, using log10 to fbank. If false, using loge.
-                                              (bool, default = false)
                 --output_type				: If 1, return power spectrum. If 2, return log-power
-                                              spectrum. (int, default = 1)
+                                              spectrum. If 3, return magnitude spectrum. (int, default = 3)
                 --upper_frequency_limit		: High cutoff frequency for mel bins (if <= 0, offset
                                              from Nyquist) (float, default = 0)
                 --lower_frequency_limit		: Low cutoff frequency for mel bins (float, default = 20)
                 --filterbank_channel_count	: Number of triangular mel-frequency bins.
                                              (float, default = 23)
                 --dither			    	: Dithering constant (0.0 means no dither).
-                                             (float, default = 1) [add robust to training]
+                                             (float, default = 0) [add robust to training]
         :return: An object of class HParams, which is a set of hyperparameters as name-value pairs.
         """
 
         hparams = HParams(cls=cls)
 
         # spectrum
-        hparams.append(Spectrum.params({"output_type": 1, "is_fbank": True}))
+        hparams.append(Spectrum.params({'output_type': 3, 'is_fbank': True,
+                                        'preEph_coeff':0.0, 'window_type': 'hann',
+                                        'dither': 0.0, 'remove_dc_offset':False}))
 
-        # fbank
+        # mel_spectrum
         upper_frequency_limit = 0
         lower_frequency_limit = 60
         filterbank_channel_count = 40
-        is_log10 = False
-        hparams.add_hparam("upper_frequency_limit", upper_frequency_limit)
-        hparams.add_hparam("lower_frequency_limit", lower_frequency_limit)
-        hparams.add_hparam("filterbank_channel_count", filterbank_channel_count)
-        hparams.add_hparam('is_log10', is_log10)
+        hparams.add_hparam('upper_frequency_limit', upper_frequency_limit)
+        hparams.add_hparam('lower_frequency_limit', lower_frequency_limit)
+        hparams.add_hparam('filterbank_channel_count', filterbank_channel_count)
 
         # delta
         delta_delta = False  # True
         order = 2
         window = 2
-        hparams.add_hparam("delta_delta", delta_delta)
-        hparams.add_hparam("order", order)
-        hparams.add_hparam("window", window)
+        hparams.add_hparam('delta_delta', delta_delta)
+        hparams.add_hparam('order', order)
+        hparams.add_hparam('window', window)
 
         if config is not None:
             hparams.parse(config, True)
 
-        hparams.type = "Fbank"
+        hparams.type = 'MelSpectrum'
 
-        hparams.add_hparam("channel", 1)
+        hparams.add_hparam('channel', 1)
         if hparams.delta_delta:
             hparams.channel = hparams.order + 1
 
@@ -117,41 +112,32 @@ class Fbank(BaseFrontend):
 
     def call(self, audio_data, sample_rate):
         """
-        Caculate fbank features of audio data.
-        :param audio_data: the audio signal from which to compute spectrum.
-                          Should be an (1, N) tensor.
-        :param sample_rate: [option]the samplerate of the signal we working with,
-                            default is 16kHz.
-        :return: A float tensor of size (num_channels, num_frames, num_frequencies) containing
-               fbank features of every frame in speech.
+           Caculate logmelspectrum of audio data.
+           :param audio_data: the audio signal from which to compute spectrum.
+                              Should be an (1, N) tensor.
+           :param sample_rate: [option]the samplerate of the signal we working with,
+                                default is 16kHz.
+           :return: A float tensor of size (num_frames, num_channels) containing
+                   melspectrum features of every frame in speech.
         """
         p = self.config
 
-        with tf.name_scope('fbank'):
+        with tf.name_scope('melspectrum'):
 
             spectrum = self.spect(audio_data, sample_rate)
             spectrum = tf.expand_dims(spectrum, 0)
             sample_rate = tf.cast(sample_rate, dtype=tf.int32)
 
-            fbank = py_x_ops.fbank(spectrum,
-                                   sample_rate,
-                                   upper_frequency_limit=p.upper_frequency_limit,
-                                   lower_frequency_limit=p.lower_frequency_limit,
-                                   filterbank_channel_count=p.filterbank_channel_count,
-                                   is_log10=p.is_log10)
+            mel_spectrum = py_x_ops.mel_spectrum(
+                spectrum,
+                sample_rate,
+                upper_frequency_limit=p.upper_frequency_limit,
+                lower_frequency_limit=p.lower_frequency_limit,
+                filterbank_channel_count=p.filterbank_channel_count)
 
-            fbank = tf.squeeze(fbank, axis=0)
-            shape = tf.shape(fbank)
-            nframe = shape[0]
-            nfbank = shape[1]
-            if p.delta_delta:
-                fbank = py_x_ops.delta_delta(fbank, p.order, p.window)
-            if p.type == 'Fbank':
-                fbank = self.cmvn(fbank)
+            mel_spectrum_out = tf.squeeze(mel_spectrum, axis=0)
 
-            fbank = tf.reshape(fbank, (nframe, nfbank, p.channel))
-
-            return fbank
+            return mel_spectrum_out
 
     def dim(self):
         p = self.config

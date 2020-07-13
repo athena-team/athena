@@ -26,6 +26,7 @@ logging.info("x_ops*.so path:{}".format(path))
 gen_x_ops = tf.load_op_library(tf.resource_loader.get_path_to_datafile(so_lib_file))
 
 spectrum = gen_x_ops.spectrum
+mel_spectrum = gen_x_ops.mel_spectrum
 fbank = gen_x_ops.fbank
 delta_delta = gen_x_ops.delta_delta
 pitch = gen_x_ops.pitch

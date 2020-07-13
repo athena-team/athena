@@ -91,6 +91,41 @@ class TdnnLayer(tf.keras.layers.Layer):
         return x
 
 
+class ZoneOutCell(tf.keras.layers.LSTMCell):
+    '''Wrapper for LSTM cell to create ZoneOut Cell
+
+    inspired by:
+    https://github.com/teganmaharaj/zoneout/blob/master/zoneout_tensorflow.py
+    Published by one of 'https://arxiv.org/pdf/1606.01305.pdf' paper writers.
+    '''
+
+    def __init__(self, zoneout_rate=0., **kwargs):
+        super().__init__(**kwargs)
+        self.zoneout_rate = zoneout_rate
+        self.drop_layer = tf.keras.layers.Dropout(self.zoneout_rate)
+
+    def call(self, inputs, states, training: bool = None):
+        '''Runs vanilla LSTM Cell and applies zoneout.
+        '''
+        # Apply vanilla LSTM
+        outputs, new_states = super().call(inputs, states, training=training)
+        if self.zoneout_rate == 0:
+            return outputs, new_states
+        # Apply zoneout
+        h = (1 - self.zoneout_rate) * \
+            self.drop_layer(new_states[0] - states[0], training=training) + \
+            states[0]
+        c = (1 - self.zoneout_rate) * \
+            self.drop_layer(new_states[1] - states[1], training=training) + \
+            states[1]
+        return outputs, [h, c]
+
+    def get_config(self):
+        config = super().get_config()
+        config['zoneout_rate'] = self.zoneout_rate
+        return config
+
+
 SUPPORTED_RNNS = {
     "lstm": tf.keras.layers.LSTMCell,
     "gru": tf.keras.layers.GRUCell,

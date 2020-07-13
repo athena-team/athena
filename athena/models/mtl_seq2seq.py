@@ -26,6 +26,7 @@ from ..loss import CTCLoss
 from ..metrics import CTCAccuracy
 from .speech_transformer import SpeechTransformer, SpeechTransformer2
 from ..utils.hparam import register_and_parse_hparams
+import io
 
 
 class MtlTransformerCtc(BaseModel):
@@ -63,6 +64,18 @@ class MtlTransformerCtc(BaseModel):
         # for deployment
         self.deploy_encoder = None
         self.deploy_decoder = None
+
+        # for WFST
+        self.vocab = {}
+        for line in io.open(data_descriptions.hparams.text_config["model"], 'r', encoding='utf-8').readlines():
+            char, idx = line.strip().split()[0], line.strip().split()[1]
+            self.vocab[char] = int(idx)
+        # we need dict of words for WFST decoding
+        if data_descriptions.hparams.words is not None:
+            self.words = []
+            for line in io.open(data_descriptions.hparams.words, 'r', encoding='utf-8').readlines():
+                word = line.strip().split()[0]
+                self.words.append(word)
 
     def call(self, samples, training=None):
         """ call function in keras layers """
@@ -121,13 +134,22 @@ class MtlTransformerCtc(BaseModel):
         history_predictions = history_predictions.stack()
         init_cand_states = [history_predictions]
         step = 0
-        if hparams.beam_search and hparams.ctc_weight != 0 and decoder.ctc_scorer is not None:
+        if hparams.decoder_type == "beam_search_decoder" and hparams.ctc_weight != 0 and decoder.ctc_scorer is not None:
             ctc_logits = self.decoder(encoder_output, training=False)
             ctc_logits = tf.math.log(tf.nn.softmax(ctc_logits))
             init_cand_states = decoder.ctc_scorer.initial_state(init_cand_states, ctc_logits)
-        predictions = decoder(
-            history_predictions, init_cand_states, step, (encoder_output, input_mask)
-        )
+        if hparams.decoder_type == "beam_search_decoder":
+            predictions = decoder(
+                history_predictions, init_cand_states, step, (encoder_output, input_mask)
+            )
+        elif hparams.decoder_type == "wfst_decoder":
+            initial_packed_states = (0,)  # this is basically decoding step
+            decoder.decode((encoder_output, input_mask), initial_packed_states, self.model.inference_one_step)
+            words_prediction_id = decoder.get_best_path()
+            words_prediction = ''.join([self.words[int(idx)] for idx in words_prediction_id])
+            predictions = [self.vocab[prediction] for prediction in words_prediction]
+            predictions = tf.constant([predictions])
+            predictions = tf.cast(predictions, tf.int64)
         return predictions
 
     def deploy(self):

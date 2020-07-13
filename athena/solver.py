@@ -15,7 +15,7 @@
 # ==============================================================================
 # pylint: disable=arguments-differ
 # pylint: disable=no-member
-"""Base class for cross entropy model."""
+""" high-level abstraction of different stages in speech processing """
 
 import warnings
 import time
@@ -29,7 +29,10 @@ from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
+from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
+from pydecoders import WFSTDecoder
+import time
 
 
 class BaseSolver(tf.keras.Model):
@@ -77,7 +80,8 @@ class BaseSolver(tf.keras.Model):
             # outputs of a forward run of model, potentially contains more than one item
             outputs = self.model(samples, training=True)
             loss, metrics = self.model.get_loss(outputs, samples, training=True)
-        grads = tape.gradient(loss, self.model.trainable_variables)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss, metrics
@@ -117,7 +121,8 @@ class BaseSolver(tf.keras.Model):
             loss, metrics = evaluate_step(samples)
             if batch % self.hparams.log_interval == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
-            loss_metric.update_state(loss)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+            loss_metric.update_state(total_loss)
         logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
         self.model.reset_metrics()
         return loss_metric.result(), metrics
@@ -143,9 +148,10 @@ class HorovodSolver(BaseSolver):
             # outputs of a forward run of model, potentially contains more than one item
             outputs = self.model(samples, training=True)
             loss, metrics = self.model.get_loss(outputs, samples, training=True)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
         # Horovod: add Horovod Distributed GradientTape.
         tape = hvd.DistributedGradientTape(tape)
-        grads = tape.gradient(loss, self.model.trainable_variables)
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss, metrics
@@ -169,22 +175,48 @@ class HorovodSolver(BaseSolver):
             if batch == 0:
                 hvd.broadcast_variables(self.model.trainable_variables, root_rank=0)
                 hvd.broadcast_variables(self.optimizer.variables(), root_rank=0)
-            if batch % self.hparams.log_interval == 0 and hvd.local_rank() == 0:
+            if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
                 logging.info(self.metric_checker(loss, metrics))
                 self.model.reset_metrics()
+
+    def evaluate(self, dataset, epoch=0):
+        """ evaluate the model """
+        loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
+        loss, metrics = None, None
+        evaluate_step = self.evaluate_step
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
+        self.model.reset_metrics()
+        for batch, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            loss, metrics = evaluate_step(samples)
+            if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
+                logging.info(self.metric_checker(loss, metrics, -2))
+            loss_metric.update_state(loss)
+        if hvd.rank() == 0:
+            logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
+            self.model.reset_metrics()
+        return loss_metric.result()
 
 
 class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
+        "decoder_type": "wfst_decoder",
         "model_avg_num": 1,
-        "beam_search": True,
         "beam_size": 4,
         "ctc_weight": 0.0,
         "lm_weight": 0.1,
         "lm_type": "",
-        "lm_path": None
+        "lm_path": None,
+        "acoustic_scale": 10.0,
+        "max_active": 80,
+        "min_active": 0,
+        "wfst_beam": 30.0,
+        "max_seq_len": 100,
+        "wfst_graph": None
     }
 
     # pylint: disable=super-init-not-called
@@ -192,12 +224,19 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
-                                                       self.model.num_class,
-                                                       self.model.sos,
-                                                       self.model.eos,
-                                                       self.model.time_propagate,
-                                                       lm_model=lm_model)
+        if self.hparams.decoder_type == "beam_search_decoder":
+            self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
+                                                           self.model.num_class,
+                                                           self.model.sos,
+                                                           self.model.eos,
+                                                           self.model.time_propagate,
+                                                           lm_model=lm_model)
+        elif self.hparams.decoder_type == "wfst_decoder":
+            self.decoder = WFSTDecoder(self.hparams.wfst_graph, acoustic_scale=self.hparams.acoustic_scale,
+                                       max_active=self.hparams.max_active, min_active=self.hparams.min_active,
+                                       beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len)
+        else:
+            raise ValueError("This decoder type is not supported")
 
     def decode(self, dataset, rank_size=1):
         """ decode the model """
@@ -223,3 +262,46 @@ class DecoderSolver(BaseSolver):
             )
             logging.info(reports)
         logging.info("decoding finished")
+
+
+class SynthesisSolver(BaseSolver):
+    """ SynthesisSolver
+    """
+    default_config = {
+        "model_avg_num": 1,
+        "gl_iters": 64,
+        "synthesize_from_true_fbank": True,
+        "output_directory": None
+    }
+
+    def __init__(self, model, data_descriptions=None, config=None):
+        super().__init__(model, None, None)
+        self.model = model
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.feature_normalizer = data_descriptions.feature_normalizer
+        self.speakers_ids_dict = data_descriptions.speakers_ids_dict
+        self.vocoder = GriffinLim(data_descriptions)
+        self.sample_signature = data_descriptions.sample_signature
+
+    def synthesize(self, dataset):
+        """ synthesize using vocoder on dataset """
+        if dataset is None:
+            return
+        total_elapsed = 0
+        synthesize_step = tf.function(self.model.synthesize, input_signature=self.sample_signature)
+        for i, samples in enumerate(dataset):
+            start = time.time()
+            samples = self.model.prepare_samples(samples)
+            speaker = samples['speaker']
+            speaker = self.speakers_ids_dict[int(speaker[0])]
+            outputs = synthesize_step(samples)
+            end = time.time() - start
+            total_elapsed += end
+            features, _ = outputs
+            if self.hparams.synthesize_from_true_fbank:
+                samples_outputs = self.feature_normalizer(samples['output'][0],
+                                                          speaker, reverse=True)
+                self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
+            features = self.feature_normalizer(features[0], speaker, reverse=True)
+            self.vocoder(features.numpy(), self.hparams, name=i)
+        logging.info("model computation elapsed: %s" % total_elapsed)

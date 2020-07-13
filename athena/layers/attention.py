@@ -277,7 +277,7 @@ class HanAttention(tf.keras.layers.Layer):
         input_projection = tf.tanh(input_projection)
 
         # [batch_size, steps, 1]
-        similaritys = tf.reduce_sum(
+        similarities = tf.reduce_sum(
             tf.multiply(input_projection, self.attention_context_vector),
             axis=2,
             keep_dims=True,
@@ -285,9 +285,9 @@ class HanAttention(tf.keras.layers.Layer):
 
         # [batch_size, steps, 1]
         if mask is not None:
-            attention_weights = self._masked_softmax(similaritys, mask, axis=1)
+            attention_weights = self._masked_softmax(similarities, mask, axis=1)
         else:
-            attention_weights = tf.nn.softmax(similaritys, axis=1)
+            attention_weights = tf.nn.softmax(similarities, axis=1)
 
         # [batch_size, features]
         attention_output = tf.reduce_sum(tf.multiply(inputs, attention_weights), axis=1)
@@ -347,3 +347,208 @@ class MatchAttention(tf.keras.layers.Layer):
         exp_sum = tf.reduce_sum(exp_attn_scores, axis=-1, keepdims=True)
         attention_weights = exp_attn_scores / exp_sum
         return tf.matmul(attention_weights, right)
+
+
+class LocationAttention(tf.keras.layers.Layer):
+    """location-aware attention
+
+    Reference: Attention-Based Models for Speech Recognition
+        (https://arxiv.org/pdf/1506.07503.pdf)
+
+    """
+
+    def __init__(self, attn_dim, conv_channel, aconv_filts, scaling=1.0):
+        super().__init__()
+        layers = tf.keras.layers
+        self.attn_dim = attn_dim
+        self.value_dense_layer = layers.Dense(attn_dim)
+        self.query_dense_layer = layers.Dense(attn_dim, use_bias=False)
+        self.location_dense_layer = layers.Dense(attn_dim, use_bias=False)
+
+        self.location_conv = layers.Conv1D(filters=conv_channel,
+                                           kernel_size=2*aconv_filts+1,
+                                           strides=1,
+                                           padding="same",
+                                           use_bias=False,
+                                           data_format="channels_last")
+        self.score_dense_layer = layers.Dense(1, name='score_dense_layer')
+        self.score_function = None
+        # scaling: used to scale softmax scores
+        self.scaling = scaling
+
+    def compute_score(self, value, value_length, query, accum_attn_weight):
+        """
+        Args:
+            value_length: the length of value, shape: [batch]
+            max_len: the maximun length
+        Returns:
+            initialized_weights: initializes to uniform distributions, shape: [batch, max_len]
+        """
+        batch = tf.shape(value)[0]
+        x_steps = tf.shape(value)[1]
+        # densed_value shape: [batch, x_step, attn_dim]
+        densed_value = self.value_dense_layer(value)
+        densed_query = tf.reshape(self.query_dense_layer(query), [batch, 1, self.attn_dim])
+
+        accum_attn_weight = tf.reshape(accum_attn_weight, [batch, x_steps, 1])
+        attn_location = self.location_conv(accum_attn_weight) # (batch, x_steps, channel)
+        attn_location = self.location_dense_layer(attn_location) # (batch, x_steps, attn_dim)
+        # [batch, x_step, attn_dim] -> [batch, x_step]
+        unscaled_weights = self.score_function(attn_location + densed_value + densed_query)
+        masks = tf.sequence_mask(value_length, maxlen=x_steps) # (batch, x_steps)
+        masks = (1 - tf.cast(masks, dtype=tf.float32)) * -1e9
+        unscaled_weights += masks
+        return unscaled_weights
+
+    def initialize_weights(self, value_length, max_len):
+        """
+        Args:
+            value_length: the length of value, shape: [batch]
+            max_len: the maximun length
+        Returns:
+            initialized_weights: initializes to uniform distributions, shape: [batch, max_len]
+        """
+        prev_attn_weight = tf.sequence_mask(value_length, max_len, dtype=tf.float32)
+        # value_length shape: [batch_size, 1]
+        value_length = tf.expand_dims(tf.cast(value_length, dtype=tf.float32), axis=1)
+        prev_attn_weight = prev_attn_weight / value_length
+        return prev_attn_weight
+
+    def call(self, attn_inputs, prev_states, training=True):
+        """
+        Args:
+            attn_inputs (tuple) : it contains 2 params:
+                value, shape: [batch, x_steps, eunits]
+                value_length, shape: [batch]
+            prev_states (tuple) : it contains 3 params:
+                query: previous rnn state, shape: [batch, dunits]
+                accum_attn_weight: previous accumulated attention weights, shape: [batch, x_steps]
+                prev_attn_weight: previous attention weights, shape: [batch, x_steps]
+            training: if it is in the training step
+        Returns:
+            attn_c: attended vector, shape: [batch, eunits]
+            attn_weight: attention scores, shape: [batch, x_steps]
+
+        """
+        value, value_length = attn_inputs
+        query, accum_attn_weight, _ = prev_states
+        batch = tf.shape(value)[0]
+        x_steps = tf.shape(value)[1]
+        self.score_function = lambda x: tf.squeeze(self.score_dense_layer(tf.nn.tanh(x)), axis=2)
+        unscaled_weights = self.compute_score(value, value_length, query, accum_attn_weight)
+        attn_weight = tf.nn.softmax(self.scaling * unscaled_weights)
+        attn_c = tf.reduce_sum(value * tf.reshape(attn_weight, [batch, x_steps, 1]), axis=1)
+        return attn_c, attn_weight
+
+
+class StepwiseMonotonicAttention(LocationAttention):
+    """stepwise monotonic attention
+
+    Reference: Robust Sequence-to-Sequence Acoustic Modeling with Stepwise Monotonic
+        Attention for Neural TTS (https://arxiv.org/pdf/1906.00672.pdf)
+
+    """
+
+    def __init__(self, attn_dim, conv_channel, aconv_filts, sigmoid_noise=2.0,
+                 score_bias_init=0.0, mode='soft'):
+        super().__init__(attn_dim, conv_channel, aconv_filts)
+        self.sigmoid_noise = sigmoid_noise
+        self.score_bias_init = score_bias_init
+        self.mode = mode
+
+    def build(self, _):
+        """
+        A Modified Energy Function is used and the params are defined here.
+            Reference: Online and Linear-Time Attention by Enforcing Monotonic Alignments
+            (https://arxiv.org/pdf/1704.00784.pdf).
+        """
+        self.attention_v = self.add_weight(
+            name="attention_v", shape=[self.attn_dim], initializer=tf.initializers.GlorotUniform()
+        )
+        self.attention_g = self.add_weight(
+            name="attention_g",
+            shape=(),
+            initializer=tf.constant_initializer(tf.math.sqrt(1.0 / self.attn_dim).numpy())
+        )
+        self.attention_b = self.add_weight(
+            name="attention_b", shape=[self.attn_dim], initializer=tf.zeros_initializer()
+        )
+        self.score_bias = self.add_weight(
+            name="score_bias",
+            shape=(),
+            initializer=tf.constant_initializer(self.score_bias_init),
+        )
+
+    def initialize_weights(self, value_length, max_len):
+        """
+        Args:
+            value_length: the length of value, shape: [batch]
+            max_len: the maximun length
+        Returns:
+            initialized_weights: initializes to dirac distributions, shape: [batch, max_len]
+        Examples:
+            An initialized_weights the shape of which is [2, 4]:
+            [[1, 0, 0, 0],
+             [1, 0, 0, 0]]
+        """
+        batch = tf.shape(value_length)[0]
+        return tf.one_hot(tf.zeros((batch,), dtype=tf.int32), max_len)
+
+    def step_monotonic_function(self, sigmoid_probs, prev_weights):
+        """
+        hard mode can only be used in the synthesis step
+        Args:
+            sigmoid_probs: sigmoid probabilities, shape: [batch, x_steps]
+            prev_weights: previous attention weights, shape: [batch, x_steps]
+        Returns:
+            weights: new attention weights, shape: [batch, x_steps]
+        """
+        if self.mode == "hard":
+            move_next_mask = tf.concat([tf.zeros_like(prev_weights[:, :1]), prev_weights[:, :-1]],
+                                       axis=1)
+            stay_prob = tf.reduce_sum(sigmoid_probs * prev_weights, axis=1, keepdims=True)
+            weights = tf.where(stay_prob > 0.5, prev_weights, move_next_mask)
+        else:
+            pad = tf.zeros([tf.shape(sigmoid_probs)[0], 1], dtype=sigmoid_probs.dtype)
+            weights = prev_weights * sigmoid_probs + \
+                      tf.concat([pad, prev_weights[:, :-1] * (1.0 - sigmoid_probs[:, :-1])], axis=1)
+        return weights
+
+    def call(self, attn_inputs, prev_states, training=True):
+        """
+        Args:
+            attn_inputs (tuple) : it contains 2 params:
+                value, shape: [batch, x_steps, eunits]
+                value_length, shape: [batch]
+            prev_states (tuple) : it contains 3 params:
+                query: previous rnn state, shape: [batch, dunits]
+                accum_attn_weight: previous accumulated attention weights, shape: [batch, x_steps]
+                prev_attn_weight: previous attention weights, shape: [batch, x_steps]
+            training: if it is in the training step
+        Returns:
+            attn_c: attended vector, shape: [batch, eunits]
+            attn_weight: attention scores, shape: [batch, x_steps]
+
+        """
+        value, value_length = attn_inputs
+        query, accum_attn_weight, prev_attn_weight = prev_states
+        batch = tf.shape(value)[0]
+        x_steps = tf.shape(value)[1]
+        normed_v = self.attention_g * self.attention_v * \
+                   tf.math.rsqrt(tf.reduce_sum(tf.square(self.attention_v)))
+
+        self.score_function = lambda x: tf.reduce_sum(normed_v * tf.nn.tanh(x + self.attention_b),
+                                                      axis=2) + self.score_bias
+        unscaled_weights = self.compute_score(value, value_length, query, accum_attn_weight)
+
+        if training:
+            noise = tf.random.normal(tf.shape(unscaled_weights), dtype=unscaled_weights.dtype)
+            unscaled_weights += self.sigmoid_noise * noise
+        if self.mode == 'hard':
+            sigmoid_probs = tf.cast(unscaled_weights > 0, unscaled_weights.dtype)
+        else:
+            sigmoid_probs = tf.nn.sigmoid(unscaled_weights)
+        attn_weight = self.step_monotonic_function(sigmoid_probs, prev_attn_weight)
+        attn_c = tf.reduce_sum(value * tf.reshape(attn_weight, [batch, x_steps, 1]), axis=1)
+        return attn_c, attn_weight
+
