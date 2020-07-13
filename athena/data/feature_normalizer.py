@@ -17,7 +17,6 @@
 """ Feature Normalizer """
 import os
 import json
-import tqdm
 import time
 import pandas
 from absl import logging
@@ -25,8 +24,11 @@ import tensorflow as tf
 import numpy as np
 import multiprocessing as mp
 from multiprocessing import cpu_count
+import tqdm
 
 def compute_cmvn_by_chunk_for_all_speaker(feature_dim, speakers, featurizer, entries):
+    ''' computing mean and variance for all speakers in a multi-process way
+    '''
     initial_mean_dict, initial_var_dict, total_num_dict = {}, {}, {}
     # speakers may be 'global' or a speaker list
     for tar_speaker in speakers:
@@ -199,3 +201,4 @@ class FeatureNormalizer:
         df = pandas.DataFrame(data=cmvns, columns=["speaker", "mean", "var"])
         df.to_csv(self.cmvn_file, index=False, sep="\t")
         logging.info("Successfully save cmvn file {}".format(self.cmvn_file))
+
