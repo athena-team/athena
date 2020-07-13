@@ -54,7 +54,8 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         "remove_unk": True,
         "input_length_range": [1, 10000],
         "output_length_range": [20, 50000],
-        "data_csv": None
+        "data_csv": None,
+        "num_cmvn_workers":1
     }
 
     def __init__(self, config=None):
@@ -67,9 +68,10 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
+        self.speakers_dict = {}
+        self.speakers_ids_dict = {}
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
-        self.speakers_dict = {}
 
     def reload_config(self, config):
         """ reload the config """
@@ -103,6 +105,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
 
         speakers_ids = list(range(len(self.speakers)))
         self.speakers_dict = dict(zip(self.speakers, speakers_ids))
+        self.speakers_ids_dict = dict(zip(speakers_ids, self.speakers))
 
         # handling special case for text_featurizer
         self.entries.sort(key=lambda item: len(item[2]))
@@ -128,6 +131,7 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         audio_feat = tf.reshape(audio_feat, [audio_feat_length, -1])
 
         text = self.text_featurizer.encode(transcripts)
+        text.append(self.text_featurizer.model.eos_index)
         text_length = len(text)
         return {
             "input": text,
@@ -155,6 +159,11 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
     def audio_featurizer_func(self):
         """ return the audio_featurizer function """
         return self.audio_featurizer
+
+    @property
+    def feat_dim(self):
+        """ return the number of feature dims """
+        return self.audio_featurizer.dim
 
     @property
     def sample_type(self):
@@ -259,7 +268,8 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         with tf.device("/cpu:0"):
             self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim
+                self.entries, self.speakers, self.audio_featurizer, feature_dim,
+                num_cmvn_workers=self.hparams.num_cmvn_workers
             )
         self.feature_normalizer.save_cmvn()
         return self

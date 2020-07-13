@@ -16,7 +16,6 @@
 # pylint: disable=no-member, invalid-name
 """ audio dataset """
 import os
-import sys
 from absl import logging
 import tensorflow as tf
 import kaldiio
@@ -95,7 +94,7 @@ class SpeechDatasetKaldiIOBuilder(BaseDatasetBuilder):
         self.entries = []
         for key in self.kaldi_io_feats.keys():
             self.entries.append(tuple([key, self.speakers[key]]))
-        
+
         if apply_sort_filter:
             logging.info("Sorting and filtering data, this is very slow, please be patient ...")
             self.entries.sort(key=lambda item: self.kaldi_io_feats[item[0]].shape[0])
@@ -112,7 +111,7 @@ class SpeechDatasetKaldiIOBuilder(BaseDatasetBuilder):
         feat = feat.reshape(feat.shape[0], feat.shape[1], 1)
         feat = tf.convert_to_tensor(feat)
         feat = self.feature_normalizer(feat, speaker)
-            
+
         input_data = feat
         output_data = tf.reshape(
             feat, [-1, self.audio_featurizer.dim * self.audio_featurizer.num_channels]

@@ -17,6 +17,7 @@
 # data
 from .data import SpeechRecognitionDatasetBuilder
 from .data import SpeechRecognitionDatasetKaldiIOBuilder
+from .data import SpeechSynthesisDatasetBuilder
 from .data import SpeechDatasetBuilder
 from .data import SpeechDatasetKaldiIOBuilder
 from .data import LanguageDatasetBuilder
@@ -44,6 +45,7 @@ from .layers.transformer import TransformerDecoderLayer
 # models
 from .models.base import BaseModel
 from .models.speech_transformer import SpeechTransformer, SpeechTransformer2
+from .models.tacotron2 import Tacotron2
 from .models.masked_pc import MaskedPredictCoding
 from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
@@ -54,6 +56,7 @@ from .models.translate_transformer import NeuralTranslateTransformer
 from .solver import BaseSolver
 from .solver import HorovodSolver
 from .solver import DecoderSolver
+from .solver import SynthesisSolver
 from .loss import CTCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy
 from .metrics import CTCAccuracy

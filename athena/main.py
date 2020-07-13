@@ -16,7 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, wildcard-import, unused-wildcard-import, redefined-outer-name
-""" a sample implementation of LAS for HKUST """
+""" starting point for model training """
 import sys
 import json
 import tensorflow as tf
@@ -26,6 +26,7 @@ from athena import *
 SUPPORTED_DATASET_BUILDER = {
     "speech_recognition_dataset": SpeechRecognitionDatasetBuilder,
     "speech_recognition_dataset_kaldiio": SpeechRecognitionDatasetKaldiIOBuilder,
+    "speech_systhesis_dataset": SpeechSynthesisDatasetBuilder,
     "speech_dataset": SpeechDatasetBuilder,
     "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
     "language_dataset": LanguageDatasetBuilder,
@@ -39,6 +40,7 @@ SUPPORTED_MODEL = {
     "mpc": MaskedPredictCoding,
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
+    "tacotron2": Tacotron2
 }
 
 SUPPORTED_OPTIMIZER = {

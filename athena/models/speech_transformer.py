@@ -262,6 +262,7 @@ class SpeechTransformer(BaseModel):
         else:
             raise ValueError("NOT SUPPORTED")
 
+
     def deploy(self):
         """ deployment function """
         layers = tf.keras.layers
@@ -309,6 +310,35 @@ class SpeechTransformer(BaseModel):
                                              outputs=[logits],
                                              name="deploy_decoder_model")
         print(self.deploy_decoder.summary())
+
+    def inference_one_step(self, enc_outputs, cur_input, inner_packed_states_array):
+        """call back function for WFST decoder
+
+        Args:
+          enc_outputs: outputs and mask of encoder
+          cur_input: input sequence for transformer, type: list
+          inner_packed_states_array: inner states need to be record, type: tuple
+        Returns:
+          scores: log scores for all labels
+          inner_packed_states_array: inner states for next iterator
+        """
+        (encoder_output, memory_mask) = enc_outputs
+        batch_size = len(cur_input)
+        encoder_output = tf.tile(encoder_output, [batch_size, 1, 1])
+        memory_mask = tf.tile(memory_mask, [batch_size, 1, 1, 1])
+        assert batch_size == len(inner_packed_states_array)
+        (step,) = inner_packed_states_array[0]
+        step += 1
+        output_mask = generate_square_subsequent_mask(step)
+        cur_input = tf.constant(cur_input, dtype=tf.float32)
+        cur_input = self.y_net(cur_input, training=False)
+        logits = self.transformer.decoder(cur_input, encoder_output, tgt_mask=output_mask,
+                                          memory_mask=memory_mask, training=False)
+        logits = self.final_layer(logits)
+        logits = logits[:, -1, :]
+        Z = tf.reduce_logsumexp(logits, axis=(1,), keepdims=True)
+        logprobs = logits - Z
+        return logprobs.numpy(), [(step,) for _ in range(batch_size)]
 
 
 class SpeechTransformer2(SpeechTransformer):
