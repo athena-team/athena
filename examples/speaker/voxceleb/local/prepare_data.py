@@ -31,7 +31,7 @@ from athena import get_wave_file_length
 
 gfile = tf.compat.v1.gfile
 
-SUBSETS_save = {
+SUBSETS = {
     "vox1_dev_wav":
         ["http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox1_dev_wav_partaa",
          "http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox1_dev_wav_partab",
@@ -46,13 +46,6 @@ SUBSETS_save = {
          "http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox2_dev_aac_partaf",
          "http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox2_dev_aac_partag",
          "http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox2_dev_aac_partah"],
-    "vox1_test_wav":
-        ["http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox1_test_wav.zip"],
-    "vox2_test_aac":
-        ["http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox2_test_aac.zip"]
-}
-
-SUBSETS = {
     "vox1_test_wav":
         ["http://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox1a/vox1_test_wav.zip"],
     "vox2_test_aac":
