@@ -267,5 +267,5 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
             self.feature_normalizer.compute_cmvn(
                 self.entries, self.speakers, self.audio_featurizer, feature_dim
             )
-        self.feature_normalizer.save_cmvn()
+        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
         return self
