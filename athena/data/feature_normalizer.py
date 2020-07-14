@@ -17,7 +17,6 @@
 """ Feature Normalizer """
 import os
 import json
-import tqdm
 import time
 import pandas
 import librosa
@@ -27,6 +26,8 @@ import tensorflow as tf
 import numpy as np
 import multiprocessing as mp
 from multiprocessing import cpu_count
+import tqdm
+
 
 class FeatureNormalizer:
     """ Feature Normalizer """
@@ -203,7 +204,7 @@ class FeatureNormalizer:
         df.to_csv(self.cmvn_file, index=False, sep="\t")
         logging.info("Successfully save cmvn file {}".format(self.cmvn_file))
 
-
+        
 class WorldFeatureNormalizer(FeatureNormalizer):
     """ World Feature Normalizer """
 
@@ -255,4 +256,3 @@ class WorldFeatureNormalizer(FeatureNormalizer):
             self.cmvn_dict[speaker].append(cmvn["f0_mean"])
             self.cmvn_dict[speaker].append(cmvn["f0_var"])
         logging.info("Successfully load cmvn file {}".format(self.cmvn_file))
-

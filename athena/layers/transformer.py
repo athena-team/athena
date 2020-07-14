@@ -186,6 +186,8 @@ class TransformerEncoder(tf.keras.layers.Layer):
         return output
 
     def set_unidirectional(self, uni=False):
+        """whether to apply trianglar masks to make transformer unidirectional
+        """
         for layer in self.layers:
             layer.set_unidirectional(uni)
 
@@ -309,6 +311,8 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         return out
 
     def set_unidirectional(self, uni=False):
+        """whether to apply trianglar masks to make transformer unidirectional
+        """
         self.self_attn.attention.uni = uni
 
 
