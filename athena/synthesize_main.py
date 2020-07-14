@@ -16,6 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, redefined-outer-name
+r""" entry point for synthesis of TTS models """
 import sys
 import json
 import tensorflow as tf
