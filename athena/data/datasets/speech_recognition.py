@@ -77,7 +77,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
             self.hparams.override_from_dict(config)
 
     def preprocess_data(self, file_path):
-        """ Generate a list of tuples (wav_filename, wav_length_ms, transcript speaker)."""
+        """ Generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker)."""
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding="utf-8") as file:
             lines = file.read().splitlines()
