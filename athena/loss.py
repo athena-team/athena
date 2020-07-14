@@ -270,10 +270,11 @@ class SoftmaxLoss(tf.keras.losses.Loss):
             input_shape=(embedding_size,),
         )
 
-    def __call__(self, inputs, labels):
-        inputs = self.dense(inputs)
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = samples['output']
+        outputs = self.dense(outputs)
         label_onehot = tf.one_hot(labels, self.num_classes)
-        loss = tf.reduce_mean(self.criterion(label_onehot, inputs))
+        loss = tf.reduce_mean(self.criterion(label_onehot, outputs))
         return loss
 
 
@@ -295,12 +296,13 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
                              name="AMSoftmaxLoss_weight")
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
 
-    def __call__(self, inputs, labels):
-        assert tf.shape(inputs)[0] == tf.shape(labels)[0]
-        assert tf.shape(inputs)[1] == self.embedding_size
-        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = samples['output']
+        assert tf.shape(outputs)[0] == tf.shape(labels)[0]
+        assert tf.shape(outputs)[1] == self.embedding_size
+        outputs_norm = tf.math.l2_normalize(outputs, axis=1)
         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
-        costh = tf.matmul(inputs_norm, weight_norm)
+        costh = tf.matmul(outputs_norm, weight_norm)
 
         label_onehot = tf.one_hot(labels, self.num_classes)
         costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
@@ -315,7 +317,7 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
 
 class AAMSoftmaxLoss(tf.keras.losses.Loss):
     """ Additive Angular Margin Softmax Loss
-        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition"
+        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition" 
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
@@ -339,10 +341,11 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         self.th = math.cos(math.pi - self.m)
         self.mm = math.sin(math.pi - self.m) * self.m
 
-    def __call__(self, inputs, labels):
-        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = samples['output']
+        outputs_norm = tf.math.l2_normalize(outputs, axis=1)
         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
-        cosine = tf.matmul(inputs_norm, weight_norm)
+        cosine = tf.matmul(outputs_norm, weight_norm)
         sine = tf.clip_by_value(tf.math.sqrt(1.0 - tf.math.pow(cosine, 2)), 0, 1)
         phi = cosine * self.cos_m - sine * self.sin_m
 
@@ -368,14 +371,13 @@ class ProtoLoss(tf.keras.losses.Loss):
         super().__init__(name=name)
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
 
-    def __call__(self, inputs, labels=None):
+    def __call__(self, outputs, samples=None, logit_length=None):
         """
             Args:
-                inputs: [batch_size, num_speaker_utts, embedding_size]
-                labels: [batch_size]
+                outputs: [batch_size, num_speaker_utts, embedding_size]
         """
-        out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
-        out_positive = inputs[:, 0, :]
+        out_anchor = tf.math.reduce_mean(outputs[:, 1:, :], axis=1)
+        out_positive = outputs[:, 0, :]
         step_size = tf.shape(out_anchor)[0]
 
         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
@@ -401,14 +403,13 @@ class AngleProtoLoss(tf.keras.losses.Loss):
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.cosine_similarity = tf.keras.losses.cosine_similarity
 
-    def __call__(self, inputs, labels=None):
+    def __call__(self, outputs, samples=None, logit_length=None):
         """
              Args:
-                inputs: [batch_size, num_speaker_utts, embedding_size]
-                labels: [batch_size]
+                outputs: [batch_size, num_speaker_utts, embedding_size]
         """
-        out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
-        out_positive = inputs[:, 0, :]
+        out_anchor = tf.math.reduce_mean(outputs[:, 1:, :], axis=1)
+        out_positive = outputs[:, 0, :]
         step_size = tf.shape(out_anchor)[0]
 
         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
@@ -436,22 +437,21 @@ class GE2ELoss(tf.keras.losses.Loss):
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.cosine_similarity = tf.keras.losses.cosine_similarity
 
-    def __call__(self, inputs, labels=None):
+    def __call__(self, outputs, samples=None, logit_length=None):
         """
              Args:
-                inputs: [batch_size, num_speaker_utts, embedding_size]
-                labels: [batch_size]
+                outputs: [batch_size, num_speaker_utts, embedding_size]
         """
-        step_size = tf.shape(inputs)[0]
-        num_speaker_utts = tf.shape(inputs)[1]
-        centroids = tf.math.reduce_mean(inputs, axis=1)
+        step_size = tf.shape(outputs)[0]
+        num_speaker_utts = tf.shape(outputs)[1]
+        centroids = tf.math.reduce_mean(outputs, axis=1)
         cosine_all = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
         for utt in range(0, num_speaker_utts):
             index = [*range(0, num_speaker_utts)]
             index.remove(utt)
-            out_positive = inputs[:, utt, :]
-            out_anchor = tf.math.reduce_mean(tf.gather(inputs, tf.constant(index), axis=1), axis=1)
+            out_positive = outputs[:, utt, :]
+            out_anchor = tf.math.reduce_mean(tf.gather(outputs, tf.constant(index), axis=1), axis=1)
 
             out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
             centroids_reshape = tf.transpose(tf.tile(
