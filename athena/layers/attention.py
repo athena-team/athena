@@ -277,7 +277,7 @@ class HanAttention(tf.keras.layers.Layer):
         input_projection = tf.tanh(input_projection)
 
         # [batch_size, steps, 1]
-        similaritys = tf.reduce_sum(
+        similarities = tf.reduce_sum(
             tf.multiply(input_projection, self.attention_context_vector),
             axis=2,
             keep_dims=True,
@@ -285,9 +285,9 @@ class HanAttention(tf.keras.layers.Layer):
 
         # [batch_size, steps, 1]
         if mask is not None:
-            attention_weights = self._masked_softmax(similaritys, mask, axis=1)
+            attention_weights = self._masked_softmax(similarities, mask, axis=1)
         else:
-            attention_weights = tf.nn.softmax(similaritys, axis=1)
+            attention_weights = tf.nn.softmax(similarities, axis=1)
 
         # [batch_size, features]
         attention_output = tf.reduce_sum(tf.multiply(inputs, attention_weights), axis=1)
@@ -365,12 +365,12 @@ class LocationAttention(tf.keras.layers.Layer):
         self.query_dense_layer = layers.Dense(attn_dim, use_bias=False)
         self.location_dense_layer = layers.Dense(attn_dim, use_bias=False)
 
-        self.location_conv = layers.Conv1D(filters = conv_channel,
-                                           kernel_size = 2 * aconv_filts + 1,
-                                           strides = 1,
-                                           padding = "same",
-                                           use_bias = False,
-                                           data_format = "channels_last")
+        self.location_conv = layers.Conv1D(filters=conv_channel,
+                                           kernel_size=2*aconv_filts+1,
+                                           strides=1,
+                                           padding="same",
+                                           use_bias=False,
+                                           data_format="channels_last")
         self.score_dense_layer = layers.Dense(1, name='score_dense_layer')
         self.score_function = None
         # scaling: used to scale softmax scores
@@ -551,3 +551,4 @@ class StepwiseMonotonicAttention(LocationAttention):
         attn_weight = self.step_monotonic_function(sigmoid_probs, prev_attn_weight)
         attn_c = tf.reduce_sum(value * tf.reshape(attn_weight, [batch, x_steps, 1]), axis=1)
         return attn_c, attn_weight
+
