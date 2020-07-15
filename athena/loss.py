@@ -271,7 +271,7 @@ class SoftmaxLoss(tf.keras.losses.Loss):
         )
 
     def __call__(self, outputs, samples, logit_length=None):
-        labels = samples['output']
+        labels = tf.squeeze(samples['output'])
         outputs = self.dense(outputs)
         label_onehot = tf.one_hot(labels, self.num_classes)
         loss = tf.reduce_mean(self.criterion(label_onehot, outputs))
@@ -297,7 +297,7 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
 
     def __call__(self, outputs, samples, logit_length=None):
-        labels = samples['output']
+        labels = tf.squeeze(samples['output'])
         assert tf.shape(outputs)[0] == tf.shape(labels)[0]
         assert tf.shape(outputs)[1] == self.embedding_size
         outputs_norm = tf.math.l2_normalize(outputs, axis=1)
@@ -317,7 +317,7 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
 
 class AAMSoftmaxLoss(tf.keras.losses.Loss):
     """ Additive Angular Margin Softmax Loss
-        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition" 
+        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition"
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
@@ -331,7 +331,7 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         initializer = tf.initializers.GlorotNormal()
         self.weight = tf.Variable(initializer(
                              shape=[embedding_size, num_classes], dtype=tf.float32),
-                             name="AMSoftmaxLoss_weight")
+                             name="AAMSoftmaxLoss_weight")
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.easy_margin = easy_margin
         self.cos_m = math.cos(self.m)
@@ -342,7 +342,7 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         self.mm = math.sin(math.pi - self.m) * self.m
 
     def __call__(self, outputs, samples, logit_length=None):
-        labels = samples['output']
+        labels = tf.squeeze(samples['output'])
         outputs_norm = tf.math.l2_normalize(outputs, axis=1)
         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
         cosine = tf.matmul(outputs_norm, weight_norm)
