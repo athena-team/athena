@@ -42,6 +42,7 @@ from .layers.transformer import TransformerEncoder
 from .layers.transformer import TransformerDecoder
 from .layers.transformer import TransformerEncoderLayer
 from .layers.transformer import TransformerDecoderLayer
+from .layers.resnet_block import ResnetBasicBlock
 
 # models
 from .models.base import BaseModel
@@ -52,6 +53,7 @@ from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
+from .models.resnet import Resnet
 
 # solver & loss & accuracy
 from .solver import BaseSolver
