@@ -29,6 +29,7 @@ SUPPORTED_DATASET_BUILDER = {
     "speech_systhesis_dataset": SpeechSynthesisDatasetBuilder,
     "speech_dataset": SpeechDatasetBuilder,
     "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
+    "speaker_recognition_dataset": SpeakerRecognitionDatasetBuilder,
     "language_dataset": LanguageDatasetBuilder,
 }
 
@@ -40,7 +41,8 @@ SUPPORTED_MODEL = {
     "mpc": MaskedPredictCoding,
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
-    "tacotron2": Tacotron2
+    "tacotron2": Tacotron2,
+    "resnet": Resnet
 }
 
 SUPPORTED_OPTIMIZER = {
