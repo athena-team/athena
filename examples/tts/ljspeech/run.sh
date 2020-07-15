@@ -25,13 +25,13 @@ source tools/env.sh
 stage=0
 stop_stage=100
 
-dataset_dir=examples/tts/data_baker/data
+dataset_dir=examples/tts/ljspeech/data
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
     echo "Creating csv"
     mkdir -p $dataset_dir || exit 1
-    python examples/tts/data_baker/local/prepare_data.py \
+    python examples/tts/ljspeech/local/prepare_data.py \
         $dataset_dir || exit 1
 fi
 
@@ -39,14 +39,14 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] ; then
     # Training stage
     echo "Training"
     python athena/main.py \
-        examples/tts/data_baker/configs/t2.json
-        > data_baker_train.log 2>&1 || exit 1
+        examples/tts/ljspeech/configs/t2.json
+        > LJSpeech_training.log 2>&1 || exit 1
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ] ; then
-    # Training stage
-    echo "Synthesizing"
+    # Synthesizing stage
+   echo "Synthesizing"
     python athena/synthesize_main.py  \
-        examples/tts/data_baker/configs/t2.json
-        > data_baker_synthesize.log 2>&1 || exit 1
+        examples/tts/ljspeech/configs/t2.json
+        > LJSpeech_synthesizing.log 2>&1 || exit 1
 fi
