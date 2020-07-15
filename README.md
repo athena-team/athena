@@ -1,9 +1,9 @@
 
 # Athena
 
-*Athena* is an open-source implementation of end-to-end Automatic Speech Recognition (ASR) engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and unsupervised pretraning.
+*Athena* is an open-source implementation of end-to-end speech processing engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and unsupervised pre-training.
 
-Our vision is to empower both industrial application and academic research on end-to-end models for speech recognition. To make ASR accessible to everyone, we're also releasing some example implementation based on some opensource dataset, like HKSUT, Librispeech
+Our vision is to empower both industrial application and academic research on end-to-end models for speech processing. To make speech processing available to everyone, we've also released example implementation on some opensource dataset for various tasks (ASR, TTS, Voice Conversion, Speaker Recognition, etc).
 
 All of our models are implemented in Tensorflow>=2.0.0.
 
@@ -31,7 +31,9 @@ All of our models are implemented in Tensorflow>=2.0.0.
 
 - Hybrid CTC/Transformer based end-to-end ASR
 - Speech-Transformer
-- Unsupervised pretraining
+- Unsupervised pre-training
+- End-to-end Tacotron2 based TTS w/ multi-speaker and GST
+- WFST-based decoding
 
 ## 3) Installation
 
@@ -205,7 +207,7 @@ Below is the basic directory structure for Athena
 ```bash
 |-- Athena
 |   |-- data  # - root directory for input-related operations
-|   |   |-- datasets  # custom datasets for ASR and pretraining
+|   |   |-- datasets  # custom datasets for ASR and pre-training
 |   |-- layers  # some layers
 |   |-- models  # some models
 |   |-- tools # contains various tools, e.g. decoding tools
