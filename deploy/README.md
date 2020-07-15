@@ -1,4 +1,4 @@
-# Deploying TensorFlow models using C++
+# Deploying TensorFlow 2.0 models using C++
 
 Here we describe how to deploy a TensorFlow model trained on Athena on servers, using C++ codes only. The implementation mainly replies on the TensorFlow C++ API. Firstly, we download/compile all environments that we will use. Second, we should "freeze" TensorFlow model trained on Python to pb format, which gather graph defination and weights together into a single file. Thirdly, we write C++ scripts to load pb file, and provide CMakeLists.txt to include all dependencies needed during compiling. Finally, compile the C++ codes and the executable file will be generated.
 
@@ -84,5 +84,5 @@ $ make
 ```
 After compiling, you can run the executable file:
 ```
-$ ./athena
+$ ./argmax
 ```
