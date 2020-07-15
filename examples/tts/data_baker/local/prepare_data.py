@@ -37,6 +37,7 @@ GFILE = tf.compat.v1.gfile
 
 URL = "https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar"
 
+# ascii code, used to delete Chinese punctuation
 CHN_PUNC_LIST = [183, 215, 8212, 8216, 8217, 8220, 8221, 8230,
     12289, 12290, 12298, 12299, 12302, 12303, 12304, 12305,
     65281, 65288, 65289, 65292, 65306, 65307, 65311]
@@ -44,7 +45,10 @@ CHN_PUNC_SET = set(CHN_PUNC_LIST)
 
 MANDARIN_INITIAL_LIST = ["b", "ch", "c", "d", "f", "g", "h", "j",\
     "k", "l", "m", "n", "p", "q", "r", "sh", "s", "t", "x", "zh", "z"]
+
+# prosody phone list
 CHN_PHONE_PUNC_LIST = ['sp2', 'sp1', 'sil']
+# erhua phoneme
 CODE_ERX = 0x513F
 
 def _update_insert_pos(old_pos, pylist):
@@ -103,6 +107,9 @@ def _pinyin_preprocess(line, words):
     return pinyin
 
 def _pinyin_2_initialfinal(py):
+    """
+    used to split pinyin into intial and final phonemes
+    """
     if py[0] == 'a' or py[0] == 'e' or py[0] == 'E' or py[0] == 'o' or py[:2] == 'ng' or \
             py[:2] == 'hm':
         py_initial = ''
@@ -235,8 +242,8 @@ def trans_prosody(dataset_dir):
 def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     """Convert rar to WAV and split the transcript.
       Args:
-    dataset_dir  : the directory which holds the input dataset.
-            ----- > /nfs/project/datasets/data_baker_tts
+    dataset_dir : the directory which holds the input dataset.
+            -----> /nfs/project/datasets/data_baker_tts
     total_csv_path : the resulting output csv file.
 
     BZNSYP dir Tree structure:
