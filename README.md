@@ -34,6 +34,7 @@ All of our models are implemented in Tensorflow>=2.0.0.
 - Unsupervised pre-training
 - End-to-end Tacotron2 based TTS w/ multi-speaker and GST
 - WFST-based decoding
+- Deployment with Tensorflow C++
 
 ## 3) Installation
 
