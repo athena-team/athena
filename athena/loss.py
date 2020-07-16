@@ -159,10 +159,11 @@ class Tacotron2Loss(tf.keras.losses.Loss):
 
         input_length = samples["input_length"]
         if self.guided_attn_weight > 0:
-            # guided_attn_masks shape: [batch_size, y_steps, x_steps]
-            attn_masks = self._create_attention_masks(input_length, output_length)
-            # length_masks shape: [batch_size, y_steps, x_steps]
-            length_masks = self._create_length_masks(input_length, output_length)
+            reduction_output_length = (output_length - 1) // self.model.reduction_factor + 1
+            # guided_attn_masks shape: [batch_size, reduction_y_steps, x_steps]
+            attn_masks = self._create_attention_masks(input_length, reduction_output_length)
+            # length_masks shape: [batch_size, reduction_y_steps, x_steps]
+            length_masks = self._create_length_masks(input_length, reduction_output_length)
             att_ws_stack = tf.cast(att_ws_stack, dtype=tf.float32)
             losses = attn_masks * att_ws_stack
             losses *= length_masks
