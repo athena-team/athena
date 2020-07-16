@@ -22,16 +22,14 @@ detailed information can be seen on https://www.data-baker.com/open_source.html
 import os
 import sys
 import codecs
-from string import digits
 import tempfile
 import re
-import rarfile
 import pandas
 from six.moves import urllib
 from absl import logging
 from sklearn.model_selection import train_test_split
-
 import tensorflow as tf
+import rarfile
 from athena import get_wave_file_length
 
 # SUBSETS = ["train", "dev", "test"]
@@ -39,22 +37,163 @@ GFILE = tf.compat.v1.gfile
 
 URL = "https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar"
 
+# ascii code, used to delete Chinese punctuation
+CHN_PUNC_LIST = [183, 215, 8212, 8216, 8217, 8220, 8221, 8230,
+    12289, 12290, 12298, 12299, 12302, 12303, 12304, 12305,
+    65281, 65288, 65289, 65292, 65306, 65307, 65311]
+CHN_PUNC_SET = set(CHN_PUNC_LIST)
 
-def normalize_biaobei_trans(trans):
-  ''' normalize HKUST transcripts
-  delete unuseful symbols and keep space between English words
-  Args:
-      trans: original transcripts
-  '''
-  norm_trans = re.sub(r'[，、”“：？！（）……]', r'', trans)
-  tmp_trans = ''
-  for item in norm_trans.strip().split():
-    if re.search('[a-zA-Z]', item):
-      item = ' ' + item + ' '
-    tmp_trans += item
-  norm_trans = re.sub(r'\s{2,}', r' ', tmp_trans)
-  norm_trans = norm_trans.strip()
-  return norm_trans
+MANDARIN_INITIAL_LIST = ["b", "ch", "c", "d", "f", "g", "h", "j",\
+    "k", "l", "m", "n", "p", "q", "r", "sh", "s", "t", "x", "zh", "z"]
+
+# prosody phone list
+CHN_PHONE_PUNC_LIST = ['sp2', 'sp1', 'sil']
+# erhua phoneme
+CODE_ERX = 0x513F
+
+def _update_insert_pos(old_pos, pylist):
+    new_pos = old_pos + 1
+    i = new_pos
+    while i < len(pylist)-1:
+        # if the first letter is upper, then this is the phoneme of English letter
+        if pylist[i][0].isupper():
+            i += 1
+            new_pos += 1
+        else:
+            break
+    return new_pos
+
+def _pinyin_preprocess(line, words):
+    if line.find('.') >= 0:
+        # remove '.' in English letter phonemes, for example: 'EH1 F . EY1 CH . P IY1'
+        py_list = line.replace('/', '').strip().split('.')
+        py_str = ''.join(py_list)
+        pinyin = py_str.split()
+    else:
+        pinyin = line.replace('/', '').strip().split()
+
+    # now the content in pinyin like: ['OW1', 'K', 'Y', 'UW1', 'JH', 'EY1', 'shi4', 'yi2', 'ge4']
+    insert_pos = _update_insert_pos(-1, pinyin)
+    i = 0
+    while i < len(words):
+        if ord(words[i]) in CHN_PUNC_SET:
+            i += 1
+            continue
+        if words[i] == '#' and (words[i+1] >= '1' and words[i+1] <= '4'):
+            if words[i+1] == '1':
+                pass
+            else:
+                if words[i+1] == '2':
+                    pinyin.insert(insert_pos, 'sp2')
+                if words[i+1] == '3':
+                    pinyin.insert(insert_pos, 'sp2')
+                elif words[i+1] == '4':
+                    pinyin.append('sil')
+                    break
+                insert_pos = _update_insert_pos(insert_pos, pinyin)
+            i += 2
+        elif ord(words[i]) == CODE_ERX:
+            if pinyin[insert_pos-1].find('er') != 0: # erhua
+                i += 1
+            else:
+                insert_pos = _update_insert_pos(insert_pos, pinyin)
+                i += 1
+        # skip non-mandarin characters, including A-Z, a-z, Greece letters, etc.
+        elif ord(words[i]) < 0x4E00 or ord(words[i]) > 0x9FA5:
+            i += 1
+        else:
+            insert_pos = _update_insert_pos(insert_pos, pinyin)
+            i += 1
+    return pinyin
+
+def _pinyin_2_initialfinal(py):
+    """
+    used to split pinyin into intial and final phonemes
+    """
+    if py[0] == 'a' or py[0] == 'e' or py[0] == 'E' or py[0] == 'o' or py[:2] == 'ng' or \
+            py[:2] == 'hm':
+        py_initial = ''
+        py_final = py
+    elif py[0] == 'y':
+        py_initial = ''
+        if py[1] == 'u' or py[1] == 'v':
+            py_final = list(py[1:])
+            py_final[0] = 'v'
+            py_final = ''.join(py_final)
+        elif py[1] == 'i':
+            py_final = py[1:]
+        else:
+            py_final = list(py)
+            py_final[0] = 'i'
+            py_final = ''.join(py_final)
+    elif py[0] == 'w':
+        py_initial = ''
+        if py[1] == 'u':
+            py_final = py[1:]
+        else:
+            py_final = list(py)
+            py_final[0] = 'u'
+            py_final = ''.join(py_final)
+    else:
+        init_cand = ''
+        for init in MANDARIN_INITIAL_LIST:
+            init_len = len(init)
+            init_cand = py[:init_len]
+            if init_cand == init:
+                break
+        if init_cand == '':
+            raise Exception('unexpected')
+        py_initial = init_cand
+        py_final = py[init_len:]
+        if (py_initial in set(['j', 'q', 'x']) and py_final[0] == 'u'):
+            py_final = list(py_final)
+            py_final[0] = 'v'
+            py_final = ''.join(py_final)
+    if py_final[-1] == '6':
+        py_final = py_final.replace('6', '2')
+    return (py_initial, py_final)
+
+def is_all_eng(words):
+    #if include mandarin
+    for word in words:
+        if ord(word) >= 0x4E00 and ord(word) <= 0x9FA5:
+            return False
+    return True
+
+def pinyin_2_phoneme(pinyin_line, words):
+    #chn or chn+eng
+    sent_phoneme = ['sp1']
+    if not is_all_eng(words):
+        sent_py = _pinyin_preprocess(pinyin_line, words)
+        for py in sent_py:
+            if py[0].isupper() or py in CHN_PHONE_PUNC_LIST:
+                sent_phoneme.append(py)
+            else:
+                initial, final = _pinyin_2_initialfinal(py)
+                if initial == '':
+                    sent_phoneme.append(final)
+                else:
+                    sent_phoneme.append(initial)
+                    sent_phoneme.append(final)
+    else:
+        wordlist = words.split(' ')
+        word_phonelist = pinyin_line.strip().split('/')
+        assert(len(word_phonelist) == len(wordlist))
+        i = 0
+        while i < len(word_phonelist):
+            phone = re.split(r'[ .]', word_phonelist[i])
+            for p in phone:
+                if p:
+                    sent_phoneme.append(p)
+            if '/' in wordlist[i]:
+                sent_phoneme.append('sp2')
+            elif '%' in wordlist[i]:
+                if i != len(word_phonelist)-1:
+                    sent_phoneme.append('sp2')
+                else:
+                    sent_phoneme.append('sil')
+            i += 1
+    return ' '.join(sent_phoneme)
 
 
 def download_and_extract(directory, url):
@@ -70,7 +209,7 @@ def download_and_extract(directory, url):
 
         def _progress(count, block_size, total_size):
             sys.stdout.write(
-                "\r>> Downloading {} {:.1f}%".format(
+                "\r > > Downloading {} {:.1f}%".format(
                     rar_filepath, 100.0 * count * block_size / total_size
                 )
             )
@@ -79,18 +218,31 @@ def download_and_extract(directory, url):
         urllib.request.urlretrieve(url, rar_filepath, _progress)  # show the progress of download
         statinfo = os.stat(rar_filepath)  # run a stat
         logging.info(
-            "Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size)  # size -->bytes
+            "Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size)  # size-->bytes
         )
         rf = rarfile.RarFile(rar_filepath)  # need to install unrar!!!!
         rf.extractall(directory)
     finally:
         GFILE.Remove(rar_filepath)
 
+def trans_prosody(dataset_dir):
+    trans_path = os.path.join(dataset_dir, "BZNSYP/ProsodyLabeling/")
+    is_sentid_line = True
+    with open(trans_path + '000001-010000.txt', encoding='utf-8') as f,\
+            open(trans_path + 'biaobei_prosody.csv', 'w') as fw:
+        for line in f:
+            if is_sentid_line:
+                sent_id = line.split()[0]
+                words = line.split('\t')[1].strip()
+            else:
+                sent_phonemes = pinyin_2_phoneme(line, words)
+                fw.writelines('|'.join([sent_id, sent_phonemes, sent_phonemes]) + '\n')
+            is_sentid_line = not is_sentid_line
 
 def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     """Convert rar to WAV and split the transcript.
       Args:
-    dataset_dir  : the directory which holds the input dataset.
+    dataset_dir : the directory which holds the input dataset.
             -----> /nfs/project/datasets/data_baker_tts
     total_csv_path : the resulting output csv file.
 
@@ -98,6 +250,7 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     BZNSYP
         -ProsodyLabeling
             -000001-010000.txt
+            -biaobei_prosody.csv
         -Wave
             -000001.wav
             -000002.wav
@@ -113,26 +266,15 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
 
     files = []
     # ProsodyLabel ---word
-    with codecs.open(os.path.join(prosodyLabel_dir, "000001-010000.txt"),
-                     "r",
+    with codecs.open(os.path.join(prosodyLabel_dir, "biaobei_prosody.csv"), "r",
                      encoding="utf-8") as f:
         for line in f:
-            if line[0:1] == '0':
-                # 000001	卡尔普#2陪外孙#1玩滑梯#4。
-                line = line[:-3]  # remove "#4。"
-                res = line.replace('#', '')
-                wav_filename = res[0:6]  # 000001
-                # get wav_length
-                wav_file = os.path.join(audio_dir, wav_filename + '.wav')
-                wav_length = get_wave_file_length(wav_file)
-                # remove digit
-                remove_digits = str.maketrans('', '', digits)
-                item = res.translate(remove_digits).strip()  # 卡尔普陪外孙玩滑梯
-                transcript = ""
-                transcript += item
-                transcript = normalize_hkust_trans(transcript)
-                # [('000001.wav', ' 卡尔普陪外孙玩滑梯')...]
-                files.append((os.path.abspath(wav_file), wav_length, transcript))
+            transcript_id = line.strip().split("|")[0]
+            transcript = line.strip().split("|")[1]
+            # get wav_length
+            wav_file = os.path.join(audio_dir, transcript_id + '.wav')
+            wav_length = get_wave_file_length(wav_file)
+            files.append((os.path.abspath(wav_file), wav_length, transcript))
 
     # Write to CSV file which contains three columns:
     df = pandas.DataFrame(
@@ -146,9 +288,8 @@ def split_train_dev_test(total_csv, output_dir):
     # get total_csv
     data = pandas.read_csv(total_csv)
     x, y = data.iloc[:, :2], data.iloc[:, 2:]
-    # split train/dev/test---8:1:1
-    x_train, x_rest, y_train, y_rest = train_test_split(x, y, test_size=0.2, random_state=0)
-    x_test, x_dev, y_test, y_dev = train_test_split(x_rest, y_rest, test_size=0.5, random_state=0)
+    x_train, x_rest, y_train, y_rest = train_test_split(x, y, test_size=0.1, random_state=0)
+    x_test, x_dev, y_test, y_dev = train_test_split(x_rest, y_rest, test_size=0.9, random_state=0)
     # add ProsodyLabel
     x_train.insert(2, 'transcript', y_train)
     x_test.insert(2, 'transcript', y_test)
@@ -178,13 +319,13 @@ def processor(dircetory):
     # get total_csv
     logging.info("Processing the BiaoBei total.csv in {}".format(dircetory))
     total_csv_path = os.path.join(dircetory, "total.csv")
+    trans_prosody(dircetory)
     convert_audio_and_split_transcript(dircetory, total_csv_path)
-    # split 8:1:1
     split_train_dev_test(total_csv_path, dircetory)
     logging.info("Finished processing BiaoBei csv ")
 
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
-    DIR = sys.argv[1]
+    DIR = sys.argv[1] #
     processor(DIR)
