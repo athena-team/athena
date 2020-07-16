@@ -16,7 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member
-r""" a sample implementation of LAS for HKUST """
+r""" entry point for multi-gpu/ multi-machine training """
 import sys
 import json
 import tensorflow as tf

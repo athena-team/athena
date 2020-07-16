@@ -14,9 +14,9 @@
 # limitations under the License.
 # ==============================================================================
 # pylint: disable=invalid-name
+""" ctc scorer used in joint-ctc decoding """
 import numpy as np
 import tensorflow as tf
-
 
 class CTCPrefixScorer:
     """

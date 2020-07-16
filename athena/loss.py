@@ -16,6 +16,7 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=too-few-public-methods
 """ some losses """
+import math
 import tensorflow as tf
 from .utils.misc import insert_eos_in_labels
 
@@ -253,3 +254,224 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         masks = tf.math.logical_and(input_masks, output_masks)
         masks = tf.cast(masks, dtype=tf.float32)
         return masks
+
+
+class SoftmaxLoss(tf.keras.losses.Loss):
+    """ Softmax Loss
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, embedding_size, num_classes, name="SoftmaxLoss"):
+        super().__init__(name=name)
+        self.embedding_size = embedding_size
+        self.num_classes = num_classes
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+        self.dense = tf.keras.layers.Dense(
+            num_classes,
+            kernel_initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02),
+            input_shape=(embedding_size,),
+        )
+
+    def __call__(self, inputs, labels):
+        inputs = self.dense(inputs)
+        label_onehot = tf.one_hot(labels, self.num_classes)
+        loss = tf.reduce_mean(self.criterion(label_onehot, inputs))
+        return loss
+
+
+class AMSoftmaxLoss(tf.keras.losses.Loss):
+    """ Additive Margin Softmax Loss
+        Reference to paper "CosFace: Large Margin Cosine Loss for Deep Face Recognition"
+                            and "In defence of metric learning for speaker recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, embedding_size, num_classes, m=0.3, s=15, name="AMSoftmaxLoss"):
+        super().__init__(name=name)
+        self.embedding_size = embedding_size
+        self.num_classes = num_classes
+        self.m = m
+        self.s = s
+        initializer = tf.initializers.GlorotNormal()
+        self.weight = tf.Variable(initializer(
+                             shape=[embedding_size, num_classes], dtype=tf.float32),
+                             name="AMSoftmaxLoss_weight")
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+
+    def __call__(self, inputs, labels):
+        assert tf.shape(inputs)[0] == tf.shape(labels)[0]
+        assert tf.shape(inputs)[1] == self.embedding_size
+        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+        weight_norm = tf.math.l2_normalize(self.weight, axis=0)
+        costh = tf.matmul(inputs_norm, weight_norm)
+
+        label_onehot = tf.one_hot(labels, self.num_classes)
+        costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
+        m_reshape = tf.constant(self.m, shape=costh_shape)
+        delt_costh = tf.math.multiply(label_onehot, m_reshape)
+
+        costh_m = costh - delt_costh
+        costh_m_s = self.s * costh_m
+        loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
+        return loss
+
+
+class AAMSoftmaxLoss(tf.keras.losses.Loss):
+    """ Additive Angular Margin Softmax Loss
+        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition"
+                            and "In defence of metric learning for speaker recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, embedding_size, num_classes,
+                 m=0.3, s=15, easy_margin=False, name="AAMSoftmaxLoss"):
+        super().__init__(name=name)
+        self.embedding_size = embedding_size
+        self.num_classes = num_classes
+        self.m = m
+        self.s = s
+        initializer = tf.initializers.GlorotNormal()
+        self.weight = tf.Variable(initializer(
+                             shape=[embedding_size, num_classes], dtype=tf.float32),
+                             name="AMSoftmaxLoss_weight")
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+        self.easy_margin = easy_margin
+        self.cos_m = math.cos(self.m)
+        self.sin_m = math.sin(self.m)
+
+        # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
+        self.th = math.cos(math.pi - self.m)
+        self.mm = math.sin(math.pi - self.m) * self.m
+
+    def __call__(self, inputs, labels):
+        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+        weight_norm = tf.math.l2_normalize(self.weight, axis=0)
+        cosine = tf.matmul(inputs_norm, weight_norm)
+        sine = tf.clip_by_value(tf.math.sqrt(1.0 - tf.math.pow(cosine, 2)), 0, 1)
+        phi = cosine * self.cos_m - sine * self.sin_m
+
+        if self.easy_margin:
+            phi = tf.where(cosine > 0, phi, cosine)
+        else:
+            phi = tf.where((cosine - self.th) > 0, phi, cosine - self.mm)
+
+        label_onehot = tf.one_hot(labels, self.num_classes)
+        output = (label_onehot * phi) + ((1.0 - label_onehot) * cosine)
+        output = output * self.s
+        loss = tf.reduce_mean(self.criterion(label_onehot, output))
+        return loss
+
+
+class ProtoLoss(tf.keras.losses.Loss):
+    """ Prototypical Loss
+        Reference to paper "Prototypical Networks for Few-shot Learning"
+                            and "In defence of metric learning for speaker recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, name="ProtoLoss"):
+        super().__init__(name=name)
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+
+    def __call__(self, inputs, labels=None):
+        """
+            Args:
+                inputs: [batch_size, num_speaker_utts, embedding_size]
+                labels: [batch_size]
+        """
+        out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
+        out_positive = inputs[:, 0, :]
+        step_size = tf.shape(out_anchor)[0]
+
+        out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
+        out_anchor_reshape = tf.transpose(tf.tile(
+                             tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
+
+        distance = -tf.reduce_sum(tf.math.squared_difference(
+                                  out_positive_reshape, out_anchor_reshape), axis=1)
+        label = tf.one_hot(tf.range(step_size), step_size)
+        loss = tf.reduce_mean(self.criterion(label, distance))
+        return loss
+
+
+class AngleProtoLoss(tf.keras.losses.Loss):
+    """ Angular Prototypical Loss
+        Reference to paper "In defence of metric learning for speaker recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, init_w=10.0, init_b=-5.0, name="AngleProtoLoss"):
+        super().__init__(name=name)
+        self.weight = tf.Variable(initial_value=init_w)
+        self.bias = tf.Variable(initial_value=init_b)
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+        self.cosine_similarity = tf.keras.losses.cosine_similarity
+
+    def __call__(self, inputs, labels=None):
+        """
+             Args:
+                inputs: [batch_size, num_speaker_utts, embedding_size]
+                labels: [batch_size]
+        """
+        out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
+        out_positive = inputs[:, 0, :]
+        step_size = tf.shape(out_anchor)[0]
+
+        out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
+        out_anchor_reshape = tf.transpose(tf.tile(
+                             tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
+        cosine = -self.cosine_similarity(out_positive_reshape, out_anchor_reshape, axis=1)
+        self.weight = tf.clip_by_value(self.weight, tf.constant(1e-6), tf.float32.max)
+        cosine_w_b = self.weight * cosine + self.bias
+
+        labels = tf.one_hot(tf.range(step_size), step_size)
+        loss = tf.reduce_mean(self.criterion(labels, cosine_w_b))
+        return loss
+
+
+class GE2ELoss(tf.keras.losses.Loss):
+    """ Generalized End-to-end Loss
+        Reference to paper "Generalized End-to-end Loss for Speaker Verification"
+                            and "In defence of metric learning for speaker recognition"
+        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+    """
+    def __init__(self, init_w=10.0, init_b=-5.0, name="GE2ELoss"):
+        super().__init__(name=name)
+        self.weight = tf.Variable(initial_value=init_w)
+        self.bias = tf.Variable(initial_value=init_b)
+        self.criterion = tf.nn.softmax_cross_entropy_with_logits
+        self.cosine_similarity = tf.keras.losses.cosine_similarity
+
+    def __call__(self, inputs, labels=None):
+        """
+             Args:
+                inputs: [batch_size, num_speaker_utts, embedding_size]
+                labels: [batch_size]
+        """
+        step_size = tf.shape(inputs)[0]
+        num_speaker_utts = tf.shape(inputs)[1]
+        centroids = tf.math.reduce_mean(inputs, axis=1)
+        cosine_all = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
+
+        for utt in range(0, num_speaker_utts):
+            index = [*range(0, num_speaker_utts)]
+            index.remove(utt)
+            out_positive = inputs[:, utt, :]
+            out_anchor = tf.math.reduce_mean(tf.gather(inputs, tf.constant(index), axis=1), axis=1)
+
+            out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
+            centroids_reshape = tf.transpose(tf.tile(
+                                tf.expand_dims(centroids, -1), [1, 1, step_size]), [2, 1, 0])
+
+            cosine_diag = -self.cosine_similarity(out_positive, out_anchor, axis=1)
+            cosine = -self.cosine_similarity(out_positive_reshape, centroids_reshape, axis=1)
+
+            cosine_update = tf.linalg.set_diag(cosine, cosine_diag)
+            cosine_all.write(utt,
+                            tf.clip_by_value(cosine_update, tf.constant(1e-6), tf.float32.max))
+
+        self.weight = tf.clip_by_value(self.weight, tf.constant(1e-6), tf.float32.max)
+        cosine_stack = tf.transpose(cosine_all.stack(), perm=[1, 0, 2])
+        cosine_w_b = self.weight * cosine_stack + self.bias
+        cosine_w_b_reshape = tf.reshape(cosine_w_b, [-1, step_size])
+
+        labels_repeat = tf.reshape(tf.tile(tf.expand_dims(tf.range(step_size), -1),
+                                           [1, num_speaker_utts]), [-1])
+        labels_onehot = tf.one_hot(labels_repeat, step_size)
+        loss = tf.reduce_mean(self.criterion(labels_onehot, cosine_w_b_reshape))
+        return loss
