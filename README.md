@@ -11,22 +11,23 @@ All of our models are implemented in Tensorflow>=2.0.0.
 ## 1) Table of Contents
 
 - [Athena](#athena)
-  - [1) Table of Contents](#table-of-contents)
-  - [2) Key Features](#key-features)
-  - [3) Installation](#installation)
-    - [3.1) Creating a virtual environment [Optional]](#1-creating-a-virtual-environment-optional)
-    - [3.2) Install *tensorflow* backend](#2-install-tensorflow-backend)
-    - [3.3) Install *horovod* for multiple-device training [Optional]](#3-install-horovod-for-multiple-device-training-optional)
-    - [3.4) Install *athena* package](#4-install-athena-package)
-    - [3.5) Test your installation](#5-test-your-installation)
+  - [1) Table of Contents](#1-table-of-contents)
+  - [2) Key Features](#2-key-features)
+  - [3) Installation](#3-installation)
+    - [3.1) Creating a virtual environment [Optional]](#31-creating-a-virtual-environment-optional)
+    - [3.2) Install *tensorflow* backend](#32-install-tensorflow-backend)
+    - [3.3) Install *horovod* for multiple-device training [Optional]](#33-install-horovod-for-multiple-device-training-optional)
+    - [3.4) Install *athena* package](#34-install-athena-package)
+    - [3.5) Test your installation](#35-test-your-installation)
     - [Notes](#notes)
-  - [4) Data Preparation](#data-preparation)
-    - [4.1) Create Manifest](#create-manifest)
-  - [5) Training](#training)
-    - [5.1) Setting the Configuration File](#setting-the-configuration-file)
-    - [5.2) Train a Model](#train-a-model)
-  - [6) Results](#results)
-  - [7) Directory Structure](#directory-structure)
+  - [4) Data Preparation](#4-data-preparation)
+    - [4.1) Create Manifest](#41-create-manifest)
+  - [5) Training](#5-training)
+    - [5.1) Setting the Configuration File](#51-setting-the-configuration-file)
+    - [5.2) Train a Model](#52-train-a-model)
+  - [6) Results](#6-results)
+    - [6.1) ASR](#61-asr)
+  - [7) Directory Structure](#7-directory-structure)
 
 ## 2) Key Features
 
@@ -52,7 +53,7 @@ source venv_athena/bin/activate
 
 ### 3.2) Install *tensorflow* backend
 
-For more information, you can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow)
+For more information, you can checkout the [tensorflow website](https://github.com/tensorflow/tensorflow).
 
 ```bash
 # we highly recommend firstly update pip
@@ -63,7 +64,7 @@ pip install tensorflow==2.0.0
 ### 3.3) Install *horovod* for multiple-device training [Optional]
 
 For multiple GPU/CPU training
-You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install)
+You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install).
 
 ### 3.4) Install *athena* package
 
@@ -120,6 +121,8 @@ wav_filename	wav_length_ms	transcript
 ### 5.1) Setting the Configuration File
 
 All of our training/ inference configurations are written in config.json. Below is an example configuration file with comments to help you understand.
+
+<details><summary>expand json</summary><div>
 
 ```json
 {
@@ -183,25 +186,40 @@ All of our training/ inference configurations are written in config.json. Below 
 }
 ```
 
+</div></details>
+
 ### 5.2) Train a Model
 
-With all the above preparation done, training becomes straight-forward. `athena/main.py` is the entry point of the training module. Just run `python athena/main.py <your_config_in_json_file>`
+With all the above preparation done, training becomes straight-forward. `athena/main.py` is the entry point of the training module. Just run:
+```
+$ python athena/main.py <your_config_in_json_file>
+````
 
 Please install Horovod and MPI at first, if you want to train model using multi-gpu. See the [Horovod page](https://github.com/horovod/horovod) for more instructions.
 
 To run on a machine with 4 GPUs with Athena:
-`$ horovodrun -np 4 -H localhost:4 python athena/horovod_main.py <your_config_in_json_file>`
+```
+$ horovodrun -np 4 -H localhost:4 python athena/horovod_main.py <your_config_in_json_file>
+```
 
 To run on 4 machines with 4 GPUs each with Athena:
-`$ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/horovod_main.py <your_config_in_json_file>`
+```
+$ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/horovod_main.py <your_config_in_json_file>
+```
 
 ## 6) Results
+
+### 6.1) ASR
 
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
+English  | Transformer | [Switchboard Dataset](https://catalog.ldc.upenn.edu/LDC97S62) | 260h | 8.6% (WER) |
+English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 5 h | 16.8% (WER) |
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
 Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 6.6% (CER)
+
+To compare with other published results, see [wer_are_we.md](https://github.com/athena-team/athena/blob/master/docs/wer_are_we.md).
 
 ## 7) Directory Structure
 
@@ -210,7 +228,7 @@ Below is the basic directory structure for Athena
 ```bash
 |-- Athena
 |   |-- data  # - root directory for input-related operations
-|   |   |-- datasets  # custom datasets for ASR and pre-training
+|   |   |-- datasets  # custom datasets for ASR, TTS and pre-training
 |   |-- layers  # some layers
 |   |-- models  # some models
 |   |-- tools # contains various tools, e.g. decoding tools
@@ -218,7 +236,7 @@ Below is the basic directory structure for Athena
 |   |   |-- feats
 |   |   |   |-- ops # c++ code on tensorflow ops
 |   |-- utils # utils, e.g. checkpoit, learning_rate, metric, etc
-|-- deploy
+|-- deploy  # deployment with Tensorflow C++
 |   |-- include
 |   |-- src
 |-- docker
@@ -228,7 +246,8 @@ Below is the basic directory structure for Athena
 |   |   |-- aishell
 |   |   |-- hkust
 |   |   |-- librispeech
-|   |   |-- switchboard_fisher
+|   |   |-- switchboard
+|   |   |-- timit
 |   |-- translate # examples for translate
 |   |   |-- spa-eng-example
 |   |-- tts # examples for tts
@@ -237,4 +256,3 @@ Below is the basic directory structure for Athena
 |   |   |-- ljspeech
 |-- tools  # need to source env.sh before training
 ```
-
