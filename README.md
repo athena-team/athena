@@ -2,11 +2,9 @@
 
 # Athena
 
-*Athena* is an open-source implementation of end-to-end speech processing engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and unsupervised pre-training.
+*Athena* is an open-source implementation of end-to-end speech processing engine. Our vision is to empower both industrial application and academic research on end-to-end models for speech processing. To make speech processing available to everyone, we're also releasing example implementation and recipe on some opensource dataset for various tasks (ASR, TTS, Voice Conversion, Speaker Recognition, etc).
 
-Our vision is to empower both industrial application and academic research on end-to-end models for speech processing. To make speech processing available to everyone, we've also released example implementation on some opensource dataset for various tasks (ASR, TTS, Voice Conversion, Speaker Recognition, etc).
-
-All of our models are implemented in Tensorflow>=2.0.0.
+All of our models are implemented in Tensorflow>=2.0.0. For ease of use, we provide Kaldi-free pythonic feature extractor with [Athena_transform](https://github.com/athena-team/athena-transform).
 
 ## 1) Table of Contents
 
