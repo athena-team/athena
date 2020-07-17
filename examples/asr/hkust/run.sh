@@ -26,7 +26,7 @@ stage=0
 stop_stage=100
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
-dataset_dir=/nfs/project/datasets/opensource_data/hkust
+dataset_dir=examples/asr/hkust/data/hkust
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
