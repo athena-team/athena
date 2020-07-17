@@ -243,7 +243,6 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     """Convert rar to WAV and split the transcript.
       Args:
     dataset_dir : the directory which holds the input dataset.
-            -----> /nfs/project/datasets/data_baker_tts
     total_csv_path : the resulting output csv file.
 
     BZNSYP dir Tree structure:
