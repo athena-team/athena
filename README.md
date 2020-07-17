@@ -1,4 +1,5 @@
 
+
 # Athena
 
 *Athena* is an open-source implementation of end-to-end speech processing engine. Currently this project supports training and decoding of Connectionist Temporal Classification (CTC) based model, transformer-basesd encoder-decoder model and Hybrid CTC/attention based model, and unsupervised pre-training.
@@ -32,7 +33,8 @@ All of our models are implemented in Tensorflow>=2.0.0.
 - Hybrid CTC/Transformer based end-to-end ASR
 - Speech-Transformer
 - Unsupervised pre-training
-- End-to-end Tacotron2 based TTS w/ multi-speaker and GST
+- Multi-GPU training on one machine or across multiple machines with Horovod
+- End-to-end Tacotron2 based TTS with support for multi-speaker and GST
 - WFST-based decoding
 - Deployment with Tensorflow C++
 
@@ -216,6 +218,10 @@ Below is the basic directory structure for Athena
 |   |   |-- feats
 |   |   |   |-- ops # c++ code on tensorflow ops
 |   |-- utils # utils, e.g. checkpoit, learning_rate, metric, etc
+|-- deploy
+|   |-- include
+|   |-- src
+|-- docker
 |-- docs  # docs
 |-- examples  # example scripts for ASR, TTS, etc
 |   |-- asr  # each subdirectory contains a data preparation scripts and a run script for the task
@@ -225,5 +231,10 @@ Below is the basic directory structure for Athena
 |   |   |-- switchboard_fisher
 |   |-- translate # examples for translate
 |   |   |-- spa-eng-example
+|   |-- tts # examples for tts
+|   |   |-- data_baker
+|   |   |-- libritts
+|   |   |-- ljspeech
 |-- tools  # need to source env.sh before training
 ```
+
