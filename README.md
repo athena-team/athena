@@ -25,9 +25,10 @@ All of our models are implemented in Tensorflow>=2.0.0.
   - [5) Training](#5-training)
     - [5.1) Setting the Configuration File](#51-setting-the-configuration-file)
     - [5.2) Train a Model](#52-train-a-model)
-  - [6) Results](#6-results)
-    - [6.1) ASR](#61-asr)
-  - [7) Directory Structure](#7-directory-structure)
+  - [6) Deployment](#6-deployment)
+  - [7) Results](#7-results)
+    - [7.1) ASR](#71-asr)
+  - [8) Directory Structure](#8-directory-structure)
 
 ## 2) Key Features
 
@@ -207,9 +208,24 @@ To run on 4 machines with 4 GPUs each with Athena:
 $ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/horovod_main.py <your_config_in_json_file>
 ```
 
-## 6) Results
+## 6) Deployment
+After training, you can deploy the model on servers using the TensorFlow C++ API. Below are some steps to achieve this functionality with ASR model. 
 
-### 6.1) ASR
+1. Install all dependencies, including TensorFlow, Protobuf, absl, Eigen3 and kenlm (optional).
+2. Freeze the model to pb format with `athena/deploy_main.py`.
+3. Load the model and do argmax decoding in C++ codes, see `deploy/src/argmax.cpp` for the entry point.
+4. Compile the C++ codes.
+
+After compiling, an executable file will be generated and you can run the executable file:
+```
+$ ./argmax
+```
+
+Detailed implementation are described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
+
+## 7) Results
+
+### 7.1) ASR
 
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
@@ -221,7 +237,7 @@ Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h |
 
 To compare with other published results, see [wer_are_we.md](https://github.com/athena-team/athena/blob/master/docs/wer_are_we.md).
 
-## 7) Directory Structure
+## 8) Directory Structure
 
 Below is the basic directory structure for Athena
 
