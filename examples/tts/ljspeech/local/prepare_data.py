@@ -177,7 +177,6 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     """Convert rar to WAV and split the transcript.
       Args:
     dataset_dir  : the directory which holds the input dataset.
-            -----> /nfs/project/datasets/tts/LJSpeech-1.1/
     total_csv_path : the resulting output csv file.
 
     LJSpeech-1.1 dir Tree structure:

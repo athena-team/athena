@@ -26,7 +26,7 @@ stage=0
 stop_stage=100
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
-dataset_dir=/nfs/cold_project/datasets/opensource_data/aishell/data_aishell
+dataset_dir=examples/asr/aishell/data/data_aishell
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
