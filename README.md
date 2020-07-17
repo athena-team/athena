@@ -209,19 +209,19 @@ $ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/hor
 ```
 
 ## 6) Deployment
-After training, you can deploy the model on servers using the TensorFlow C++ API. Below are some steps to achieve this functionality with ASR model. 
+After training, you can deploy the model on servers using the TensorFlow C++ API. Below are some steps to achieve this functionality with an ASR model. 
 
 1. Install all dependencies, including TensorFlow, Protobuf, absl, Eigen3 and kenlm (optional).
 2. Freeze the model to pb format with `athena/deploy_main.py`.
-3. Load the model and do argmax decoding in C++ codes, see `deploy/src/argmax.cpp` for the entry point.
-4. Compile the C++ codes.
+3. Compile the C++ codes.
+4. Load the model and do argmax decoding in C++ codes, see `deploy/src/argmax.cpp` for the entry point.
 
 After compiling, an executable file will be generated and you can run the executable file:
 ```
 $ ./argmax
 ```
 
-Detailed implementation are described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
+Detailed implementation is described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
 
 ## 7) Results
 
