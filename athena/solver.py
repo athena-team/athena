@@ -31,7 +31,10 @@ from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
 from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
-from pydecoders import WFSTDecoder
+try:
+    from pydecoders import WFSTDecoder
+except ImportError:
+    print("pydecoder is not installed, this will only affect WFST decoding")
 import time
 
 
