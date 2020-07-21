@@ -42,7 +42,7 @@ SUPPORTED_MODEL = {
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
     "tacotron2": Tacotron2,
-    "resnet": Resnet
+    "speaker_resnet": SpeakerResnet
 }
 
 SUPPORTED_OPTIMIZER = {

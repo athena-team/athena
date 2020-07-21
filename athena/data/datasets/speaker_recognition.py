@@ -50,8 +50,7 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         "audio_config": {"type": "Fbank"},
         "cmvn_file": None,
         "input_length_range": [20, 50000],
-        "data_csv": None,
-        "speaker_csv": None
+        "data_csv": None
     }
 
     def __init__(self, config=None):
@@ -65,55 +64,48 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
 
         self.entries = []
+        self.speakers = []
         self.speakers_ids_dict = {}
 
-        if self.hparams.data_csv is not None \
-                and self.hparams.speaker_csv is not None:
-            self.load_csv(self.hparams.data_csv, self.hparams.speaker_csv)
+        if self.hparams.data_csv is not None:
+            self.load_csv(self.hparams.data_csv)
 
     def reload_config(self, config):
         """ reload the config """
         if config is not None:
             self.hparams.override_from_dict(config)
 
-    def preprocess_data(self, data_csv_path, speaker_csv_path):
-        """Generate a list of tuples (wav_filename, wav_length_ms, speaker)."""
+    def preprocess_data(self, data_csv_path):
+        """ Generate a list of tuples
+            (wav_filename, wav_length_ms, speaker_id, speaker_name).
+        """
         logging.info("Loading data csv {}".format(data_csv_path))
         with open(data_csv_path, "r", encoding='utf-8') as data_csv:
             lines = data_csv.read().splitlines()[1:]
-        lines = [line.split("\t", 2) for line in lines]
+        lines = [line.split("\t", 3) for line in lines]
         lines.sort(key=lambda item: int(item[1]))
         self.entries = [tuple(line) for line in lines]
 
         # handling speakers
-        self.speakers = []
-        for _, _, speaker in self.entries:
-            if speaker not in self.speakers:
-                self.speakers.append(speaker)
-
-        logging.info("Loading speaker csv {}".format(speaker_csv_path))
-        with open(speaker_csv_path, "r", encoding='utf-8') as speaker_csv:
-            lines = speaker_csv.read().splitlines()[1:]
-            lines = [line.split("\t", 1) for line in lines]
-        self.speakers_ids_dict = {}
-        for speaker, spkid in lines:
+        for _, _, spkid, spkname in self.entries:
             spkid = int(spkid)
-            self.speakers_ids_dict[speaker] = spkid
+            self.speakers_ids_dict[spkname] = spkid
+        self.speakers = list(self.speakers_ids_dict.keys())
 
         # apply input length filter
         self.filter_sample_by_input_length()
         return self
 
-    def load_csv(self, data_csv_path, speaker_csv_path):
+    def load_csv(self, data_csv_path):
         """ load csv file """
-        return self.preprocess_data(data_csv_path, speaker_csv_path)
+        return self.preprocess_data(data_csv_path)
 
     def __getitem__(self, index):
-        audio_data, _, speaker = self.entries[index]
+        audio_data, _, spkid, spkname = self.entries[index]
         feat = self.audio_featurizer(audio_data)
-        feat = self.feature_normalizer(feat, speaker)
+        feat = self.feature_normalizer(feat, spkname)
         feat_length = feat.shape[0]
-        spkid = [self.speakers_ids_dict[speaker]]
+        spkid = [self.speakers_ids_dict[spkname]]
         return {
             "input": feat,
             "input_length": feat_length,
