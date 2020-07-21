@@ -53,7 +53,7 @@ from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
-from .models.resnet import Resnet
+from .models.speaker_resnet import SpeakerResnet
 
 # solver & loss & accuracy
 from .solver import BaseSolver

@@ -25,8 +25,7 @@ def test():
     ''' test the speed of speaker dataset '''
     dataset_builder = SpeakerRecognitionDatasetBuilder(
         {
-            "data_csv": "examples/speaker/voxceleb/data/vox1_test_wav.csv",
-            "speaker_csv": "examples/speaker/voxceleb/data/vox1_test_wav.spk.csv",
+            "data_csv": "examples/speaker/voxceleb/data/vox1_dev_wav.csv",
             "audio_config": {
                 "type": "Fbank",
                 "filterbank_channel_count": 40,

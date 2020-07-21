@@ -64,6 +64,8 @@ USER = {
     "password": ""
 }
 
+speaker_id_dict = {}
+
 def download_and_extract(directory, subset, urls):
     """Download and extract the given split of dataset.
 
@@ -89,9 +91,10 @@ def download_and_extract(directory, subset, urls):
 
         # concatenate all parts into zip files
         if ".zip" not in zip_filepath:
+            zip_filepath = "_".join(zip_filepath.split("_")[:-1])
             subprocess.call('cat %s* > %s.zip' %
                             (zip_filepath, zip_filepath), shell=True)
-            zip_filepath = zip_filepath + ".zip"
+            zip_filepath += ".zip"
         extract_path = zip_filepath.strip(".zip")
 
         # check zip file md5sum
@@ -120,9 +123,9 @@ def exec_cmd(cmd):
         if retcode < 0:
             logging.info(f"Child was terminated by signal {retcode}")
         else:
-            print(f"Child returned {retcode}")
+            logging.info(f"Child returned {retcode}")
     except OSError as e:
-        print(f"Execution failed: {e}")
+        logging.info(f"Execution failed: {e}")
         retcode = -999
     return retcode
 
@@ -146,21 +149,19 @@ def decode_aac_with_ffmpeg(aac_file, wav_file):
 
 
 def convert_audio_and_make_label(input_dir, subset,
-                                 output_dir, output_file, spk_file):
+                                 output_dir, output_file):
     """Optionally convert AAC to WAV and make speaker labels.
     Args:
         input_dir: the directory which holds the input dataset.
         subset: the name of the specified subset. e.g. vox1_dev_wav
         output_dir: the directory to place the newly generated csv files.
-        output_file: the name of the newly generated csv file. e.g. test-clean.csv
-        spk_file: the name of the newly generated csv file. e.g. test-clean.spk.csv
+        output_file: the name of the newly generated csv file. e.g. vox1_dev_wav.csv
     """
 
     logging.info("Preprocessing audio and label for subset %s" % subset)
     source_dir = os.path.join(input_dir, subset)
 
     files = []
-    spks = set()
     # Convert all AAC file into WAV format. At the same time, generate the csv
     for root, _, filenames in gfile.Walk(source_dir):
         for filename in filenames:
@@ -179,24 +180,21 @@ def convert_audio_and_make_label(input_dir, subset,
                         raise RuntimeError("Audio decoding failed.")
             else:
                 continue
-            spk = root.split(os.path.sep)[-2]
-            spks.add(spk)
+            speaker_name = root.split(os.path.sep)[-2]
+            if speaker_name not in speaker_id_dict:
+                num = len(speaker_id_dict)
+                speaker_id_dict[speaker_name] = num
             # wav_filesize = os.path.getsize(wav_file)
             wav_length = get_wave_file_length(wav_file)
-            files.append((os.path.abspath(wav_file), wav_length, spk))
+            files.append(
+                (os.path.abspath(wav_file), wav_length, speaker_id_dict[speaker_name], speaker_name)
+            )
 
-    # Write to CSV file which contains three columns:
-    # "wav_filename", "wav_length_ms", "spk_name".
+    # Write to CSV file which contains four columns:
+    # "wav_filename", "wav_length_ms", "speaker_id", "speaker_name".
     csv_file_path = os.path.join(output_dir, output_file)
     df = pandas.DataFrame(
-        data=files, columns=["wav_filename", "wav_length_ms", "spk_name"])
-    df.to_csv(csv_file_path, index=False, sep="\t")
-    logging.info("Successfully generated csv file {}".format(csv_file_path))
-
-    # Write speaker id.
-    spk2id = [(name, id) for id, name in enumerate(sorted(list(spks)))]
-    csv_file_path = os.path.join(output_dir, spk_file)
-    df = pandas.DataFrame(data=spk2id, columns=["spk_name", "spk_id"])
+        data=files, columns=["wav_filename", "wav_length_ms", "speaker_id", "speaker_name"])
     df.to_csv(csv_file_path, index=False, sep="\t")
     logging.info("Successfully generated csv file {}".format(csv_file_path))
 
@@ -208,10 +206,8 @@ def processor(directory, subset, force_process):
         raise ValueError(subset, "is not in voxceleb")
 
     subset_csv = os.path.join(directory, subset + '.csv')
-    spk_csv = os.path.join(directory, subset + '.spk.csv')
-    if not force_process and os.path.exists(subset_csv) \
-                         and os.path.exists(spk_csv):
-        return (subset_csv, spk_csv)
+    if not force_process and os.path.exists(subset_csv):
+        return subset_csv
 
     logging.info("Downloading and process the voxceleb in %s", directory)
     logging.info("Preparing subset %s", subset)
@@ -220,16 +216,18 @@ def processor(directory, subset, force_process):
         directory,
         subset,
         directory,
-        subset + ".csv",
-        subset + ".spk.csv"
+        subset + ".csv"
     )
     logging.info("Finished downloading and processing")
-    return (subset_csv, spk_csv)
+    return subset_csv
 
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
-    DIR = sys.argv[1]
+    if len(sys.argv) != 4:
+        print("Usage: python prepare_data.py save_directory user password")
+        sys.exit()
 
+    DIR, USER["user"], USER["password"] = sys.argv[1], sys.argv[2], sys.argv[3]
     for SUBSET in SUBSETS:
         processor(DIR, SUBSET, False)

@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 # Only support eager mode and TF>=2.0.0
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, too-many-arguments
 """ some losses """
 import math
 import tensorflow as tf
@@ -298,16 +298,12 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
 
     def __call__(self, outputs, samples, logit_length=None):
         labels = tf.squeeze(samples['output'])
-        assert tf.shape(outputs)[0] == tf.shape(labels)[0]
-        assert tf.shape(outputs)[1] == self.embedding_size
         outputs_norm = tf.math.l2_normalize(outputs, axis=1)
         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
         costh = tf.matmul(outputs_norm, weight_norm)
 
         label_onehot = tf.one_hot(labels, self.num_classes)
-        costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
-        m_reshape = tf.constant(self.m, shape=costh_shape)
-        delt_costh = tf.math.multiply(label_onehot, m_reshape)
+        delt_costh = self.m * label_onehot
 
         costh_m = costh - delt_costh
         costh_m_s = self.s * costh_m

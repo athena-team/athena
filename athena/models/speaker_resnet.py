@@ -45,7 +45,6 @@ class SpeakerResnet(BaseModel):
         "hidden_size": 512,
         "num_filters": [16, 32, 64, 128],
         "num_layers": [3, 4, 6, 3],
-        "encoder_sap": False,
         "loss": "amsoftmax",
         "margin": 0.3,
         "scale": 15
@@ -57,7 +56,7 @@ class SpeakerResnet(BaseModel):
         # number of speakers
         self.num_class = data_descriptions.num_class
         self.loss_function = self.init_loss(self.hparams.loss)
-        self.metric = None
+        self.metric = tf.keras.metrics.Mean(name="AverageLoss")
 
         num_filters = self.hparams.num_filters
         num_layers = self.hparams.num_layers
@@ -119,6 +118,12 @@ class SpeakerResnet(BaseModel):
         else:
             raise NotImplementedError()
         return loss_function
+
+    def get_loss(self, outputs, samples, training=None):
+        loss = self.loss_function(outputs, samples)
+        self.metric.update_state(loss)
+        metrics = {self.metric.name: self.metric.result()}
+        return loss, metrics
 
     def make_resnet_block_layer(self, num_filter, num_blocks, stride=1):
         resnet_block = tf.keras.Sequential()
