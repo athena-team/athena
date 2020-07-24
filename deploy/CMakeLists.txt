@@ -20,7 +20,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g3 -O2 -D_GLIBCXX_USE_NANOSL
 
 add_library(utils ./include/utils.h ./src/utils.cpp)
 add_library(tensor_utils ./include/tensor_utils.h ./src/tensor_utils.cpp)
-add_executable(athena ./src/athena.cpp)
+add_executable(argmax ./src/argmax.cpp)
 
 target_link_libraries(
     tensor_utils
@@ -29,7 +29,7 @@ target_link_libraries(
 )
 
 target_link_libraries(
-    athena
+    argmax
         tensor_utils
         utils
         tensorflow_cc
