@@ -24,7 +24,7 @@ source tools/env.sh
 
 stage=0
 stop_stage=100
-dataset_dir=/nfs/datasets/opensource_data/aishell
+dataset_dir=examples/asr/aishell/data/data_aishell
 workplace_dir=examples/asr/aishell_sub
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
