@@ -22,14 +22,13 @@ limitations under the License.
 
 void createMap(std::vector<std::string> &index_to_char, std::string filename) {
     std::ifstream fin(filename);
-    if (fin.is_open()) {
-        for (int i = 0; i < 3650; i++) {
-            std::string str = "";
-            fin >> str;
-            int index = 0;
-            fin >> index;
-            index_to_char.push_back(str);
+    std::string str = "";
+    int index = 0;
+    while(fin >> str >> index) {
+        if (str.compare("<space>") == 0) {
+            str = " ";
         }
-        fin.close();
+        index_to_char.push_back(str);
     }
+    fin.close();
 }
