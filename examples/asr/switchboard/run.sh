@@ -32,9 +32,10 @@ horovod_prefix=""
 # horovod_cmd="horovodrun -np 4 -H localhost:4"
 # horovod_prefix="horovod_"
 
-# please modify the following pathes accordingly
-dataset_dir=/nfs/cold_project/dataset/opensource/switchboard_fisher
-sctk_path=/nfs/private/luone/kaldi/tools/sctk
+# please modify the following pathes accordingly 
+# if you put dataset or sctk in differenct pathes
+dataset_dir=examples/asr/switchboard/data
+sctk_path=tools/sctk
 
 bpe_prefix=examples/asr/switchboard/data/switchboard_bpe2000
 score_dir=examples/asr/switchboard/score
