@@ -15,8 +15,9 @@ All of our models are implemented in Tensorflow>=2.0.0. For ease of use, we prov
     - [3.1) Creating a virtual environment [Optional]](#31-creating-a-virtual-environment-optional)
     - [3.2) Install *tensorflow* backend](#32-install-tensorflow-backend)
     - [3.3) Install *horovod* for multiple-device training [Optional]](#33-install-horovod-for-multiple-device-training-optional)
-    - [3.4) Install *athena* package](#34-install-athena-package)
-    - [3.5) Test your installation](#35-test-your-installation)
+    - [3.4) Install *pydecoder* for WFST decoding [Optional]](#34-install-pydecoder-for-WFST-decoding-optional)
+    - [3.5) Install *athena* package](#35-install-athena-package)
+    - [3.6) Test your installation](#36-test-your-installation)
     - [Notes](#notes)
   - [4) Data Preparation](#4-data-preparation)
     - [4.1) Create Manifest](#41-create-manifest)
@@ -65,7 +66,12 @@ pip install tensorflow==2.0.0
 For multiple GPU/CPU training
 You have to install the *horovod*, you can find out more information from the [horovod website](https://github.com/horovod/horovod#install).
 
-### 3.4) Install *athena* package
+### 3.4) Install *pydecoder* for WFST decoding [Optional]
+
+For WFST decoding
+You have to install *pydecoder*, installation guide for *pydecoder* can be found [athena-decoder website](https://github.com/athena-team/athena-decoder#installation)
+
+### 3.5) Install *athena* package
 
 ```bash
 git clone https://github.com/athena-team/athena.git

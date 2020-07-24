@@ -7,7 +7,7 @@ bash examples/asr/$dataset_name/run.sh
 
 ## Core Stages:
 
-1) Data preparation: Before you run `examples/asr/$dataset_name/run.sh`, you should download the coorsponding dataset and store it in `/nfs/project/datasets/opensource_data/$dataset_name`. The script `examples/asr/$dataset_name/local/prepare_data.py` would generate the desired csv file decripting the dataset
+1) Data preparation: Before you run `examples/asr/$dataset_name/run.sh`, you should download the coorsponding dataset and store it in `examples/asr/$dataset_name/data`. The script `examples/asr/$dataset_name/local/prepare_data.py` would generate the desired csv file decripting the dataset
 
 2) Data normalization: With the generated csv file, we should compute the cmvn file firstly like this `python athena/cmvn_main.py examples/asr/$dataset_name/configs/mpc.json examples/asr/$dataset_name/data/all.csv`
 
