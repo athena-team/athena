@@ -235,7 +235,7 @@ Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
 English  | Transformer | [Switchboard Dataset](https://catalog.ldc.upenn.edu/LDC97S62) | 260h | 8.6% (WER) |
-English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 5 h | 16.8% (WER) |
+English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 3 h | 16.8% (WER) |
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
 Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 6.6% (CER)
 
