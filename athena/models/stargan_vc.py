@@ -217,7 +217,7 @@ class StarganModel(BaseModel):
             domain_out_fake = self.classifier(generated_forward)
             discirmination = self.discriminator(generated_forward, target_label)
 
-            # apply penalty to make convergence more stable
+            # apply penalty to make convergence more stable, reference can be found at https://arxiv.org/abs/1704.00028
             epsilon = tf.random.uniform([self.batchsize, 1, 1, 1], 0.0, 1.0)
             length = tf.math.minimum(tf.shape(generated_forward)[2], tf.shape(input_real)[2])
             generated_forward = generated_forward[:, :, 0: length, :]
