@@ -21,7 +21,9 @@ from .data import SpeechSynthesisDatasetBuilder
 from .data import SpeechDatasetBuilder
 from .data import SpeechDatasetKaldiIOBuilder
 from .data import LanguageDatasetBuilder
+from .data import VoiceConversionDatasetBuilder
 from .data import FeatureNormalizer
+from .data import WorldFeatureNormalizer
 from .data.text_featurizer import TextFeaturizer
 
 # layers
@@ -54,11 +56,14 @@ from .models.translate_transformer import NeuralTranslateTransformer
 
 # solver & loss & accuracy
 from .solver import BaseSolver
+from .solver import GanSolver
 from .solver import HorovodSolver
 from .solver import DecoderSolver
 from .solver import SynthesisSolver
+from .solver import ConvertSolver
 from .loss import CTCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy
+from .loss import StarganLoss
 from .metrics import CTCAccuracy
 from .metrics import Seq2SeqSparseCategoricalAccuracy
 

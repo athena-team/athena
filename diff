@@ -1,0 +1,1691 @@
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena: .DS_Store
+diff -r athena/__init__.py /nfs/cold_project/jiangdongwei/athena_vc/athena/__init__.py
+20d19
+< from .data import SpeechSynthesisDatasetBuilder
+23a23
+> from .data import VoiceConversionDatasetBuilder
+24a25
+> from .data import WorldFeatureNormalizer
+47,48c48
+< from .models.speech_transformer import SpeechTransformer, SpeechTransformer2
+< from .models.tacotron2 import Tacotron2
+---
+> from .models.speech_transformer import SpeechTransformer
+53a54
+> from .models.stargan_vc import StarganModel
+56a58
+> from .solver import GanSolver
+59c61
+< from .solver import SynthesisSolver
+---
+> from .solver import ConvertSolver
+61a64
+> from .loss import StarganLoss
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena: __init__.pyc
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena: __pycache__
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena: convert_main.py
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/data: .DS_Store
+diff -r athena/data/__init__.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/__init__.py
+20d19
+< from .datasets.speech_synthesis import SpeechSynthesisDatasetBuilder
+27c26,27
+< from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer
+---
+> 
+> from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer
+\ No newline at end of file
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/data: __init__.pyc
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/data: __pycache__
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets: __init__.pyc
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets: __pycache__
+diff -r athena/data/datasets/speech_recognition.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets/speech_recognition.py
+270c270
+<         self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
+---
+>         self.feature_normalizer.save_cmvn()
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets: speech_recognition.pyc
+diff -r athena/data/datasets/speech_recognition_kaldiio.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets/speech_recognition_kaldiio.py
+258c258
+<         self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
+---
+>         self.feature_normalizer.save_cmvn()
+diff -r athena/data/datasets/speech_set.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets/speech_set.py
+209c209
+<         self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
+---
+>         self.feature_normalizer.save_cmvn()
+diff -r athena/data/datasets/speech_set_kaldiio.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets/speech_set_kaldiio.py
+214c214
+<         self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
+---
+>         self.feature_normalizer.save_cmvn()
+diff -r athena/data/datasets/speech_synthesis.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets/speech_synthesis.py
+57,58c57
+<         "data_csv": None,
+<         "num_cmvn_workers":1
+---
+>         "data_csv": None
+71,72d69
+<         self.speakers_dict = {}
+<         self.speakers_ids_dict = {}
+74a72
+>         self.speakers_dict = {}
+108d105
+<         self.speakers_ids_dict = dict(zip(speakers_ids, self.speakers))
+134d130
+<         text.append(self.text_featurizer.model.eos_index)
+164,168d159
+<     def feat_dim(self):
+<         """ return the number of feature dims """
+<         return self.audio_featurizer.dim
+< 
+<     @property
+271,272c262
+<                 self.entries, self.speakers, self.audio_featurizer, feature_dim,
+<                 num_cmvn_workers=self.hparams.num_cmvn_workers
+---
+>                 self.entries, self.speakers, self.audio_featurizer, feature_dim
+274c264
+<         self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
+---
+>         self.feature_normalizer.save_cmvn()
+diff -r athena/data/datasets/voice_conversion.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/datasets/voice_conversion.py
+19,20c19
+< import librosa
+< import pyworld
+---
+> import random
+22a22,23
+> import librosa
+> import pyworld
+27d27
+< import random
+41,60d40
+< 
+<         @property:
+<         sample_shape:
+<             {"src_coded_sp": tf.TensorShape(
+<                 [sp_dim, None, None]
+<             ),
+<             "tar_coded_sp": tf.TensorShape(
+<                 [sp_dim, None, None]
+<             ),
+<             "src_speaker": tf.TensorShape([spk_num]),
+<             "tar_speaker": tf.TensorShape([spk_num]),
+<             "input_length": tf.TensorShape([]),
+<             "src_f0": tf.TensorShape([None]),
+<             "src_ap": tf.TensorShape([None, inc]),
+<             "src_sp": tf.TensorShape([None, inc]),
+<             "tar_f0": tf.TensorShape([None]),
+<             "tar_ap": tf.TensorShape([None, inc]),
+<             "tar_sp": tf.TensorShape([None, inc]),
+<             "src_spk": tf.TensorShape([]),
+<             "tar_spk": tf.TensorShape([]),}
+63d42
+<         "audio_config": {"type": "World", "codedsp_dim": 36},
+67a47,48
+>         "enable_load_from_disk": True,
+>         "codedsp_dim": 36,
+70c51
+<         "codedsp_dim": 36
+---
+> 	    "speaker_num": 9
+75d55
+<         # hparams
+81a62,63
+>         self.speaker_num = self.hparams.speaker_num
+>         self.enable_load_from_disk = self.hparams.enable_load_from_disk
+94d75
+<             # self.spk_one_hot[name] = onehot_arr[:, spk_count]
+105,106c86,88
+<         """Generate a list of tuples (src_wav_filename, src_speaker,
+<                                       tar_wav_filename, tar_speaker)."""
+---
+>         """Generate a list of tuples for train(src_wav_filename, src_speaker, tar_wav_filename, tar_speaker).
+>            Generate a list of tuples for cmvn(speaker, files)
+>         """
+120,126c102,108
+<         for line in lines:
+<             items = line.split("\t")
+<             src_wav_filename, src_speaker = items[0], items[1]
+<             self.speakers.remove(src_speaker)
+<             tar_speaker = random.choice(self.speakers)
+<             self.speakers.append(src_speaker)
+<             tar_wav_filename = random.choice(self.entries_person_wavs[tar_speaker])
+---
+> 
+>             while True:
+>                 line2 = random.choice(lines)
+>                 items2 = line2.split("\t")
+>                 tar_wav_filename, tar_speaker = items2[0], items2[1]
+>                 if tar_speaker != src_speaker:
+>                     break
+129d110
+< 
+141,158d121
+<     def pad_wav_to_get_fixed_frames(self, x: np.ndarray, y: np.ndarray):
+<         """ Apply the original speaker's speech padding to the same length as the target speaker's speech padding """
+<         wav_len_x = len(x)
+<         wav_len_y = len(y)
+<         if wav_len_x > wav_len_y:
+<             need_pad = wav_len_x - wav_len_y
+<             tempx = y.tolist()
+<             tempx.extend(y[:need_pad])
+<             y = tempx[:-1]
+<             paded_len = wav_len_x
+<         else:
+<             need_pad = wav_len_y - wav_len_x
+<             tempx = x.tolist()
+<             tempx.extend(x[:need_pad])
+<             x = tempx[:-1]
+<             paded_len = wav_len_y
+<         return np.asarray(x, dtype=np.float), np.asarray(y, dtype=np.float), paded_len
+< 
+160,165c123,127
+<         """ World Vocoder parameterizes speech into three components:
+<                 Pitch (fundamental frequency, F0) contour
+<                 Harmonic spectral envelope(sp)
+<                 Aperiodic spectral envelope (relative to the harmonic spectral envelope, ap)
+<             Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
+<         """
+---
+>         # World Vocoder parameterizes speech into three components:
+>         #     Pitch (fundamental frequency, F0) contour
+>         #     Harmonic spectral envelope(sp)
+>         #     Aperiodic spectral envelope (relative to the harmonic spectral envelope, ap)
+>         # Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
+170d131
+<         # coded_sp = coded_sp.T  # sp_features x T
+178,179d138
+<         """ Calculting world features on-the-fly takes too much time, this is another option to load vc-related features from disk 
+<         """
+187c146
+<                                tf.convert_to_tensor(src_coded_sp, dtype=tf.float32), tf.convert_to_tensor(src_ap, dtype=tf.float32), \
+---
+>         tf.convert_to_tensor(src_coded_sp, dtype=tf.float32), tf.convert_to_tensor(src_ap, dtype=tf.float32), \
+192,194c151,155
+<         src_wav_filename, src_speaker, tar_wav_filename, tar_speaker = \
+<             self.entries[index]
+<         if False:
+---
+>         src_wav_filename, src_speaker, tar_wav_filename, tar_speaker = self.entries[index]
+> 
+>         if self.hparams.enable_load_from_disk:
+>             src_f0, src_coded_sp, src_ap, tar_coded_sp = self.load_from_disk(src_wav_filename, tar_wav_filename)
+>         else:
+197d157
+<             # src_wav, tar_wav, pad_len = self.pad_wav_to_get_fixed_frames(src_wav,tar_wav)
+200,201c160
+<         else:
+<             src_f0, src_coded_sp, src_ap, tar_coded_sp = self.load_from_disk(src_wav_filename, tar_wav_filename)
+---
+> 
+210c169,170
+<         src_wav_id = os.path.split(src_wav_filename)[1]
+---
+>         src_wav_filename = os.path.split(src_wav_filename)[1]#.split("-")[1]
+> 
+220,222c180
+<             "src_spk": src_speaker, # name
+<             "tar_spk": tar_speaker,
+<             "src_wav_id": src_wav_id,
+---
+>             "src_wav_filename": src_wav_filename,
+230d187
+<     @property
+236,240d192
+<     def speaker_num(self):
+<         """ return the speaker list """
+<         return len(self.speakers)
+< 
+<     @property
+251,253c203
+<             "src_spk": tf.string,
+<             "tar_spk": tf.string,
+<             "src_wav_id": tf.string,
+---
+>             "src_wav_filename": tf.string,
+262d211
+< 
+272,273c221,222
+<             "src_f0": tf.TensorShape([None]),       # T
+<             "src_ap": tf.TensorShape([None, inc]),  # T*fftsize//2+1
+---
+>             "src_f0": tf.TensorShape([None]),
+>             "src_ap": tf.TensorShape([None, inc]),
+276,278c225
+<             "src_spk": tf.TensorShape([]),
+<             "tar_spk": tf.TensorShape([]),
+<             "src_wav_id": tf.TensorShape([]),
+---
+>             "src_wav_filename": tf.TensorShape([]),
+295,296c242,243
+<                 "src_f0": tf.TensorSpec(shape=(None, None), dtype=tf.float32),       # T
+<                 "src_ap": tf.TensorSpec(shape=(None, None, inc), dtype=tf.float32),  # T*fftsize//2+1
+---
+>                 "src_f0": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+>                 "src_ap": tf.TensorSpec(shape=(None, None, inc), dtype=tf.float32),
+299,301c246
+<                 "src_spk": tf.TensorSpec(shape=(None), dtype=tf.string),
+<                 "tar_spk": tf.TensorSpec(shape=(None), dtype=tf.string),
+<                 "src_wav_id": tf.TensorSpec(shape=(None), dtype=tf.string),
+---
+>                 "src_wav_filename": tf.TensorSpec(shape=(None), dtype=tf.string),
+336c281,282
+<             self.feature_normalizer.compute_world_cmvn(self.entries_person_wavs, self.sp_dim, self.fft_size, self.fs, self.speakers)
+---
+>             self.feature_normalizer.compute_world_cmvn(self.enable_load_from_disk, self.entries_person_wavs, \
+>                                                        self.sp_dim, self.fft_size, self.fs, self.speakers)
+diff -r athena/data/feature_normalizer.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/feature_normalizer.py
+20d19
+< import tqdm
+21a21,23
+> import multiprocessing as mp
+> from multiprocessing import cpu_count
+> import tqdm
+28,29c30,62
+< import multiprocessing as mp
+< from multiprocessing import cpu_count
+---
+> 
+> 
+> def compute_cmvn_by_chunk_for_all_speaker(feature_dim, speakers, featurizer, entries):
+>     initial_mean_dict, initial_var_dict, total_num_dict = {}, {}, {}
+>     # speakers may be 'global' or a speaker list
+>     for tar_speaker in speakers:
+>         logging.info("processing %s from %s" % (tar_speaker, os.getpid()))
+>         # compute some sums of the corresponding chunk for per speaker
+>         initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+>         initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+>         total_num = tf.Variable(0, dtype=tf.int32)
+> 
+>         for items in tqdm.tqdm(entries):
+>             audio_file, speaker = items[0], items[-1]
+>             if speaker != tar_speaker:
+>                 continue
+>             feat_data = featurizer(audio_file)
+>             temp_frame_num = feat_data.shape[0]
+>             total_num.assign_add(temp_frame_num)
+> 
+>             temp_feat = tf.reshape(feat_data, [-1, feature_dim])
+>             temp_feat2 = tf.square(temp_feat)
+> 
+>             temp_mean = tf.reduce_sum(temp_feat, axis=[0])
+>             temp_var = tf.reduce_sum(temp_feat2, axis=[0])
+> 
+>             initial_mean.assign_add(temp_mean)
+>             initial_var.assign_add(temp_var)
+>         # save the sums for per speaker in a dict
+>         initial_mean_dict[tar_speaker] = initial_mean
+>         initial_var_dict[tar_speaker] = initial_var
+>         total_num_dict[tar_speaker] = total_num
+>     return initial_mean_dict, initial_var_dict, total_num_dict
+46c79
+<         """ transform original feature to normalized feature """
+---
+>         """ TODO: docstring"""
+47a81
+>             print("speaker no in cmvn_dict!")
+64c98
+<             initial_mean, initial_var, total_num = self.compute_cmvn_by_chunk_for_all_speaker(
+---
+>             initial_mean, initial_var, total_num = compute_cmvn_by_chunk_for_all_speaker(
+85c119
+<             result_list = p.starmap(self.compute_cmvn_by_chunk_for_all_speaker, args)
+---
+>             result_list = p.starmap(compute_cmvn_by_chunk_for_all_speaker, args)
+107,139d140
+<     def compute_cmvn_by_chunk_for_all_speaker(self, feature_dim, speakers, featurizer, entries):
+<         ''' because of memory issue, we used incremental approximation for the calculation of cmvn '''
+<         initial_mean_dict, initial_var_dict, total_num_dict = {}, {}, {}
+<         # speakers may be 'global' or a speaker list
+<         for tar_speaker in speakers:
+<             logging.info("processing %s from %s" % (tar_speaker, os.getpid()))
+<             # compute some sums of the corresponding chunk for per speaker
+<             initial_mean = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+<             initial_var = tf.Variable(tf.zeros([feature_dim], dtype=tf.float32))
+<             total_num = tf.Variable(0, dtype=tf.int32)
+< 
+<             for items in tqdm.tqdm(entries):
+<                 audio_file, speaker = items[0], items[-1]
+<                 if speaker != tar_speaker:
+<                     continue
+<                 feat_data = featurizer(audio_file)
+<                 temp_frame_num = feat_data.shape[0]
+<                 total_num.assign_add(temp_frame_num)
+< 
+<                 temp_feat = tf.reshape(feat_data, [-1, feature_dim])
+<                 temp_feat2 = tf.square(temp_feat)
+< 
+<                 temp_mean = tf.reduce_sum(temp_feat, axis=[0])
+<                 temp_var = tf.reduce_sum(temp_feat2, axis=[0])
+< 
+<                 initial_mean.assign_add(temp_mean)
+<                 initial_var.assign_add(temp_var)
+<             # save the sums for per speaker in a dict
+<             initial_mean_dict[tar_speaker] = initial_mean
+<             initial_var_dict[tar_speaker] = initial_var
+<             total_num_dict[tar_speaker] = total_num
+<         return initial_mean_dict, initial_var_dict, total_num_dict
+< 
+141c142
+<         """ Compute cmvn for filtered entries using kaldi-format data"""
+---
+>         """ Compute cmvn for filtered entries using kaldi-format data """
+179c180
+<         """ load mean and var """
+---
+>         """ TODO: docstring """
+180a182
+>             print("cmvn_file not exists!")
+191c193
+<         """ save cmvn variables determined by variable_list to file """
+---
+>         """ TODO: docstring """
+209,211c211
+< 
+<     def compute_world_cmvn(self, entries_person_wavs, sp_dim, fft_size, fs, speakers):
+<         """ compuate cmvn of f0 and sp using pyworld """
+---
+>     def compute_world_cmvn(self, enable_load_from_disk, entries_person_wavs, sp_dim, fft_size, fs, speakers):
+217d216
+<                 wav, _ = librosa.load(audio_file, sr=fs, mono=True, dtype=np.float64)
+223,228c222,231
+<                 f0, timeaxis = pyworld.harvest(wav, fs)
+<                 # CheapTrick harmonic spectral envelope estimation algorithm.
+<                 sp = pyworld.cheaptrick(wav, f0, timeaxis, fs, fft_size=fft_size)
+<                 # feature reduction
+<                 coded_sp = pyworld.code_spectral_envelope(sp, fs, sp_dim)
+<                 coded_sp = coded_sp.T  # sp_features x T
+---
+>                 if enable_load_from_disk:
+>                     samples = np.load(audio_file)
+>                     f0, coded_sp, ap = samples["f0"], samples["coded_sp"], samples["ap"]
+>                 else:
+>                     wav, _ = librosa.load(audio_file, sr=fs, mono=True, dtype=np.float64)
+>                     f0, timeaxis = pyworld.harvest(wav, fs)
+>                     # CheapTrick harmonic spectral envelope estimation algorithm.
+>                     sp = pyworld.cheaptrick(wav, f0, timeaxis, fs, fft_size=fft_size)
+>                     # feature reduction
+>                     coded_sp = pyworld.code_spectral_envelope(sp, fs, sp_dim).T
+230,231c233
+<                 f0_ = np.reshape(f0, [-1, 1])
+<                 f0s.append(f0_)
+---
+>                 f0s.append(np.reshape(f0, [-1, 1]))
+240,241c242,243
+<             self.cmvn_dict[speaker] = (list(coded_sps_mean.numpy()), list(coded_sps_var.numpy()), \
+<                                        list(log_f0s_mean.numpy()), list(log_f0s_var.numpy()))
+---
+>             self.cmvn_dict[speaker] = (coded_sps_mean, coded_sps_var, \
+>                                        log_f0s_mean, log_f0s_var)
+246c248
+<         """ load codedsp_mean, codedsp_var, f0_mean, f0_var for vc dataset """
+---
+>         """ TODO: docstring """
+247a250
+>             print("cmvn_file not exists!")
+diff -r athena/data/text_featurizer.py /nfs/cold_project/jiangdongwei/athena_vc/athena/data/text_featurizer.py
+55,56c55,56
+<         self.space, self.unk, self.eos = "<space>", "<unk>", "~"
+<         self.unk_index, self.max_index, self.eos_index = 0, 0, 0
+---
+>         self.space, self.unk = "<space>", "<unk>"
+>         self.unk_index, self.max_index = 0, 0
+68,69d67
+<                 if word == self.eos:
+<                     self.eos_index = index
+115c113
+<         return [self.stoi[token] for token in sentence.strip().split(' ')]
+---
+>         return [self.stoi[token.lower()] for token in sentence.strip().split(' ')]
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/layers: __pycache__
+diff -r athena/layers/attention.py /nfs/cold_project/jiangdongwei/athena_vc/athena/layers/attention.py
+350,553d349
+< 
+< 
+< class LocationAttention(tf.keras.layers.Layer):
+<     """location-aware attention
+< 
+<     Reference: Attention-Based Models for Speech Recognition
+<         (https://arxiv.org/pdf/1506.07503.pdf)
+< 
+<     """
+< 
+<     def __init__(self, attn_dim, conv_channel, aconv_filts, scaling=1.0):
+<         super().__init__()
+<         layers = tf.keras.layers
+<         self.attn_dim = attn_dim
+<         self.value_dense_layer = layers.Dense(attn_dim)
+<         self.query_dense_layer = layers.Dense(attn_dim, use_bias=False)
+<         self.location_dense_layer = layers.Dense(attn_dim, use_bias=False)
+< 
+<         self.location_conv = layers.Conv1D(filters = conv_channel,
+<                                            kernel_size = 2 * aconv_filts + 1,
+<                                            strides = 1,
+<                                            padding = "same",
+<                                            use_bias = False,
+<                                            data_format = "channels_last")
+<         self.score_dense_layer = layers.Dense(1, name='score_dense_layer')
+<         self.score_function = None
+<         # scaling: used to scale softmax scores
+<         self.scaling = scaling
+< 
+<     def compute_score(self, value, value_length, query, accum_attn_weight):
+<         """
+<         Args:
+<             value_length: the length of value, shape: [batch]
+<             max_len: the maximun length
+<         Returns:
+<             initialized_weights: initializes to uniform distributions, shape: [batch, max_len]
+<         """
+<         batch = tf.shape(value)[0]
+<         x_steps = tf.shape(value)[1]
+<         # densed_value shape: [batch, x_step, attn_dim]
+<         densed_value = self.value_dense_layer(value)
+<         densed_query = tf.reshape(self.query_dense_layer(query), [batch, 1, self.attn_dim])
+< 
+<         accum_attn_weight = tf.reshape(accum_attn_weight, [batch, x_steps, 1])
+<         attn_location = self.location_conv(accum_attn_weight) # (batch, x_steps, channel)
+<         attn_location = self.location_dense_layer(attn_location) # (batch, x_steps, attn_dim)
+<         # [batch, x_step, attn_dim] -> [batch, x_step]
+<         unscaled_weights = self.score_function(attn_location + densed_value + densed_query)
+<         masks = tf.sequence_mask(value_length, maxlen=x_steps) # (batch, x_steps)
+<         masks = (1 - tf.cast(masks, dtype=tf.float32)) * -1e9
+<         unscaled_weights += masks
+<         return unscaled_weights
+< 
+<     def initialize_weights(self, value_length, max_len):
+<         """
+<         Args:
+<             value_length: the length of value, shape: [batch]
+<             max_len: the maximun length
+<         Returns:
+<             initialized_weights: initializes to uniform distributions, shape: [batch, max_len]
+<         """
+<         prev_attn_weight = tf.sequence_mask(value_length, max_len, dtype=tf.float32)
+<         # value_length shape: [batch_size, 1]
+<         value_length = tf.expand_dims(tf.cast(value_length, dtype=tf.float32), axis=1)
+<         prev_attn_weight = prev_attn_weight / value_length
+<         return prev_attn_weight
+< 
+<     def call(self, attn_inputs, prev_states, training=True):
+<         """
+<         Args:
+<             attn_inputs (tuple) : it contains 2 params:
+<                 value, shape: [batch, x_steps, eunits]
+<                 value_length, shape: [batch]
+<             prev_states (tuple) : it contains 3 params:
+<                 query: previous rnn state, shape: [batch, dunits]
+<                 accum_attn_weight: previous accumulated attention weights, shape: [batch, x_steps]
+<                 prev_attn_weight: previous attention weights, shape: [batch, x_steps]
+<             training: if it is in the training step
+<         Returns:
+<             attn_c: attended vector, shape: [batch, eunits]
+<             attn_weight: attention scores, shape: [batch, x_steps]
+< 
+<         """
+<         value, value_length = attn_inputs
+<         query, accum_attn_weight, _ = prev_states
+<         batch = tf.shape(value)[0]
+<         x_steps = tf.shape(value)[1]
+<         self.score_function = lambda x: tf.squeeze(self.score_dense_layer(tf.nn.tanh(x)), axis=2)
+<         unscaled_weights = self.compute_score(value, value_length, query, accum_attn_weight)
+<         attn_weight = tf.nn.softmax(self.scaling * unscaled_weights)
+<         attn_c = tf.reduce_sum(value * tf.reshape(attn_weight, [batch, x_steps, 1]), axis=1)
+<         return attn_c, attn_weight
+< 
+< 
+< class StepwiseMonotonicAttention(LocationAttention):
+<     """stepwise monotonic attention
+< 
+<     Reference: Robust Sequence-to-Sequence Acoustic Modeling with Stepwise Monotonic
+<         Attention for Neural TTS (https://arxiv.org/pdf/1906.00672.pdf)
+< 
+<     """
+< 
+<     def __init__(self, attn_dim, conv_channel, aconv_filts, sigmoid_noise=2.0,
+<                  score_bias_init=0.0, mode='soft'):
+<         super().__init__(attn_dim, conv_channel, aconv_filts)
+<         self.sigmoid_noise = sigmoid_noise
+<         self.score_bias_init = score_bias_init
+<         self.mode = mode
+< 
+<     def build(self, _):
+<         """
+<         A Modified Energy Function is used and the params are defined here.
+<             Reference: Online and Linear-Time Attention by Enforcing Monotonic Alignments
+<             (https://arxiv.org/pdf/1704.00784.pdf).
+<         """
+<         self.attention_v = self.add_weight(
+<             name="attention_v", shape=[self.attn_dim], initializer=tf.initializers.GlorotUniform()
+<         )
+<         self.attention_g = self.add_weight(
+<             name="attention_g",
+<             shape=(),
+<             initializer=tf.constant_initializer(tf.math.sqrt(1.0 / self.attn_dim).numpy())
+<         )
+<         self.attention_b = self.add_weight(
+<             name="attention_b", shape=[self.attn_dim], initializer=tf.zeros_initializer()
+<         )
+<         self.score_bias = self.add_weight(
+<             name="score_bias",
+<             shape=(),
+<             initializer=tf.constant_initializer(self.score_bias_init),
+<         )
+< 
+<     def initialize_weights(self, value_length, max_len):
+<         """
+<         Args:
+<             value_length: the length of value, shape: [batch]
+<             max_len: the maximun length
+<         Returns:
+<             initialized_weights: initializes to dirac distributions, shape: [batch, max_len]
+<         Examples:
+<             An initialized_weights the shape of which is [2, 4]:
+<             [[1, 0, 0, 0],
+<              [1, 0, 0, 0]]
+<         """
+<         batch = tf.shape(value_length)[0]
+<         return tf.one_hot(tf.zeros((batch,), dtype=tf.int32), max_len)
+< 
+<     def step_monotonic_function(self, sigmoid_probs, prev_weights):
+<         """
+<         hard mode can only be used in the synthesis step
+<         Args:
+<             sigmoid_probs: sigmoid probabilities, shape: [batch, x_steps]
+<             prev_weights: previous attention weights, shape: [batch, x_steps]
+<         Returns:
+<             weights: new attention weights, shape: [batch, x_steps]
+<         """
+<         if self.mode == "hard":
+<             move_next_mask = tf.concat([tf.zeros_like(prev_weights[:, :1]), prev_weights[:, :-1]],
+<                                        axis=1)
+<             stay_prob = tf.reduce_sum(sigmoid_probs * prev_weights, axis=1, keepdims=True)
+<             weights = tf.where(stay_prob > 0.5, prev_weights, move_next_mask)
+<         else:
+<             pad = tf.zeros([tf.shape(sigmoid_probs)[0], 1], dtype=sigmoid_probs.dtype)
+<             weights = prev_weights * sigmoid_probs + \
+<                       tf.concat([pad, prev_weights[:, :-1] * (1.0 - sigmoid_probs[:, :-1])], axis=1)
+<         return weights
+< 
+<     def call(self, attn_inputs, prev_states, training=True):
+<         """
+<         Args:
+<             attn_inputs (tuple) : it contains 2 params:
+<                 value, shape: [batch, x_steps, eunits]
+<                 value_length, shape: [batch]
+<             prev_states (tuple) : it contains 3 params:
+<                 query: previous rnn state, shape: [batch, dunits]
+<                 accum_attn_weight: previous accumulated attention weights, shape: [batch, x_steps]
+<                 prev_attn_weight: previous attention weights, shape: [batch, x_steps]
+<             training: if it is in the training step
+<         Returns:
+<             attn_c: attended vector, shape: [batch, eunits]
+<             attn_weight: attention scores, shape: [batch, x_steps]
+< 
+<         """
+<         value, value_length = attn_inputs
+<         query, accum_attn_weight, prev_attn_weight = prev_states
+<         batch = tf.shape(value)[0]
+<         x_steps = tf.shape(value)[1]
+<         normed_v = self.attention_g * self.attention_v * \
+<                    tf.math.rsqrt(tf.reduce_sum(tf.square(self.attention_v)))
+< 
+<         self.score_function = lambda x: tf.reduce_sum(normed_v * tf.nn.tanh(x + self.attention_b),
+<                                                       axis=2) + self.score_bias
+<         unscaled_weights = self.compute_score(value, value_length, query, accum_attn_weight)
+< 
+<         if training:
+<             noise = tf.random.normal(tf.shape(unscaled_weights), dtype=unscaled_weights.dtype)
+<             unscaled_weights += self.sigmoid_noise * noise
+<         if self.mode == 'hard':
+<             sigmoid_probs = tf.cast(unscaled_weights > 0, unscaled_weights.dtype)
+<         else:
+<             sigmoid_probs = tf.nn.sigmoid(unscaled_weights)
+<         attn_weight = self.step_monotonic_function(sigmoid_probs, prev_attn_weight)
+<         attn_c = tf.reduce_sum(value * tf.reshape(attn_weight, [batch, x_steps, 1]), axis=1)
+<         return attn_c, attn_weight
+\ No newline at end of file
+diff -r athena/layers/commons.py /nfs/cold_project/jiangdongwei/athena_vc/athena/layers/commons.py
+22c22
+< 
+---
+> import tensorflow_addons as tfa
+23a24
+> from athena.utils.misc import gated_linear_layer
+94,100c95,104
+< class ZoneOutCell(tf.keras.layers.LSTMCell):
+<     '''Wrapper for LSTM cell to create ZoneOut Cell
+< 
+<     inspired by:
+<     https://github.com/teganmaharaj/zoneout/blob/master/zoneout_tensorflow.py
+<     Published by one of 'https://arxiv.org/pdf/1606.01305.pdf' paper writers.
+<     '''
+---
+> class DownSampleBlock(tf.keras.layers.Layer):
+>     def __init__(self, filters, kernel_size, strides):
+>         super(DownSampleBlock, self).__init__()
+> 
+>         self.conv1 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
+>                                             padding="same")
+>         self.conv2 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
+>                                             padding="same")
+>         self.norm1 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+>         self.norm2 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+102,105c106,123
+<     def __init__(self, zoneout_rate=0., **kwargs):
+<         super().__init__(**kwargs)
+<         self.zoneout_rate = zoneout_rate
+<         self.drop_layer = tf.keras.layers.Dropout(self.zoneout_rate)
+---
+>     def call(self, x):
+>         h1 = self.conv1(x)
+>         h1_norm = self.norm1(h1)
+>         h1_gates = self.conv2(x)
+>         h1_gates_norm = self.norm2(h1_gates)
+>         h1_glu = gated_linear_layer(inputs=h1_norm, gates=h1_gates_norm)
+>         return h1_glu
+> 
+> 
+> class UpSampleBlock(tf.keras.layers.Layer):
+>     def __init__(self, filters, kernel_size, strides):
+>         super(UpSampleBlock, self).__init__()
+>         self.conv1 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
+>                                             padding="same")
+>         self.conv2 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
+>                                             padding="same")
+>         self.norm1 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+>         self.norm2 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+107,126c125,131
+<     def call(self, inputs, states, training: bool = None):
+<         '''Runs vanilla LSTM Cell and applies zoneout.
+<         '''
+<         # Apply vanilla LSTM
+<         outputs, new_states = super().call(inputs, states, training=training)
+<         if self.zoneout_rate == 0:
+<             return outputs, new_states
+<         # Apply zoneout
+<         h = (1 - self.zoneout_rate) * \
+<             self.drop_layer(new_states[0] - states[0], training=training) + \
+<             states[0]
+<         c = (1 - self.zoneout_rate) * \
+<             self.drop_layer(new_states[1] - states[1], training=training) + \
+<             states[1]
+<         return outputs, [h, c]
+< 
+<     def get_config(self):
+<         config = super().get_config()
+<         config['zoneout_rate'] = self.zoneout_rate
+<         return config
+---
+>     def call(self, x):
+>         h1 = self.conv1(x)
+>         h1_norm = self.norm1(h1)
+>         h1_gates = self.conv2(x)
+>         h1_gates_norm = self.norm2(h1_gates)
+>         h1_glu = gated_linear_layer(inputs=h1_norm, gates=h1_gates_norm)
+>         return h1_glu
+diff -r athena/loss.py /nfs/cold_project/jiangdongwei/athena_vc/athena/loss.py
+19d18
+< import math
+102,350c101,166
+< 
+< class Tacotron2Loss(tf.keras.losses.Loss):
+<     """Tacotron2 Loss
+<     """
+< 
+<     def __init__(self, model, guided_attn_weight=0.0, regularization_weight=0.0,
+<                  l1_loss_weight=0.0, attn_sigma=0.4, mask_decoder=False,
+<                  name="Tacotron2Loss"):
+<         super().__init__(name=name)
+<         self.model = model
+<         self.guided_attn_weight = guided_attn_weight
+<         self.regularization_weight = regularization_weight
+<         self.l1_loss_weight = l1_loss_weight
+<         self.mask_decoder = mask_decoder
+<         self.attn_sigma = attn_sigma
+< 
+<     def __call__(self, outputs, samples, logit_length=None):
+<         """
+<         Args:
+<             outputs: contain elements below:
+<                 att_ws_stack: shape: [batch, y_steps, x_steps]
+<         """
+<         final_loss = {}
+<         before_outs, after_outs, logits_stack, att_ws_stack = outputs
+<         # perform masking for padded values
+<         output_length = samples["output_length"]
+<         output = samples["output"]
+<         y_steps = tf.shape(output)[1]
+<         batch = tf.shape(output)[0]
+<         feat_dim = tf.shape(output)[2]
+<         if self.mask_decoder:
+<             mask = tf.sequence_mask(
+<                 output_length, y_steps, dtype=tf.float32
+<             )
+<             mask = tf.tile(tf.expand_dims(mask, axis=-1), [1, 1, feat_dim])
+<         else:
+<             mask = tf.ones_like(output)
+<         total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+<         if self.l1_loss_weight > 0:
+<             l1_loss = tf.abs(after_outs - output) + tf.abs(before_outs - output)
+<             l1_loss *= mask
+<             final_loss['l1_loss'] = tf.reduce_sum(l1_loss) / total_size * \
+<                                     self.l1_loss_weight
+<         mse_loss = tf.square(after_outs - output) + tf.square(before_outs - output)
+<         mse_loss *= mask
+< 
+<         indexes = tf.tile(tf.range(y_steps)[tf.newaxis, :], [batch, 1]) # [batch, y_steps]
+<         end_index = tf.tile((output_length - 1)[:, tf.newaxis], [1, y_steps])
+<         zeroes = tf.zeros_like(indexes, dtype=tf.float32)
+<         ones = tf.ones_like(indexes, dtype=tf.float32)
+<         labels = tf.where(end_index <= indexes, ones, zeroes) # [batch, y_steps]
+<         # bce_loss is used for stop token prediction
+<         bce_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits_stack[:, :, 0])
+<         bce_loss = bce_loss[:, :, tf.newaxis]
+<         bce_loss *= mask
+<         final_loss['mse_loss'] = tf.reduce_sum(mse_loss) / total_size
+<         final_loss['bce_loss'] = tf.reduce_sum(bce_loss) / total_size
+< 
+<         input_length = samples["input_length"]
+<         if self.guided_attn_weight > 0:
+<             # guided_attn_masks shape: [batch_size, y_steps, x_steps]
+<             attn_masks = self._create_attention_masks(input_length, output_length)
+<             # length_masks shape: [batch_size, y_steps, x_steps]
+<             length_masks = self._create_length_masks(input_length, output_length)
+<             att_ws_stack = tf.cast(att_ws_stack, dtype=tf.float32)
+<             losses = attn_masks * att_ws_stack
+<             losses *= length_masks
+<             loss = tf.reduce_sum(losses)
+<             total_size = tf.cast(tf.reduce_sum(length_masks), dtype=tf.float32)
+<             final_loss['guided_attn_loss'] = self.guided_attn_weight * loss / total_size
+<         if self.regularization_weight > 0:
+<             computed_vars = [var for var in self.model.trainable_variables
+<                              if 'bias' not in var.name and \
+<                                 'projection' not in var.name and \
+<                                 'e_function' not in var.name and \
+<                                 'embedding' not in var.name and \
+<                                 'rnn' not in var.name and \
+<                                 'zone_out' not in var.name]
+<             final_loss['regularization_loss'] = tf.add_n([tf.nn.l2_loss(v) for v in computed_vars]) * \
+<                           self.regularization_weight
+< 
+<         return final_loss
+< 
+<     def _create_attention_masks(self, input_length, output_length):
+<         """masks created by attention location
+< 
+<         Args:
+<             input_length: shape: [batch_size]
+<             output_length: shape: [batch_size]
+< 
+<         Returns:
+<             masks: shape: [batch_size, y_steps, x_steps]
+<         """
+<         batch_size = tf.shape(input_length)[0]
+<         input_max_len = tf.reduce_max(input_length)
+<         output_max_len = tf.reduce_max(output_length)
+< 
+<         # grid_x shape: [output_max_len, input_max_len]
+<         grid_x, grid_y = tf.meshgrid(tf.range(output_max_len),
+<                                      tf.range(input_max_len),
+<                                      indexing='ij')
+< 
+<         grid_x = tf.tile(grid_x[tf.newaxis, :, :], [batch_size, 1, 1])
+<         grid_y = tf.tile(grid_y[tf.newaxis, :, :], [batch_size, 1, 1])
+<         input_length = input_length[:, tf.newaxis, tf.newaxis]
+<         output_length = output_length[:, tf.newaxis, tf.newaxis]
+<         # masks shape: [batch_size, y_steps, x_steps]
+<         masks = 1.0 - tf.math.exp(-(grid_y / input_length - grid_x / output_length) ** 2
+<                                  / (2 * (self.attn_sigma ** 2)))
+<         masks = tf.cast(masks, dtype=tf.float32)
+<         return masks
+< 
+<     def _create_length_masks(self, input_length, output_length):
+<         """masks created by input and output length
+< 
+<         Args:
+<             input_length: shape: [batch_size]
+<             output_length: shape: [batch_size]
+< 
+<         Returns:
+<             masks: shape: [batch_size, output_length, input_length]
+< 
+<         Examples:
+<             output_length: [6, 8]
+<             input_length: [3, 5]
+<             masks:
+<                [[[1, 1, 1, 0, 0],
+<                  [1, 1, 1, 0, 0],
+<                  [1, 1, 1, 0, 0],
+<                  [1, 1, 1, 0, 0],
+<                  [1, 1, 1, 0, 0],
+<                  [1, 1, 1, 0, 0],
+<                  [0, 0, 0, 0, 0],
+<                  [0, 0, 0, 0, 0]],
+<                 [[1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1],
+<                  [1, 1, 1, 1, 1]]]
+<         """
+<         input_max_len = tf.reduce_max(input_length)
+<         output_max_len = tf.reduce_max(output_length)
+<         # input_masks shape: [batch_size, max_input_length]
+<         input_masks = tf.sequence_mask(input_length)
+<         input_masks = tf.tile(tf.expand_dims(input_masks, 1), [1, output_max_len, 1])
+<         # output_masks shape: [batch_size, max_output_length]
+<         output_masks = tf.sequence_mask(output_length)
+<         output_masks = tf.tile(tf.expand_dims(output_masks, -1), [1, 1, input_max_len])
+<         masks = tf.math.logical_and(input_masks, output_masks)
+<         masks = tf.cast(masks, dtype=tf.float32)
+<         return masks
+< 
+< 
+< class SoftmaxLoss(tf.keras.losses.Loss):
+<     """ Softmax Loss
+<         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+<     """
+<     def __init__(self, embedding_size, num_classes, name="SoftmaxLoss"):
+<         super().__init__(name=name)
+<         self.embedding_size = embedding_size
+<         self.num_classes = num_classes
+<         self.criterion = tf.nn.softmax_cross_entropy_with_logits
+<         self.dense = tf.keras.layers.Dense(
+<             num_classes,
+<             kernel_initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02),
+<             input_shape=(embedding_size,),
+<         )
+< 
+<     def __call__(self, inputs, labels):
+<         inputs = self.dense(inputs)
+<         label_onehot = tf.one_hot(labels, self.num_classes)
+<         loss = tf.reduce_mean(self.criterion(label_onehot, inputs))
+<         return loss
+< 
+< 
+< class AMSoftmaxLoss(tf.keras.losses.Loss):
+<     """ Additive Margin Softmax Loss
+<         Reference to paper "CosFace: Large Margin Cosine Loss for Deep Face Recognition"
+<                             and "In defence of metric learning for speaker recognition"
+<         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+<     """
+<     def __init__(self, embedding_size, num_classes, m=0.3, s=15, name="AMSoftmaxLoss"):
+<         super().__init__(name=name)
+<         self.embedding_size = embedding_size
+<         self.num_classes = num_classes
+<         self.m = m
+<         self.s = s
+<         initializer = tf.initializers.GlorotNormal()
+<         self.weight = tf.Variable(initializer(
+<                              shape=[embedding_size, num_classes], dtype=tf.float32),
+<                              name="AMSoftmaxLoss_weight")
+<         self.criterion = tf.nn.softmax_cross_entropy_with_logits
+< 
+<     def __call__(self, inputs, labels):
+<         assert tf.shape(inputs)[0] == tf.shape(labels)[0]
+<         assert tf.shape(inputs)[1] == self.embedding_size
+<         inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+<         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
+<         costh = tf.matmul(inputs_norm, weight_norm)
+< 
+<         label_onehot = tf.one_hot(labels, self.num_classes)
+<         costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
+<         m_reshape = tf.constant(self.m, shape=costh_shape)
+<         delt_costh = tf.math.multiply(label_onehot, m_reshape)
+< 
+<         costh_m = costh - delt_costh
+<         costh_m_s = self.s * costh_m
+<         loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
+<         return loss
+< 
+< 
+< class AAMSoftmaxLoss(tf.keras.losses.Loss):
+<     """ Additive Angular Margin Softmax Loss
+<         Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition" 
+<                             and "In defence of metric learning for speaker recognition"
+<         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+<     """
+<     def __init__(self, embedding_size, num_classes, 
+<                  m=0.3, s=15, easy_margin=False, name="AAMSoftmaxLoss"):
+<         super().__init__(name=name)
+<         self.embedding_size = embedding_size
+<         self.num_classes = num_classes
+<         self.m = m
+<         self.s = s
+<         initializer = tf.initializers.GlorotNormal()
+<         self.weight = tf.Variable(initializer(
+<                              shape=[embedding_size, num_classes], dtype=tf.float32),
+<                              name="AMSoftmaxLoss_weight")
+<         self.criterion = tf.nn.softmax_cross_entropy_with_logits
+<         self.easy_margin = easy_margin
+<         self.cos_m = math.cos(self.m)
+<         self.sin_m = math.sin(self.m)
+< 
+<         # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
+<         self.th = math.cos(math.pi - self.m)
+<         self.mm = math.sin(math.pi - self.m) * self.m
+< 
+<     def __call__(self, inputs, labels):
+<         inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+<         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
+<         cosine = tf.matmul(inputs_norm, weight_norm)
+<         sine = tf.clip_by_value(tf.math.sqrt(1.0 - tf.math.pow(cosine, 2)), 0, 1)
+<         phi = cosine * self.cos_m - sine * self.sin_m
+< 
+<         if self.easy_margin:
+<             phi = tf.where(cosine > 0, phi, cosine)
+---
+> def GeneratorLoss(discirmination, input_real, generated_back, identity_map, target_label_reshaped,\
+>                   domain_out_real, lambda_cycle, lambda_identity, lambda_classifier):
+>     domain_real_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits \
+>                                       (labels=target_label_reshaped, logits=domain_out_real))
+> 
+>     # we need to trim input to have the same length as output because it might not be divisible with 4
+>     length = tf.math.minimum(tf.shape(generated_back)[2], tf.shape(input_real)[2])
+>     cycle_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - generated_back[:, :, 0: length, :]))
+>     identity_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - identity_map[:, :, 0: length, :]))
+> 
+>     generator_loss = tf.reduce_mean(\
+>     tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discirmination),\
+>                                             logits=discirmination))
+> 
+>     generator_loss_all = generator_loss + lambda_cycle * cycle_loss + \
+>                          lambda_identity * identity_loss + lambda_classifier * domain_real_loss
+>     return generator_loss_all
+> 
+> 
+> def DiscriminatorLoss(discrimination_real, discirmination_fake, target_label_reshaped,\
+>                                              domain_out_fake, gradient_penalty):
+> 
+>     discrimination_real_loss = tf.reduce_mean(
+>         tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discrimination_real),\
+>                                                 logits=discrimination_real))
+> 
+>     discrimination_fake_loss = tf.reduce_mean(
+>         tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(discirmination_fake),\
+>                                                 logits=discirmination_fake))
+> 
+>     domain_fake_loss = tf.reduce_mean(\
+>         tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_fake))
+> 
+>     discrimator_loss = discrimination_fake_loss + discrimination_real_loss + domain_fake_loss \
+>                         + gradient_penalty
+>     return discrimator_loss
+> 
+> def ClassifyLoss(target_label_reshaped, domain_out_real):
+>     domain_real_loss = tf.reduce_mean(
+>         tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_real))
+>     return domain_real_loss
+> 
+> class StarganLoss(tf.keras.losses.Loss):
+>     def __init__(self, lambda_cycle, lambda_identity, lambda_classifier, name="StarganLoss"):
+>         super().__init__(name=name)
+>         self.lambda_cycle = lambda_cycle
+>         self.lambda_identity = lambda_identity
+>         self.lambda_classifier = lambda_classifier
+> 
+>     def __call__(self, outputs, samples, logit_length=None, stage=None):
+>         input_real, target_real, target_label, source_label = \
+>             samples["src_coded_sp"], samples["tar_coded_sp"], \
+>             samples["tar_speaker"], samples["src_speaker"]
+> 
+>         target_label_reshaped = outputs["target_label_reshaped"]
+> 
+>         if stage == "classifier":
+>             domain_out_real = outputs["domain_out_real"]
+>             loss = ClassifyLoss(target_label_reshaped, domain_out_real)
+>         elif stage == "generator":
+>             discirmination, generated_back, identity_map, domain_out_real = \
+>             outputs["discirmination"], outputs["generated_back"], outputs["identity_map"], outputs["domain_out_real"]
+> 
+>             loss = GeneratorLoss(discirmination, input_real, generated_back, identity_map,\
+>                                            target_label_reshaped, domain_out_real, self.lambda_cycle,\
+>                                            self.lambda_identity, self.lambda_classifier)
+352,419c168,171
+<             phi = tf.where((cosine - self.th) > 0, phi, cosine - self.mm)
+< 
+<         label_onehot = tf.one_hot(labels, self.num_classes)
+<         output = (label_onehot * phi) + ((1.0 - label_onehot) * cosine)
+<         output = output * self.s
+<         loss = tf.reduce_mean(self.criterion(label_onehot, output))
+<         return loss
+< 
+< 
+< class ProtoLoss(tf.keras.losses.Loss):
+<     """ Prototypical Loss
+<         Reference to paper "Prototypical Networks for Few-shot Learning"
+<                             and "In defence of metric learning for speaker recognition"
+<         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+<     """
+<     def __init__(self, name="ProtoLoss"):
+<         super().__init__(name=name)
+<         self.criterion = tf.nn.softmax_cross_entropy_with_logits
+< 
+<     def __call__(self, inputs, labels=None):
+<         """
+<             Args:
+<                 inputs: [batch_size, num_speaker_utts, embedding_size]
+<                 labels: [batch_size]
+<         """
+<         out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
+<         out_positive = inputs[:, 0, :]
+<         step_size = tf.shape(out_anchor)[0]
+< 
+<         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
+<         out_anchor_reshape = tf.transpose(tf.tile(
+<                              tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
+< 
+<         distance = -tf.reduce_sum(tf.math.squared_difference(
+<                                   out_positive_reshape, out_anchor_reshape), axis=1)
+<         label = tf.one_hot(tf.range(step_size), step_size)
+<         loss = tf.reduce_mean(self.criterion(label, distance))
+<         return loss
+< 
+< 
+< class AngleProtoLoss(tf.keras.losses.Loss):
+<     """ Angular Prototypical Loss
+<         Reference to paper "In defence of metric learning for speaker recognition"
+<         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+<     """
+<     def __init__(self, init_w=10.0, init_b=-5.0, name="AngleProtoLoss"):
+<         super().__init__(name=name)
+<         self.weight = tf.Variable(initial_value=init_w)
+<         self.bias = tf.Variable(initial_value=init_b)
+<         self.criterion = tf.nn.softmax_cross_entropy_with_logits
+<         self.cosine_similarity = tf.keras.losses.cosine_similarity
+< 
+<     def __call__(self, inputs, labels=None):
+<         """
+<              Args:
+<                 inputs: [batch_size, num_speaker_utts, embedding_size]
+<                 labels: [batch_size]
+<         """
+<         out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
+<         out_positive = inputs[:, 0, :]
+<         step_size = tf.shape(out_anchor)[0]
+< 
+<         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
+<         out_anchor_reshape = tf.transpose(tf.tile(
+<                              tf.expand_dims(out_anchor, -1), [1, 1, step_size]), [2, 1, 0])
+<         cosine = -self.cosine_similarity(out_positive_reshape, out_anchor_reshape, axis=1)
+<         self.weight = tf.clip_by_value(self.weight, tf.constant(1e-6), tf.float32.max)
+<         cosine_w_b = self.weight * cosine + self.bias
+---
+>             discrimination_real, discirmination, domain_out_fake, gradient_penalty = outputs["discrimination_real"], \
+>                 outputs["discirmination"], outputs["domain_out_fake"], outputs["gradient_penalty"]
+>             loss = DiscriminatorLoss(discrimination_real, discirmination,\
+>                                              target_label_reshaped, domain_out_fake, gradient_penalty)
+421,475d172
+<         labels = tf.one_hot(tf.range(step_size), step_size)
+<         loss = tf.reduce_mean(self.criterion(labels, cosine_w_b))
+<         return loss
+< 
+< 
+< class GE2ELoss(tf.keras.losses.Loss):
+<     """ Generalized End-to-end Loss
+<         Reference to paper "Generalized End-to-end Loss for Speaker Verification"
+<                             and "In defence of metric learning for speaker recognition"
+<         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
+<     """
+<     def __init__(self, init_w=10.0, init_b=-5.0, name="GE2ELoss"):
+<         super().__init__(name=name)
+<         self.weight = tf.Variable(initial_value=init_w)
+<         self.bias = tf.Variable(initial_value=init_b)
+<         self.criterion = tf.nn.softmax_cross_entropy_with_logits
+<         self.cosine_similarity = tf.keras.losses.cosine_similarity
+< 
+<     def __call__(self, inputs, labels=None):
+<         """
+<              Args:
+<                 inputs: [batch_size, num_speaker_utts, embedding_size]
+<                 labels: [batch_size]
+<         """
+<         step_size = tf.shape(inputs)[0]
+<         num_speaker_utts = tf.shape(inputs)[1]
+<         centroids = tf.math.reduce_mean(inputs, axis=1)
+<         cosine_all = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
+< 
+<         for utt in range(0, num_speaker_utts):
+<             index = [*range(0, num_speaker_utts)]
+<             index.remove(utt)
+<             out_positive = inputs[:, utt, :]
+<             out_anchor = tf.math.reduce_mean(tf.gather(inputs, tf.constant(index), axis=1), axis=1)
+< 
+<             out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
+<             centroids_reshape = tf.transpose(tf.tile(
+<                                 tf.expand_dims(centroids, -1), [1, 1, step_size]), [2, 1, 0])
+< 
+<             cosine_diag = -self.cosine_similarity(out_positive, out_anchor, axis=1)
+<             cosine = -self.cosine_similarity(out_positive_reshape, centroids_reshape, axis=1)
+< 
+<             cosine_update = tf.linalg.set_diag(cosine, cosine_diag)
+<             cosine_all.write(utt,
+<                             tf.clip_by_value(cosine_update, tf.constant(1e-6), tf.float32.max))
+< 
+<         self.weight = tf.clip_by_value(self.weight, tf.constant(1e-6), tf.float32.max)
+<         cosine_stack = tf.transpose(cosine_all.stack(), perm=[1, 0, 2])
+<         cosine_w_b = self.weight * cosine_stack + self.bias
+<         cosine_w_b_reshape = tf.reshape(cosine_w_b, [-1, step_size])
+< 
+<         labels_repeat = tf.reshape(tf.tile(tf.expand_dims(tf.range(step_size), -1),
+<                                            [1, num_speaker_utts]), [-1])
+<         labels_onehot = tf.one_hot(labels_repeat, step_size)
+<         loss = tf.reduce_mean(self.criterion(labels_onehot, cosine_w_b_reshape))
+diff -r athena/main.py /nfs/cold_project/jiangdongwei/athena_vc/athena/main.py
+29d28
+<     "speech_systhesis_dataset": SpeechSynthesisDatasetBuilder,
+32a32
+>     "voice_conversion_dataset": VoiceConversionDatasetBuilder
+38d37
+<     "speech_transformer2": SpeechTransformer2,
+43c42
+<     "tacotron2": Tacotron2
+---
+>     "stargan" : StarganModel
+64a64
+>     "convert_config": None,
+115d114
+< 
+diff -r athena/metrics.py /nfs/cold_project/jiangdongwei/athena_vc/athena/metrics.py
+93d92
+< 
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/models: .DS_Store
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/models: __pycache__
+diff -r athena/models/base.py /nfs/cold_project/jiangdongwei/athena_vc/athena/models/base.py
+37c37
+<     def get_loss(self, outputs, samples, training=None):
+---
+>     def get_loss(self, outputs, samples, training=None, stage=None):
+43c43
+<             loss = self.loss_function(outputs, samples, logit_length)
+---
+>             loss = self.loss_function(outputs, samples, logit_length, stage)
+diff -r athena/models/mtl_seq2seq.py /nfs/cold_project/jiangdongwei/athena_vc/athena/models/mtl_seq2seq.py
+27c27
+< from .speech_transformer import SpeechTransformer, SpeechTransformer2
+---
+> from .speech_transformer import SpeechTransformer
+37,38c37
+<         "speech_transformer": SpeechTransformer,
+<         "speech_transformer2": SpeechTransformer2,
+---
+>         "speech_transformer": SpeechTransformer
+diff -r athena/models/speech_transformer.py /nfs/cold_project/jiangdongwei/athena_vc/athena/models/speech_transformer.py
+259,321d258
+< 
+< 
+< class SpeechTransformer2(SpeechTransformer):
+<     """ Decoder for SpeechTransformer2 works for two pass schedual sampling"""
+< 
+<     def call(self, samples, training: bool = None):
+<         x0 = samples["input"]
+<         y0 = insert_sos_in_labels(samples["output"], self.sos)
+<         x = self.x_net(x0, training=training)
+<         y = self.y_net(y0, training=training)
+<         input_length = self.compute_logit_length(samples)
+<         input_mask, output_mask = self._create_masks(x, input_length, y0)
+<         # first pass
+<         y, encoder_output = self.transformer(
+<             x,
+<             y,
+<             input_mask,
+<             output_mask,
+<             input_mask,
+<             training=training,
+<             return_encoder_output=True,
+<         )
+<         y_pre = self.final_layer(y)
+<         # second pass
+<         y = self.mix_target_sequence(y0, y_pre, training)
+<         y, encoder_output = self.transformer(
+<             x,
+<             y,
+<             input_mask,
+<             output_mask,
+<             input_mask,
+<             training=training,
+<             return_encoder_output=True,
+<         )
+<         y = self.final_layer(y)
+<         if self.hparams.return_encoder_output:
+<             return y, encoder_output
+<         return y
+< 
+<     def mix_target_sequence(self, gold_token, predicted_token, training, top_k=5):
+<         """ to mix gold token and prediction
+<         param gold_token: true labels
+<         param predicted_token: predictions by first pass
+<         return: mix of the gold_token and predicted_token
+<         """
+<         mix_result = tf.TensorArray(
+<             tf.float32, size=1, dynamic_size=True, clear_after_read=False
+<         )
+<         for i in tf.range(tf.shape(gold_token)[-1]):
+<             if self.random_num([1]) > self.hparams.schedual_sampling_rate:# do schedual sampling
+<                 selected_input = predicted_token[:, i, :]
+<                 selected_idx = tf.nn.top_k(selected_input, top_k).indices
+<                 embedding_input = self.y_net.layers[1](selected_idx, training=training)
+<                 embedding_input = tf.reduce_mean(embedding_input, axis=1)
+<                 mix_result = mix_result.write(i, embedding_input)
+<             else:
+<                 selected_input = tf.reshape(gold_token[:, i], [-1, 1])
+<                 embedding_input = self.y_net.layers[1](selected_input, training=training)
+<                 mix_result = mix_result.write(i, embedding_input[:, 0, :])
+<         final_input = self.y_net.layers[2](tf.transpose(mix_result.stack(), [1, 0, 2]),
+<                                            training=training)
+<         final_input = self.y_net.layers[3](final_input, training=training)
+<         return final_input
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/models: stargan_vc.py
+Only in athena/models: tacotron2.py
+diff -r athena/solver.py /nfs/cold_project/jiangdongwei/athena_vc/athena/solver.py
+2c2
+< # Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Jianwei Sun; Ruixiong Zhang
+---
+> # Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Jianwei Sun; Ruixiong Zhang; Dongwei Jiang; Chunxin Xiao
+21a22
+> import os
+27a29,31
+> import pyworld
+> import numpy as np
+> import librosa
+32c36
+< from .tools.vocoder import GriffinLim
+---
+> # from .models.vocoder import GriffinLim
+34d37
+< import time
+96a100
+>             tic = time.time()
+97a102,103
+>             toc = time.time()
+>             print("step time", toc - tic)
+254d259
+< 
+256a262,263
+>         "max_output_length": 15,
+>         "end_prob": 0.5,
+268,269c275
+<         self.vocoder = GriffinLim(data_descriptions)
+<         self.sample_signature = data_descriptions.sample_signature
+---
+>         # self.vocoder = GriffinLim(data_descriptions)
+274,275d279
+<         total_elapsed = 0
+<         synthesize_step = tf.function(self.model.synthesize, input_signature=self.sample_signature)
+277d280
+<             start = time.time()
+281,283c284
+<             outputs = synthesize_step(samples)
+<             end = time.time() - start
+<             total_elapsed += end
+---
+>             outputs = self.model.synthesize(samples, self.hparams)
+291c292,470
+<         logging.info("model computation elapsed: %s" % total_elapsed)
+\ No newline at end of file
+---
+> 
+> 
+> class GanSolver(BaseSolver):
+>     """Gan Solver.
+>     """
+>     default_config = {
+>         "clip_norm": 100.0,
+>         "log_interval": 10,
+>         "enable_tf_function": True
+>     }
+> 
+>     def __init__(self, model, sample_signature, config=None):
+>         super().__init__(model, None, sample_signature)
+>         self.model = model
+>         self.metric_checker = MetricChecker(self.model.get_stage_model("generator").optimizer)
+>         self.sample_signature = sample_signature
+>         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+> 
+>     def train_step(self, samples):
+>         """ train the model 1 step """
+>         # classifier
+>         with tf.GradientTape() as tape:
+>             # outputs of a forward run of model, potentially contains more than one item
+>             outputs = self.model(samples, training=True, stage="classifier")
+>             loss_c, metrics_c = self.model.get_loss(outputs, samples, training=True, stage="classifier")
+>             total_loss = sum(list(loss_c.values())) if isinstance(loss_c, dict) else loss_c
+>         grads = tape.gradient(total_loss, self.model.get_stage_model("classifier").trainable_variables)
+>         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+>         self.model.get_stage_model("classifier").optimizer.apply_gradients\
+>             (zip(grads, self.model.get_stage_model("classifier").trainable_variables))
+> 
+>         # generator
+>         with tf.GradientTape() as tape:
+>             # outputs of a forward run of model, potentially contains more than one item
+>             outputs = self.model(samples, training=True, stage="generator")
+>             loss_g, metrics_g = self.model.get_loss(outputs, samples, training=True, stage="generator")
+>             total_loss = sum(list(loss_g.values())) if isinstance(loss_g, dict) else loss_g
+>         grads = tape.gradient(total_loss, self.model.get_stage_model("generator").trainable_variables)
+>         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+>         self.model.get_stage_model("generator").optimizer.apply_gradients\
+>             (zip(grads, self.model.get_stage_model("generator").trainable_variables))
+> 
+>         # discriminator
+>         with tf.GradientTape() as tape:
+>             # outputs of a forward run of model, potentially contains more than one item
+>             outputs = self.model(samples, training=True, stage="discriminator")
+>             loss_d, metrics_d = self.model.get_loss(outputs, samples, training=True, stage="discriminator")
+>             total_loss = sum(list(loss_d.values())) if isinstance(loss_d, dict) else loss_d
+>         grads = tape.gradient(total_loss, self.model.get_stage_model("discriminator").trainable_variables)
+>         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+>         self.model.get_stage_model("discriminator").optimizer.apply_gradients\
+>             (zip(grads, self.model.get_stage_model("discriminator").trainable_variables))
+> 
+>         total_loss = loss_c + loss_g + loss_d
+>         metrics = {"metrics_c": metrics_c, "metrics_g": metrics_g, "metrics_d": metrics_d}
+>         return total_loss, metrics
+> 
+>     def train(self, dataset, total_batches=-1):
+>         """ Update the model in 1 epoch """
+>         train_step = self.train_step
+>         if self.hparams.enable_tf_function:
+>             logging.info("please be patient, enable tf.function, it takes time ...")
+>             train_step = tf.function(train_step, input_signature=self.sample_signature)
+>         for batch, samples in enumerate(dataset.take(total_batches)):
+>             # train 1 step
+>             samples = self.model.prepare_samples(samples)
+>             total_loss, metrics = train_step(samples)
+>             if batch % self.hparams.log_interval == 0:
+>                 logging.info(self.metric_checker(total_loss, metrics, loss_name="total_loss"))
+>                 self.model.reset_metrics()
+> 
+>     def evaluate_step(self, samples):
+>         """ evaluate the model 1 step """
+>         # outputs of a forward run of model, potentially contains more than one item
+>         outputs = self.model(samples, training=False, stage="classifier")
+>         loss_c, metrics_c = self.model.get_loss(outputs, samples, training=False, stage="classifier")
+> 
+>         outputs = self.model(samples, training=False, stage="generator")
+>         loss_g, metrics_g = self.model.get_loss(outputs, samples, training=False, stage="generator")
+> 
+>         outputs = self.model(samples, training=False, stage="discriminator")
+>         loss_d, metrics_d = self.model.get_loss(outputs, samples, training=False, stage="discriminator")
+> 
+>         total_loss = loss_c + loss_g + loss_d
+>         metrics = {"metrics_c": metrics_c, "metrics_g": metrics_g, "metrics_d": metrics_d}
+>         return total_loss, metrics
+> 
+>     def evaluate(self, dataset, epoch=0):
+>         """ evaluate the model """
+>         loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
+>         loss, metrics = None, None
+>         evaluate_step = self.evaluate_step
+>         if self.hparams.enable_tf_function:
+>             logging.info("please be patient, enable tf.function, it takes time ...")
+>             evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
+>         self.model.reset_metrics()  # init metric.result() with 0
+>         for batch, samples in enumerate(dataset):
+>             samples = self.model.prepare_samples(samples)
+>             total_loss, metrics = evaluate_step(samples)
+>             if batch % self.hparams.log_interval == 0:
+>                 logging.info(self.metric_checker(total_loss, metrics, -2))
+>             total_loss = sum(list(total_loss.values())) if isinstance(total_loss, dict) else total_loss
+>             loss_metric.update_state(total_loss)
+>         logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
+>         self.model.reset_metrics()
+>         return loss_metric.result(), metrics
+> 
+> 
+> class ConvertSolver(BaseSolver):
+>     default_config = {
+>         "output_directory": "./gen_vcc2018/"
+>     }
+> 
+>     def __init__(self, model=None, data_descriptions=None, config=None):
+>         super().__init__(model, None, None)
+>         self.model = model
+>         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+>         self.feature_normalizer = data_descriptions.feature_normalizer
+>         self.speakers_ids_dict = data_descriptions.speakers_ids_dict
+>         self.fs, self.fft_size = data_descriptions.fs, data_descriptions.fft_size
+> 
+>     def convert(self, dataset):
+>         if dataset is None:
+>             print("convert dataset error!")
+>             return
+>         for i, samples in enumerate(dataset):
+>             samples = self.model.prepare_samples(samples)
+>             src_coded_sp, src_speaker_onehot, src_f0, src_ap = samples["src_coded_sp"], \
+>                  samples["src_speaker"], samples["src_f0"], samples["src_ap"]
+>             tar_speaker_onehot = samples["tar_speaker"]
+>             # Map the ids to the speakers name
+>             src_id, tar_id = samples["src_id"], samples["tar_id"]
+>             src_id, tar_id = int(src_id), int(tar_id)
+>             src_speaker = self.speakers_ids_dict[src_id]
+>             tar_speaker = self.speakers_ids_dict[tar_id]
+> 
+>             src_wav_filename = samples["src_wav_filename"]
+>             src_filename = src_wav_filename.numpy()[0].decode().replace(".npz","")
+> 
+>             gen_coded_sp = self.model.convert(src_coded_sp, tar_speaker_onehot)
+>             gen_coded_sp = tf.transpose(tf.squeeze(gen_coded_sp), [1, 0])
+>             coded_sp = self.feature_normalizer(gen_coded_sp, str(tar_speaker), reverse=True)
+> 
+>             def apply_f0_cmvn(cmvn_dict, feat_data, src_speaker, tar_speaker):
+>                 if tar_speaker not in cmvn_dict:
+>                     print("tar_speaker not in cmvn_dict!")
+>                     return feat_data
+>                 f0 = feat_data.numpy()
+>                 src_mean = cmvn_dict[src_speaker][2]
+>                 src_var = cmvn_dict[src_speaker][3]
+>                 tar_mean = cmvn_dict[tar_speaker][2]
+>                 tar_var = cmvn_dict[tar_speaker][3]
+>                 f0_converted = np.exp((np.ma.log(f0) - src_mean) / np.sqrt(src_var) * np.sqrt(tar_var) + tar_mean)
+>                 return f0_converted
+>             f0 = apply_f0_cmvn(self.feature_normalizer.cmvn_dict, src_f0, str(src_speaker), str(tar_speaker))
+> 
+>             # Restoration of sp characteristics
+>             c = []
+>             for one_slice in coded_sp:
+>                 one_slice = np.ascontiguousarray(one_slice, dtype=np.float64).reshape(1, -1)
+>                 decoded_sp = pyworld.decode_spectral_envelope(one_slice, self.fs, fft_size=self.fft_size)
+>                 c.append(decoded_sp)
+>             sp = np.concatenate((c), axis=0)
+>             f0 = np.squeeze(f0, axis=(0,)).astype(np.float64)
+>             src_ap = np.squeeze(src_ap.numpy(), axis=(0,)).astype(np.float64)
+> 
+>             # Remove the extra padding at the end of the sp feature
+>             sp = sp[:src_ap.shape[0], :]
+>             # sp: T,fft_size//2+1   f0: T   ap: T,fft_size//2+1
+>             synwav = pyworld.synthesize(f0, sp, src_ap, self.fs)
+> 
+>             wavname = src_speaker + "_" + tar_speaker + "_" + src_filename  + ".wav"
+>             wavfolder = os.path.join(self.hparams.output_directory)
+>             if not os.path.exists(wavfolder):
+>                 os.makedirs(wavfolder)
+>             wavpath = os.path.join(wavfolder, wavname)
+> 
+>             librosa.output.write_wav(wavpath, synwav, sr=self.fs)
+>             print("generate wav:", wavpath)
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena: stargan_main.py
+Only in athena: synthesize_main.py
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/tools: __pycache__
+Only in athena/tools: vocoder.py
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform: __init__.pyc
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform: __pycache__
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform: audio_featurizer.pyc
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform/feats: __init__.pyc
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform/feats: __pycache__
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform/feats/ops: __pycache__
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/transform/feats/ops: x_ops.so
+Only in /nfs/cold_project/jiangdongwei/athena_vc/athena/utils: __pycache__
+diff -r athena/utils/checkpoint.py /nfs/cold_project/jiangdongwei/athena_vc/athena/utils/checkpoint.py
+43c43
+<     def __init__(self, checkpoint_directory=None, model=None, **kwargs):
+---
+>     def __init__(self, checkpoint_directory=None, model=None, model_name=None, **kwargs):
+47a48,51
+>         self.ckpt_name = "ckpt_" + model_name
+>         self.n_best = "n_best_" + model_name
+>         self.best_loss_name = "best_loss_" + model_name
+> 
+50c54
+<         self.checkpoint_prefix = os.path.join(checkpoint_directory, "ckpt")
+---
+>         self.checkpoint_prefix = os.path.join(checkpoint_directory, self.ckpt_name)
+55,56c59,60
+<         if os.path.exists(os.path.join(self.checkpoint_directory, 'n_best')):
+<             with open(os.path.join(self.checkpoint_directory, 'n_best')) as f:
+---
+>         if os.path.exists(os.path.join(self.checkpoint_directory, self.n_best)):
+>             with open(os.path.join(self.checkpoint_directory, self.n_best)) as f:
+66c70
+<             with open(os.path.join(self.checkpoint_directory, 'best_loss'), 'w') as wf:
+---
+>             with open(os.path.join(self.checkpoint_directory, self.best_loss_name), 'w') as wf:
+72c76
+<         with open(os.path.join(self.checkpoint_directory, 'n_best'), 'w') as wf:
+---
+>         with open(os.path.join(self.checkpoint_directory, self.n_best), 'w') as wf:
+78c82
+<         avg_file = os.path.join(self.checkpoint_directory, 'n_best')
+---
+>         avg_file = os.path.join(self.checkpoint_directory, self.n_best)
+117c121
+<                 latest_filename='best_loss'
+---
+>                 latest_filename=self.best_loss_name
+diff -r athena/utils/learning_rate.py /nfs/cold_project/jiangdongwei/athena_vc/athena/utils/learning_rate.py
+58c58
+<     """WarmUpAdam Implementation """
+---
+>     """WarmUpAdam Implementation """ # 774   1244   648   0.12590282
+62c62
+<         "k": 0.5,
+---
+>         "k": 0.5,   # 0.08
+97,98c97
+<     def __init__(self, initial_lr=0.005, decay_steps=10000, decay_rate=0.5,
+<                  start_decay_steps=30000, final_lr=1e-5):
+---
+>     def __init__(self, initial_lr=0.005, decay_steps=10000, decay_rate=0.5):
+103,104d101
+<         self.start_decay_steps = start_decay_steps
+<         self.final_lr = final_lr
+107,111c104,106
+<         factor = tf.cond(step < self.start_decay_steps,
+<                          lambda : tf.cast(1, tf.float32),
+<                          lambda : self.decay_rate ** ((step - self.start_decay_steps) // self.decay_steps))
+<         lr = self.initial_lr * factor
+<         return tf.minimum(tf.maximum(lr, self.final_lr), self.initial_lr)
+---
+>         step = tf.cast(step, tf.float32)
+>         factor = tf.cast(self.decay_rate ** (step // self.decay_steps), tf.float32)
+>         return self.initial_lr * factor
+117,121c112,114
+<         "initial_lr": 0.005,
+<         "decay_steps": 10000,
+<         "decay_rate": 0.5,
+<         "start_decay_steps": 30000,
+<         "final_lr": 1e-5
+---
+>         "initial_lr": 0.0001,
+>         "decay_steps": 200000,
+>         "decay_rate": 0.5
+124c117
+<     def __init__(self, config=None, beta_1=0.9, beta_2=0.999, epsilon=1e-6,
+---
+>     def __init__(self, config=None, beta_1=0.9, beta_2=0.999, epsilon=1e-7,
+131,133c124
+<                 self.hparams.decay_rate,
+<                 self.hparams.start_decay_steps,
+<                 self.hparams.final_lr
+---
+>                 self.hparams.decay_rate
+140a132
+> 
+diff -r athena/utils/metric_check.py /nfs/cold_project/jiangdongwei/athena_vc/athena/utils/metric_check.py
+30a31
+>         self.best_loss = tf.constant(np.inf)
+35c36
+<     def __call__(self, loss, metrics, evaluate_epoch=-1):
+---
+>     def __call__(self, loss, metrics, evaluate_epoch=-1, loss_name=None):
+49c50
+<             return self.summary_train(loss, metrics)
+---
+>             return self.summary_train(loss, metrics, loss_name=loss_name)
+52c53
+<     def summary_train(self, loss, metrics):
+---
+>     def summary_train(self, loss, metrics, loss_name=None):
+62,66c63
+<         total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+<         tf.summary.scalar("total_loss", total_loss, step=global_steps)
+<         if isinstance(loss, dict):
+<             for name in loss:
+<                 tf.summary.scalar(name, loss[name], step=global_steps)
+---
+>         tf.summary.scalar("loss", loss, step=global_steps)
+68,71c65,67
+<         if metrics is not None:
+<             for name in metrics:
+<                 metric = metrics[name]
+<                 tf.summary.scalar(name, metric, step=global_steps)
+---
+>         for name in metrics:
+>             metric = metrics[name]
+>             tf.summary.scalar(name, metric, step=global_steps)
+73a70
+>         reports += "loss_name: %s\t" % (loss_name)
+76,83c73,76
+<         reports += "loss: %.4f\t" % (total_loss)
+<         if isinstance(loss, dict):
+<             for name in loss:
+<                 reports += "%s: %.4f\t" % (name, loss[name])
+<         if metrics is not None:
+<             for name in metrics:
+<                 metric = metrics[name]
+<                 reports += "%s: %.4f\t" % (name, metric)
+---
+>         reports += "loss: %.4f\t" % (loss)
+>         for name in metrics:
+>             metric = metrics[name]
+>             reports += "%s: %.4f\t" % (name, metric)
+102,103d94
+<         global_steps = tf.convert_to_tensor(self.optimizer.iterations)
+<         total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+105,118c96
+<             tf.summary.scalar("evaluate_total_loss", total_loss, step=global_steps)
+<             if isinstance(loss, dict):
+<                 for name in loss:
+<                     tf.summary.scalar("evaluate_" + name, loss[name], step=global_steps)
+<             if metrics is not None:
+<                 for name in metrics:
+<                     metric = metrics[name]
+<                     tf.summary.scalar("evaluate_" + name, metric, step=global_steps)
+<             reports += "epoch: %d\t" % (epoch)
+<         reports += "loss: %.4f\t" % (total_loss)
+<         if isinstance(loss, dict):
+<             for name in loss:
+<                 reports += "%s: %.4f\t" % (name, loss[name])
+<         if metrics is not None:
+---
+>             tf.summary.scalar("evaluate_loss", loss, step=epoch)
+121c99,104
+<                 reports += "%s: %.4f\t" % (name, metric)
+---
+>                 tf.summary.scalar("evaluate_" + name, metric, step=epoch)
+>             reports += "epoch: %d\t" % (epoch)
+>         reports += "loss: %.4f\t" % (loss)
+>         for name in metrics:
+>             metric = metrics[name]
+>             reports += "%s: %.4f\t" % (name, metric)
+diff -r athena/utils/misc.py /nfs/cold_project/jiangdongwei/athena_vc/athena/utils/misc.py
+67a68,72
+> def gated_linear_layer(inputs, gates, name=None):
+>     h1_glu = tf.keras.layers.multiply(inputs=[inputs, tf.sigmoid(gates)], name=name)
+>     return h1_glu
+> 
+> 
