@@ -1,0 +1,93 @@
+{
+  "batch_size":32,
+  "num_epochs":200,
+  "sorta_epoch":1,
+  "ckpt":"examples/tts/ljspeech/ckpts/t2/",
+  "summary_dir":"examples/tts/ljspeech/ckpts/t2/event",
+
+  "solver_gpu":[1],
+  "solver_config":{
+    "clip_norm":1,
+    "log_interval":10,
+    "enable_tf_function":true
+  },
+
+  "model":"tacotron2",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "eunits": 512,
+    "e_convlayers": 3,
+    "ekernels": 5,
+    "e_rnnlayers": 1,
+
+    "zoneout_rate": 0.1,
+    "dropout_rate": 0.5,
+
+    "dlayers": 2,
+    "dunits": 1024,
+
+    "prenet_layers": 2,
+    "prenet_units": 256,
+
+    "postnet_layers": 5,
+    "postnet_kernel": 5,
+    "postnet_filters": 512,
+
+    "att_dim": 128,
+    "att_chans": 32,
+    "att_filters": 15,
+
+    "guided_attn_weight": 0.4,
+    "regularization_weight": 0.0,
+    "l1_loss_weight": 1.0,
+    "batch_norm_position": "after",
+    "mask_decoder": false,
+    "step_monotonic": false,
+    "sma_mode": "soft",
+
+    "reduction_factor": 3,
+    "clip_outputs": false,
+    "clip_lower_bound_decay": 0.1,
+    "clip_max_value": 4,
+
+    "max_output_length": 15,
+    "end_prob": 0.5
+  },
+
+  "decode_config":{
+    "model_avg_num": 0,
+    "gl_iters": 64,
+    "output_directory": "test_t2_wav",
+    "synthesize_from_true_fbank": true
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":8000,
+    "k":1.0
+  },
+
+
+  "dataset_builder": "speech_systhesis_dataset",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/tts/ljspeech/data/train.csv",
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "filterbank_channel_count":80, "window_length": 0.08534, "frame_length": 0.0125, "dither": 0.0, "upper_frequency_limit": 12000, "lower_frequency_limit": 0, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "text_config": {"type":"eng_vocab", "model":"examples/tts/ljspeech/data/vocab"},
+    "cmvn_file": "examples/tts/ljspeech/data/cmvn"
+  },
+  "devset_config":{
+    "data_csv": "examples/tts/ljspeech/data/dev.csv",
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "filterbank_channel_count":80, "window_length": 0.08534, "frame_length": 0.0125, "dither": 0.0, "upper_frequency_limit": 12000, "lower_frequency_limit": 0, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "text_config": {"type":"eng_vocab", "model":"examples/tts/ljspeech/data/vocab"},
+    "cmvn_file": "examples/tts/ljspeech/data/cmvn"
+  },
+  "testset_config":{
+    "data_csv": "examples/tts/ljspeech/data/test.csv",
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "filterbank_channel_count":80, "window_length": 0.08534, "frame_length": 0.0125, "dither": 0.0, "upper_frequency_limit": 12000, "lower_frequency_limit": 0, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "cmvn_file": "examples/tts/ljspeech/data/cmvn",
+    "text_config": {"type":"eng_vocab", "model":"examples/tts/ljspeech/data/vocab"}
+  }
+}

@@ -28,7 +28,10 @@ horovod_cmd=""
 horovod_prefix=""
 #horovod_cmd="horovodrun -np 4 -H localhost:4"
 #horovod_prefix="horovod_"
-dataset_dir=/nfs/project/datasets/opensource_data/TIMIT
+
+# please modify the following path accordingly 
+# if you put dataset in the differenct path
+dataset_dir=examples/asr/timit/data/TIMIT
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
