@@ -365,6 +365,7 @@ class GanSolver(BaseSolver):
         self.model.get_stage_model("discriminator").optimizer.apply_gradients\
             (zip(grads, self.model.get_stage_model("discriminator").trainable_variables))
 
+        # total loss is the same of classifier, generator and discriminator
         total_loss = loss_c + loss_g + loss_d
         metrics = {"metrics_c": metrics_c, "metrics_g": metrics_g, "metrics_d": metrics_d}
         return total_loss, metrics

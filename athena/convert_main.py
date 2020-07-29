@@ -16,29 +16,27 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, redefined-outer-name
-""" entry point for synthesis of TTS models """
+""" starting point for conversion of VC models """
 import sys
 import json
 import tensorflow as tf
 from absl import logging
-from athena import SynthesisSolver
-from athena.main import (
+from athena import ConvertSolver
+from athena.stargan_main import (
     parse_config,
-    build_model_from_jsonfile,
+    build_model_from_jsonfile_stargan,
     SUPPORTED_DATASET_BUILDER
 )
 
 
-def synthesize(jsonfile):
-    """ entry point for speech synthesis, do some preparation work """
-    p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
-    avg_num = 1 if 'model_avg_num' not in p.decode_config else p.decode_config['model_avg_num']
-    if avg_num > 0:
-        checkpointer.compute_nbest_avg(avg_num)
+def convert(jsonfile):
+    """ entry point for speech conversion, do some preparation work """
+    p, model, checkpointer = build_model_from_jsonfile_stargan(jsonfile)
+    checkpointer.restore_from_best()
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
-    solver = SynthesisSolver(model, dataset_builder, config=p.decode_config)
-    solver.synthesize(dataset_builder.as_dataset(batch_size=1))
+    solver = ConvertSolver(model, dataset_builder, config=p.convert_config)
+    solver.convert(dataset_builder.as_dataset(batch_size=1))
 
 
 if __name__ == "__main__":
@@ -53,5 +51,6 @@ if __name__ == "__main__":
         config = json.load(file)
     p = parse_config(config)
 
-    SynthesisSolver.initialize_devices(p.solver_gpu)
-    synthesize(jsonfile)
+    ConvertSolver.initialize_devices(p.solver_gpu)
+    convert(jsonfile)
+
