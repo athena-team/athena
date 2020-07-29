@@ -15,7 +15,7 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=no-member, invalid-name, relative-beyond-top-level
 # pylint: disable=too-many-locals, too-many-statements, too-many-arguments, too-many-instance-attributes
-""" a implementation of deep speech 2 model can be used as a sample for ctc model """
+""" an implementation of stargan for voice conversion """
 
 import tensorflow as tf
 from ..utils.hparam import register_and_parse_hparams
@@ -26,7 +26,8 @@ from ..layers.commons import DownSampleBlock, UpSampleBlock
 
 
 class Generator(BaseModel):
-
+    """ generator for stargan
+    """
     def __init__(self, optimizer_config=None):
         super(Generator, self).__init__()
         inner = tf.keras.layers.Input(shape=[36, None, 1], dtype=tf.float32)
@@ -74,7 +75,8 @@ class Generator(BaseModel):
         return u5
 
 class Discriminator(BaseModel):
-
+    """ discriminator for stargan
+    """
     def __init__(self, optimizer_config=None):
         super(Discriminator, self).__init__()
         self.downsample_1 = DownSampleBlock(filters=32, kernel_size=[3, 9], strides=[1, 1])
@@ -112,7 +114,8 @@ class Discriminator(BaseModel):
 
 
 class Classifier(BaseModel):
-
+    """ classifier for stargan
+    """
     def __init__(self, speaker_num=2, optimizer_config=None):
         super(Classifier, self).__init__()
         inner = tf.keras.layers.Input(shape=[8, None, 1])
@@ -148,6 +151,8 @@ class Classifier(BaseModel):
 
 
 class StarganModel(BaseModel):
+    """ definination for stargan model, it consists of generator, discriminator and classifier
+    """
     default_config = {
         "codedsp_dim":36,
         "lambda_cycle": 10,
@@ -212,7 +217,7 @@ class StarganModel(BaseModel):
             domain_out_fake = self.classifier(generated_forward)
             discirmination = self.discriminator(generated_forward, target_label)
 
-            # apply penalty
+            # apply penalty to make convergence more stable
             epsilon = tf.random.uniform([self.batchsize, 1, 1, 1], 0.0, 1.0)
             length = tf.math.minimum(tf.shape(generated_forward)[2], tf.shape(input_real)[2])
             generated_forward = generated_forward[:, :, 0: length, :]
@@ -252,6 +257,9 @@ class StarganModel(BaseModel):
         return tar_coded_sp
 
     def get_stage_model(self, stage):
+        """ get stargan model of different stage, we need to run these parts sepeartely 
+            in solver
+        """
         if stage == "classifier":
             return self.classifier
         elif stage == "generator":
@@ -277,3 +285,4 @@ class StarganModel(BaseModel):
             self.metric_d.update_state(loss)
             metrics_d = self.metric_d.result()
             return loss, metrics_d
+

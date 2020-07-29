@@ -16,7 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, wildcard-import, unused-wildcard-import, redefined-outer-name
-""" a sample implementation of LAS for HKUST """
+""" entry point for stargan_vc model training """
 import sys
 import json
 import tensorflow as tf
@@ -122,10 +122,10 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 	:param rank_size: total number of workers, 1 if using single gpu
 	:param rank: rank of current worker, 0 if using single gpu
 	"""
-    p, model, checkpointer = build_model_from_jsonfile(jsonfile)
+    p, model, checkpointer = build_model_from_jsonfile_stargan(jsonfile)
     epoch = int(checkpointer.save_counter)
     if p.pretrained_model is not None and epoch == 0:
-        p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
+        p2, pretrained_model, _, _ = build_model_from_jsonfile_stargan(p.pretrained_model)
         model.restore_from_pretrained_model(pretrained_model, p2.model)
 
     if rank == 0:
