@@ -19,8 +19,9 @@
 
 import tensorflow as tf
 from athena.layers.functional import make_positional_encoding, collapse4d, gelu
-
+import tensorflow_addons as tfa
 from athena.layers.functional import splice
+from athena.utils.misc import gated_linear_layer
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
@@ -89,6 +90,45 @@ class TdnnLayer(tf.keras.layers.Layer):
         x = splice(x, self.context_list)
         x = self.linear(x, training=training, mask=mask)
         return x
+
+
+class DownSampleBlock(tf.keras.layers.Layer):
+    def __init__(self, filters, kernel_size, strides):
+        super(DownSampleBlock, self).__init__()
+
+        self.conv1 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.conv2 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.norm1 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+        self.norm2 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+
+    def call(self, x):
+        h1 = self.conv1(x)
+        h1_norm = self.norm1(h1)
+        h1_gates = self.conv2(x)
+        h1_gates_norm = self.norm2(h1_gates)
+        h1_glu = gated_linear_layer(inputs=h1_norm, gates=h1_gates_norm)
+        return h1_glu
+
+
+class UpSampleBlock(tf.keras.layers.Layer):
+    def __init__(self, filters, kernel_size, strides):
+        super(UpSampleBlock, self).__init__()
+        self.conv1 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.conv2 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.norm1 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+        self.norm2 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+
+    def call(self, x):
+        h1 = self.conv1(x)
+        h1_norm = self.norm1(h1)
+        h1_gates = self.conv2(x)
+        h1_gates_norm = self.norm2(h1_gates)
+        h1_glu = gated_linear_layer(inputs=h1_norm, gates=h1_gates_norm)
+        return h1_glu
 
 
 class ZoneOutCell(tf.keras.layers.LSTMCell):

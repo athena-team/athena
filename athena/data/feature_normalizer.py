@@ -138,7 +138,7 @@ class FeatureNormalizer:
         return initial_mean_dict, initial_var_dict, total_num_dict
 
     def compute_cmvn_kaldiio(self, entries, speakers, kaldi_io_feats, feature_dim):
-        """ Compute cmvn for filtered entries using kaldi-format data"""
+        """ Compute cmvn for filtered entries using kaldi-format data """
         start = time.time()
         for tar_speaker in set(speakers.values()):
             logging.info("processing %s" % tar_speaker)
@@ -207,7 +207,7 @@ class FeatureNormalizer:
 class WorldFeatureNormalizer(FeatureNormalizer):
     """ World Feature Normalizer """
 
-    def compute_world_cmvn(self, entries_person_wavs, sp_dim, fft_size, fs, speakers):
+    def compute_world_cmvn(self, enable_load_from_disk, entries_person_wavs, sp_dim, fft_size, fs, speakers):
         """ compuate cmvn of f0 and sp using pyworld """
         start = time.time()
         cmvns = []
@@ -220,15 +220,18 @@ class WorldFeatureNormalizer(FeatureNormalizer):
                 #     Harmonic spectral envelope(sp)
                 #     Aperiodic spectral envelope (relative to the harmonic spectral envelope,ap)
                 # Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
-                f0, timeaxis = pyworld.harvest(wav, fs)
-                # CheapTrick harmonic spectral envelope estimation algorithm.
-                sp = pyworld.cheaptrick(wav, f0, timeaxis, fs, fft_size=fft_size)
-                # feature reduction
-                coded_sp = pyworld.code_spectral_envelope(sp, fs, sp_dim)
-                coded_sp = coded_sp.T  # sp_features x T
+                if enable_load_from_disk:
+                    samples = np.load(audio_file)
+                    f0, coded_sp, ap = samples["f0"], samples["coded_sp"], samples["ap"]
+                else:
+                    wav, _ = librosa.load(audio_file, sr=fs, mono=True, dtype=np.float64)
+                    f0, timeaxis = pyworld.harvest(wav, fs)
+                    # CheapTrick harmonic spectral envelope estimation algorithm.
+                    sp = pyworld.cheaptrick(wav, f0, timeaxis, fs, fft_size=fft_size)
+                    # feature reduction
+                    coded_sp = pyworld.code_spectral_envelope(sp, fs, sp_dim).T
                 coded_sps.append(coded_sp)
-                f0_ = np.reshape(f0, [-1, 1])
-                f0s.append(f0_)
+                f0s.append(np.reshape(f0, [-1, 1]))
             # Calculate the mean and standard deviation of the World features
             coded_sps_concatenated = np.concatenate(coded_sps, axis=1)
             coded_sps_mean = list(np.mean(coded_sps_concatenated, axis=1, keepdims=False))
@@ -237,8 +240,8 @@ class WorldFeatureNormalizer(FeatureNormalizer):
             log_f0s_mean = log_f0s_concatenated.mean()
             log_f0s_var = log_f0s_concatenated.var()
             cmvns.append((speaker, coded_sps_mean, coded_sps_var, log_f0s_mean, log_f0s_var))
-            self.cmvn_dict[speaker] = (list(coded_sps_mean.numpy()), list(coded_sps_var.numpy()), \
-                                       list(log_f0s_mean.numpy()), list(log_f0s_var.numpy()))
+            self.cmvn_dict[speaker] = (coded_sps_mean, coded_sps_var, \
+                                       log_f0s_mean, log_f0s_var)
 
         logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
 

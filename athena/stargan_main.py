@@ -79,11 +79,12 @@ def parse_config(config):
     logging.info("hparams: {}".format(p))
     return p
 
-def build_model_from_jsonfile(jsonfile, pre_run=True):
+def build_model_from_jsonfile_stargan(jsonfile, pre_run=True):
     """ creates model using configurations in json, load from checkpoint
-    if previous models exist in checkpoint dir
+    if previous models exist in checkpoint dir.
+    This function differs from build_model_from_jsonfile because it uses multiple 
+    optimizer for stargan model
     """
-    config = None
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
@@ -95,22 +96,23 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
         data_descriptions=dataset_builder,
         config=p.model_config,
     )
-    optimizer = SUPPORTED_OPTIMIZER[p.optimizer](p.optimizer_config)
     checkpointer = Checkpoint(
         checkpoint_directory=p.ckpt,
         model=model,
-        optimizer=optimizer,
+        optimizer_g=model.get_stage_model("generator").optimizer,
+	optimizer_d=model.get_stage_model("discriminator").optimizer,
+	optimizer_c=model.get_stage_model("classifier").optimizer,
+	model_name="gan"
     )
     if pre_run or p.pretrained_model is not None:
-        # pre_run for lazy initilize in keras
-        solver = BaseSolver(
+        # pre_run for lazy initialize in keras
+        solver = GanSolver(
             model,
-            optimizer,
             sample_signature=dataset_builder.sample_signature
         )
         dataset = dataset_builder.as_dataset(p.batch_size)
         solver.evaluate_step(model.prepare_samples(iter(dataset).next()))
-    return p, model, optimizer, checkpointer
+    return p, model, checkpointer
 
 
 def train(jsonfile, Solver, rank_size=1, rank=0):
@@ -120,7 +122,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
 	:param rank_size: total number of workers, 1 if using single gpu
 	:param rank: rank of current worker, 0 if using single gpu
 	"""
-    p, model, optimizer, checkpointer = build_model_from_jsonfile(jsonfile)
+    p, model, checkpointer = build_model_from_jsonfile(jsonfile)
     epoch = int(checkpointer.save_counter)
     if p.pretrained_model is not None and epoch == 0:
         p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
@@ -134,15 +136,13 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     trainset_builder.compute_cmvn_if_necessary(rank == 0)
     trainset_builder.shard(rank_size, rank)
 
-    # train
     solver = Solver(
         model,
-        optimizer,
         sample_signature=trainset_builder.sample_signature,
         config=p.solver_config,
     )
-    loss = 0.0
-    metrics = {}
+    loss_g = 0
+    metrics_g = {}
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
@@ -155,10 +155,10 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
                 logging.info(">>>>> start evaluate in epoch %d" % epoch)
             devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
             devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-            loss, metrics = solver.evaluate(devset, epoch)
+            loss_g, metrics_g = solver.evaluate(devset, epoch)
 
         if rank == 0:
-            checkpointer(loss, metrics)
+            checkpointer(loss_g, metrics_g)
 
         epoch = epoch + 1
 
@@ -175,5 +175,5 @@ if __name__ == "__main__":
     with open(json_file) as f:
         config = json.load(f)
     p = parse_config(config)
-    BaseSolver.initialize_devices(p.solver_gpu)
-    train(json_file, BaseSolver, 1, 0)
+    GanSolver.initialize_devices(p.solver_gpu)
+    train(json_file, GanSolver, 1, 0)

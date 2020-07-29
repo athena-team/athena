@@ -474,3 +474,80 @@ class GE2ELoss(tf.keras.losses.Loss):
         labels_onehot = tf.one_hot(labels_repeat, step_size)
         loss = tf.reduce_mean(self.criterion(labels_onehot, cosine_w_b_reshape))
         return loss
+
+
+class StarganLoss(tf.keras.losses.Loss):
+    def __init__(self, lambda_cycle, lambda_identity, lambda_classifier, name="StarganLoss"):
+        super().__init__(name=name)
+        self.lambda_cycle = lambda_cycle
+        self.lambda_identity = lambda_identity
+        self.lambda_classifier = lambda_classifier
+
+    def __call__(self, outputs, samples, logit_length=None, stage=None):
+        input_real, target_real, target_label, source_label = \
+            samples["src_coded_sp"], samples["tar_coded_sp"], \
+            samples["tar_speaker"], samples["src_speaker"]
+
+        target_label_reshaped = outputs["target_label_reshaped"]
+
+        if stage == "classifier":
+            domain_out_real = outputs["domain_out_real"]
+            loss = ClassifyLoss(target_label_reshaped, domain_out_real)
+        elif stage == "generator":
+            discirmination, generated_back, identity_map, domain_out_real = \
+            outputs["discirmination"], outputs["generated_back"], outputs["identity_map"], outputs["domain_out_real"]
+
+            loss = GeneratorLoss(discirmination, input_real, generated_back, identity_map,\
+                                           target_label_reshaped, domain_out_real, self.lambda_cycle,\
+                                           self.lambda_identity, self.lambda_classifier)
+        else:
+            discrimination_real, discirmination, domain_out_fake, gradient_penalty = outputs["discrimination_real"], \
+                outputs["discirmination"], outputs["domain_out_fake"], outputs["gradient_penalty"]
+            loss = DiscriminatorLoss(discrimination_real, discirmination,\
+                                             target_label_reshaped, domain_out_fake, gradient_penalty)
+
+
+def GeneratorLoss(discirmination, input_real, generated_back, identity_map, target_label_reshaped,\
+                  domain_out_real, lambda_cycle, lambda_identity, lambda_classifier):
+    domain_real_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits \
+                                      (labels=target_label_reshaped, logits=domain_out_real))
+
+    # we need to trim input to have the same length as output because it might not be divisible with 4
+    length = tf.math.minimum(tf.shape(generated_back)[2], tf.shape(input_real)[2])
+    cycle_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - generated_back[:, :, 0: length, :]))
+    identity_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - identity_map[:, :, 0: length, :]))
+
+    generator_loss = tf.reduce_mean(\
+    tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discirmination),\
+                                            logits=discirmination))
+
+    generator_loss_all = generator_loss + lambda_cycle * cycle_loss + \
+                         lambda_identity * identity_loss + lambda_classifier * domain_real_loss
+    return generator_loss_all
+
+
+def DiscriminatorLoss(discrimination_real, discirmination_fake, target_label_reshaped,\
+                                             domain_out_fake, gradient_penalty):
+
+    discrimination_real_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discrimination_real),\
+                                                logits=discrimination_real))
+
+    discrimination_fake_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(discirmination_fake),\
+                                                logits=discirmination_fake))
+
+    domain_fake_loss = tf.reduce_mean(\
+        tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_fake))
+
+    discrimator_loss = discrimination_fake_loss + discrimination_real_loss + domain_fake_loss \
+                        + gradient_penalty
+    return discrimator_loss
+
+
+def ClassifyLoss(target_label_reshaped, domain_out_real):
+    domain_real_loss = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_real))
+    return domain_real_loss
+
+
