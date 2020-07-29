@@ -315,7 +315,7 @@ class SynthesisSolver(BaseSolver):
 
 
 class GanSolver(BaseSolver):
-    """Gan Solver.
+    """ Gan Solver.
     """
     default_config = {
         "clip_norm": 100.0,

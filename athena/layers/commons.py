@@ -93,6 +93,8 @@ class TdnnLayer(tf.keras.layers.Layer):
 
 
 class DownSampleBlock(tf.keras.layers.Layer):
+    """ conv2d downsample block for stargan, instance norm is used because batch size is 1
+    """
     def __init__(self, filters, kernel_size, strides):
         super(DownSampleBlock, self).__init__()
 
@@ -113,6 +115,8 @@ class DownSampleBlock(tf.keras.layers.Layer):
 
 
 class UpSampleBlock(tf.keras.layers.Layer):
+    """ conv2d upsample block for stargan, instance norm is used because batch size is 1
+    """
     def __init__(self, filters, kernel_size, strides):
         super(UpSampleBlock, self).__init__()
         self.conv1 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
