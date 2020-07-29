@@ -103,6 +103,8 @@ class Vocabulary:
             raise ValueError("unsupported input")
 
 class EnglishVocabulary(Vocabulary):
+    """ English vocabulary seperated by space
+    """
     def __init__(self, vocab_file):
         super().__init__(vocab_file)
 
