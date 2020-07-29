@@ -16,7 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, wildcard-import, unused-wildcard-import, redefined-outer-name
-""" a sample implementation of LAS for HKUST """
+""" starting point for model training """
 import sys
 import json
 import tensorflow as tf
