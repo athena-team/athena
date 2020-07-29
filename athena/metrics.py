@@ -67,8 +67,8 @@ class CharactorAccuracy(Accuracy):
     """ CharactorAccuracy
     Base class for Word Error Rate calculation
     """
-    def __init__(self, name="CharactorAccuracy"):
-        super().__init__(name=name)
+    def __init__(self, name="CharactorAccuracy", rank_size=1):
+        super().__init__(name=name, rank_size=rank_size)
 
     def update_state(self, predictions, samples, logit_length=None):
         """ Accumulate errors and counts """
@@ -137,8 +137,8 @@ class ClassificationAccuracy(Accuracy):
         Implements top-1 accuracy calculation for speaker classification
         (closed-set speaker recognition)
     """
-    def __init__(self, name="ClassificationAccuracy"):
-        super().__init__(name=name)
+    def __init__(self, name="ClassificationAccuracy", rank_size=1):
+        super().__init__(name=name, rank_size=rank_size)
 
     def update_state(self, predictions, samples, logit_length=None):
         labels = tf.cast(tf.squeeze(samples["output"]), dtype=tf.int64)
@@ -164,15 +164,21 @@ class EqualErrorRate:
     def __init__(self, name="EqualErrorRate"):
         self.name = name
         self.index = 0
-        self.predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
-        self.labels = tf.TensorArray(tf.int32, size=0, dynamic_size=True, clear_after_read=False)
+        self.predictions = tf.TensorArray(tf.float32, size=0,
+                                          dynamic_size=True, clear_after_read=False)
+        self.labels = tf.TensorArray(tf.int32, size=0,
+                                     dynamic_size=True, clear_after_read=False)
 
     def reset_states(self):
+        """ reset predictions and labels """
         self.index = 0
-        self.predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
-        self.labels = tf.TensorArray(tf.int32, size=0, dynamic_size=True, clear_after_read=False)
+        self.predictions = tf.TensorArray(tf.float32, size=0,
+                                          dynamic_size=True, clear_after_read=False)
+        self.labels = tf.TensorArray(tf.int32, size=0,
+                                     dynamic_size=True, clear_after_read=False)
 
     def update_state(self, predictions, samples, logit_length=None):
+        """ append new predictions and labels """
         labels = tf.squeeze(samples["output"])
         self.predictions.write(self.index, predictions)
         self.labels.write(self.index, labels)
@@ -182,6 +188,7 @@ class EqualErrorRate:
         return self.update_state(logits, samples, logit_length)
 
     def result(self):
+        """ calculate equal error rate """
         fpr, tpr, thresholds = roc_curve(self.labels.concat(),
                                          self.predictions.concat(), pos_label=1)
         eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
