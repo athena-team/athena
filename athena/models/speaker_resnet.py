@@ -23,6 +23,7 @@
 import tensorflow as tf
 from .base import BaseModel
 from ..loss import SoftmaxLoss, AMSoftmaxLoss, AAMSoftmaxLoss, ProtoLoss, AngleProtoLoss, GE2ELoss
+from ..metrics import ClassificationAccuracy, EqualErrorRate
 from ..layers.resnet_block import ResnetBasicBlock
 from ..utils.hparam import register_and_parse_hparams
 
@@ -56,7 +57,9 @@ class SpeakerResnet(BaseModel):
         # number of speakers
         self.num_class = data_descriptions.num_class
         self.loss_function = self.init_loss(self.hparams.loss)
-        self.metric = tf.keras.metrics.Mean(name="AverageLoss")
+        self.metric = ClassificationAccuracy(name="Top1-Accuracy")
+        # equal error rate metric for evaluating
+        self.eval_metric = EqualErrorRate(name="EER")
 
         num_filters = self.hparams.num_filters
         num_layers = self.hparams.num_layers
@@ -88,15 +91,15 @@ class SpeakerResnet(BaseModel):
 
         inner = layers.GlobalAveragePooling2D()(inner)
         inner = layers.Dense(self.hparams.hidden_size)(inner)
-        self.resnet = tf.keras.Model(inputs=input_features,
-                                     outputs=inner,
-                                     name="resnet")
-        print(self.resnet.summary())
+        self.speaker_resnet = tf.keras.Model(inputs=input_features,
+                                             outputs=inner,
+                                             name="speaker_resnet")
+        print(self.speaker_resnet.summary())
 
     def call(self, samples, training=None):
         """ call model """
         input_features = samples["input"]
-        output = self.resnet(input_features, training=training)
+        output = self.speaker_resnet(input_features, training=training)
         return output
 
     def init_loss(self, loss):
@@ -114,15 +117,34 @@ class SpeakerResnet(BaseModel):
                                 s=self.hparams.scale
                             )
         elif loss in ("prototypical", "angular_prototypical", "ge2e"):
-            loss_function = SUPPORTED_LOSS[loss]()
+            # need special dataset builder
+            raise NotImplementedError()
         else:
             raise NotImplementedError()
         return loss_function
 
     def get_loss(self, outputs, samples, training=None):
-        loss = self.loss_function(outputs, samples)
-        self.metric.update_state(loss)
+        loss, outputs = self.loss_function(outputs, samples)
+        self.metric.update_state(outputs, samples)
         metrics = {self.metric.name: self.metric.result()}
+        return loss, metrics
+
+    def get_eer(self, samples, training=False):
+        """ get equal error rates """
+        # only input will be used
+        samples_a = {"input": samples['input_a']}
+        samples_b = {"input": samples['input_b']}
+        output_a = self.speaker_resnet(samples_a, training=training)
+        output_b = self.speaker_resnet(samples_b, training=training)
+
+        cosine_simil = -tf.keras.losses.cosine_similarity(output_a, output_b, axis=1)
+        self.eval_metric.update_state(cosine_simil, samples)
+        metrics = {self.eval_metric.name: self.eval_metric.result()}
+        # this is a fake loss, because for verification task which
+        # training with classfication-based objectives, speakers in
+        # dev set are not included in training set, so it is
+        # impossible to calculate loss during evaluating
+        loss = 0
         return loss, metrics
 
     def make_resnet_block_layer(self, num_filter, num_blocks, stride=1):

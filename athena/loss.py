@@ -309,7 +309,7 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
         costh_m = costh - delt_costh
         costh_m_s = self.s * costh_m
         loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
-        return loss
+        return loss, costh_m_s
 
 
 class AAMSoftmaxLoss(tf.keras.losses.Loss):

@@ -21,6 +21,7 @@ from .datasets.speech_synthesis import SpeechSynthesisDatasetBuilder
 from .datasets.speech_set import SpeechDatasetBuilder
 from .datasets.speech_set_kaldiio import SpeechDatasetKaldiIOBuilder
 from .datasets.speaker_recognition import SpeakerRecognitionDatasetBuilder
+from .datasets.speaker_recognition import SpeakerVerificationDatasetBuilder
 from .datasets.language_set import LanguageDatasetBuilder
 from .feature_normalizer import FeatureNormalizer
 from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer
