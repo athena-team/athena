@@ -61,6 +61,11 @@ class MtlTransformerCtc(BaseModel):
         self.time_propagate = self.model.time_propagate
         self.decoder = Dense(self.num_class)
 
+        # for deployment
+        self.deploy_encoder = None
+        self.deploy_decoder = None
+
+        # for WFST
         self.vocab = {}
         for line in io.open(data_descriptions.hparams.text_config["model"], 'r', encoding='utf-8').readlines():
             char, idx = line.strip().split()[0], line.strip().split()[1]
@@ -146,3 +151,9 @@ class MtlTransformerCtc(BaseModel):
             predictions = tf.constant([predictions])
             predictions = tf.cast(predictions, tf.int64)
         return predictions
+
+    def deploy(self):
+        """ deployment function """
+        self.model.deploy()
+        self.deploy_encoder = self.model.deploy_encoder
+        self.deploy_decoder = self.model.deploy_decoder

@@ -35,7 +35,10 @@ from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
 from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
-from pydecoders import WFSTDecoder
+try:
+    from pydecoders import WFSTDecoder
+except ImportError:
+    print("pydecoder is not installed, this will only affect WFST decoding")
 import time
 
 
@@ -201,7 +204,7 @@ class HorovodSolver(BaseSolver):
         if hvd.rank() == 0:
             logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
             self.model.reset_metrics()
-        return loss_metric.result()
+        return loss_metric.result(), metrics
 
 
 class DecoderSolver(BaseSolver):

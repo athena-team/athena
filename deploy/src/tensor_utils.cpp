@@ -17,9 +17,11 @@ limitations under the License.
 #include "tensor_utils.h"
 #include "tensorflow/core/public/session.h"
 #include <fstream>
+#include <Eigen/Dense>
 
 
-int initSession(tensorflow::Session *&session, const std::string &graph_path, tensorflow::Status &status) {
+int initSession(tensorflow::Session *&session, 
+                const std::string &graph_path, tensorflow::Status &status) {
     status = tensorflow::NewSession(tensorflow::SessionOptions(), &session);
     if (!status.ok()) {
         std::cout << status.ToString() << "\n";
@@ -40,47 +42,89 @@ int initSession(tensorflow::Session *&session, const std::string &graph_path, te
         std::cout << status.ToString() << "\n";
         return 1;
     }
+    return 0;
 }
 
 tensorflow::Tensor getMatrixFromFile(const std::string &filename) {
     std::ifstream fin(filename);
-
     std::vector<float> dataPoints;
     float item = 0.0;
     while (fin >> item) {
         dataPoints.push_back(item);
     }
+    fin.close();
+
     int nrows = int(dataPoints.size() / 40);
     int ncols = 40;
-    tensorflow::Tensor res(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, nrows, ncols, 1}));
-    auto X = res.tensor<float, 4>();
+    tensorflow::Tensor feats(tensorflow::DT_FLOAT, 
+                             tensorflow::TensorShape({1, nrows, ncols, 1}));
+    auto feats_tensor = feats.tensor<float, 4>();
 
     for (int row = 0; row < nrows; row++) {
         for (int col = 0; col < ncols; col++) {
-            X(0, row, col, 0) = dataPoints[row * 40 + col];
+            feats_tensor(0, row, col, 0) = dataPoints[row * 40 + col];
         }
     }
-    fin.close();
-    return res;
+    return feats;
 }
 
+Eigen::Tensor<float, 1> computeLogSoftmax(tensorflow::Tensor score) {
+    // logsoftmax = logits - log(reduce_sum(exp(logits)))
+    auto score_tensor = score.tensor<float, 2>();
+    int classes = score.shape().dim_size(1);
+    Eigen::Tensor<float, 1> score_reshape(classes);
+    for (int i = 0; i < classes; i++) {
+        score_reshape(i) = score_tensor(0, i);
+    }
+    Eigen::Tensor<float, 0> log_sum = score_reshape.exp().sum().log();
+    auto log_probs = score_reshape - score_reshape.constant(log_sum());
+    return log_probs;
+}
 
-void createInputStructureEncoder(std::vector <std::pair<std::string, tensorflow::Tensor>> &inputs){
-    // input
-    tensorflow::Tensor input_seq(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, 593, 40, 1}));
+void createInputStructureEncoder(std::vector
+                                 <std::pair<std::string, tensorflow::Tensor>> &inputs) {
+    // input_seq: [None, input_seq_len, 40, 1]
+    tensorflow::Tensor input_seq(tensorflow::DT_FLOAT);
     tensorflow::Tensor input_len(tensorflow::DT_INT32, tensorflow::TensorShape({1}));
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"input_1", input_seq});
-    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>{"input_2", input_len});
-
-    auto b = inputs[1].second.tensor<int, 1>();
-    b(0) = 593;
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_encoder_input_seq", input_seq});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_encoder_input_length", input_len});
 }
 
-void createOutputNameStructureEncoder(std::vector<std::string> &output_names){
+void createOutputNameStructureEncoder(std::vector<std::string> &output_names) {
     /*
-        encoder_output: [1, seq_length, hsize]
-        input_mask: [1, 1, 1, seq_length]
+        encoder_output: [1, input_seq_len // 4, hsize] float
+        input_mask: [1, 1, 1, input_seq_len // 4] float
     */
-    output_names.emplace_back("transformer_encoder/transformer_encoder_layer_11/layer_normalization_23/batchnorm/add_1");
+    output_names.emplace_back(
+    "transformer_encoder/transformer_encoder_layer_11/layer_normalization_23/batchnorm/add_1");
     output_names.emplace_back("strided_slice_1");
+}
+
+void createInputStructureDecoder(std::vector
+                                 <std::pair<std::string, tensorflow::Tensor>> &inputs) {
+    /*
+        encoder_output: [1, input_seq_len // 4, hsize]
+        memory_mask: [1, 1, 1, input_seq_len // 4]
+        history_predictions: [1, pred_seq_len]
+    */
+    tensorflow::Tensor encoder_output(tensorflow::DT_FLOAT);
+    tensorflow::Tensor memory_mask(tensorflow::DT_FLOAT);
+    tensorflow::Tensor history_predictions(tensorflow::DT_FLOAT);
+    tensorflow::Tensor step(tensorflow::DT_INT32, tensorflow::TensorShape({1}));
+
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_encoder_output", encoder_output});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_memory_mask", memory_mask});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_history_predictions", history_predictions});
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"deploy_decoder_step", step});
+}
+
+void createOutputNameStructureDecoder(std::vector<std::string> &output_names) {
+    // logits: [1, classes] float
+    output_names.emplace_back("strided_slice_3");
 }
