@@ -122,8 +122,6 @@ def exec_cmd(cmd):
         retcode = subprocess.call(cmd, shell=True)
         if retcode < 0:
             logging.info(f"Child was terminated by signal {retcode}")
-        else:
-            logging.info(f"Child returned {retcode}")
     except OSError as e:
         logging.info(f"Execution failed: {e}")
         retcode = -999

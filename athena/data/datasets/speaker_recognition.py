@@ -39,8 +39,7 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         @property:
         num_class(self): return the max_index of the vocabulary
         sample_shape:
-            {"key": tf.TensorShape([]),
-            "speech": tf.TensorShape([None, self.audio_featurizer.dim,
+            {"speech": tf.TensorShape([None, self.audio_featurizer.dim,
                                     self.audio_featurizer.num_channels]),
             "speech_length": tf.TensorShape([1]),
             "output_length": tf.TensorShape([1]),
@@ -191,3 +190,82 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
             )
         self.feature_normalizer.save_cmvn()
         return self
+
+
+class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
+    """ SpeakerVerificationDatasetBuilder
+
+    Args:
+        for __init__(self, config=None)
+
+    Config:
+       audio_config: the config file for feature extractor, default={'type':'Fbank'}
+
+    Interfaces::
+        __len__(self): return the number of data samples
+
+        @property:
+        num_class(self): return the max_index of the vocabulary
+        sample_shape:
+            {"speech": tf.TensorShape([None, self.audio_featurizer.dim,
+                                    self.audio_featurizer.num_channels]),
+            "speech_length": tf.TensorShape([1]),
+            "output_length": tf.TensorShape([1]),
+            "output": tf.TensorShape([None])}
+    """
+
+    def __init__(self, config=None):
+        super().__init__(config=config)
+
+    def preprocess_data(self, data_csv_path):
+        """ Generate a list of tuples
+            (wav_filename_a, speaker_a, wav_filename_b, speaker_b, label).
+        """
+        logging.info("Loading data csv {}".format(data_csv_path))
+        with open(data_csv_path, "r", encoding='utf-8') as data_csv:
+            lines = data_csv.read().splitlines()[1:]
+        lines = [line.split("\t", 4) for line in lines]
+        self.entries = [tuple(line) for line in lines]
+        return self
+
+    def __getitem__(self, index):
+        audio_data_a, speaker_a, audio_data_b, speaker_b, label = self.entries[index]
+        feat_a = self.audio_featurizer(audio_data_a)
+        feat_a = self.feature_normalizer(feat_a, speaker_a)
+        feat_b = self.audio_featurizer(audio_data_b)
+        feat_b = self.feature_normalizer(feat_b, speaker_b)
+        return {
+            "input_a": feat_a,
+            "input_b": feat_b,
+            "output": [label]
+        }
+
+    @property
+    def sample_type(self):
+        return {
+            "input_a": tf.float32,
+            "input_b": tf.float32,
+            "output": tf.int32
+        }
+
+    @property
+    def sample_shape(self):
+        dim = self.audio_featurizer.dim
+        nc = self.audio_featurizer.num_channels
+        return {
+            "input_a": tf.TensorShape([None, dim, nc]),
+            "input_b": tf.TensorShape([None, dim, nc]),
+            "output": tf.TensorShape([None])
+        }
+
+    @property
+    def sample_signature(self):
+        dim = self.audio_featurizer.dim
+        nc = self.audio_featurizer.num_channels
+        return (
+            {
+                "input_a": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input_b":tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+            },
+        )
