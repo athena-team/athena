@@ -64,7 +64,6 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
 
         self.entries = []
         self.speakers = []
-        self.speakers_ids_dict = {}
 
         if self.hparams.data_csv is not None:
             self.load_csv(self.hparams.data_csv)
@@ -84,12 +83,7 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         lines = [line.split("\t", 3) for line in lines]
         lines.sort(key=lambda item: int(item[1]))
         self.entries = [tuple(line) for line in lines]
-
-        # handling speakers
-        for _, _, spkid, spkname in self.entries:
-            spkid = int(spkid)
-            self.speakers_ids_dict[spkname] = spkid
-        self.speakers = list(self.speakers_ids_dict.keys())
+        self.speakers = list(set(line[-1] for line in lines))
 
         # apply input length filter
         self.filter_sample_by_input_length()
@@ -104,7 +98,7 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         feat = self.audio_featurizer(audio_data)
         feat = self.feature_normalizer(feat, spkname)
         feat_length = feat.shape[0]
-        spkid = [self.speakers_ids_dict[spkname]]
+        spkid = [spkid]
         return {
             "input": feat,
             "input_length": feat_length,
@@ -119,7 +113,7 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
     @property
     def num_class(self):
         ''' return the number of speakers'''
-        return len(self.speakers_ids_dict)
+        return len(self.speakers)
 
     @property
     def sample_type(self):
