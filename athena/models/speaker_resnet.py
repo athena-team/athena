@@ -41,8 +41,11 @@ class SpeakerResnet(BaseModel):
         Reference to paper "Deep residual learning for image recognition"
         The implementation is the same as the standard resnet with 34 weighted layers,
         excepts using only 1/4 amount of filters to reduce computation.
+        config:
+            task: "speaker_identification" or "speaker_verification"
     """
     default_config = {
+        "task": "speaker_identification",
         "hidden_size": 512,
         "num_filters": [16, 32, 64, 128],
         "num_layers": [3, 4, 6, 3],
@@ -57,9 +60,11 @@ class SpeakerResnet(BaseModel):
         # number of speakers
         self.num_class = data_descriptions.num_class
         self.loss_function = self.init_loss(self.hparams.loss)
+        self.task = self.hparams.task
         self.metric = ClassificationAccuracy(name="Top1-Accuracy")
         # equal error rate metric for evaluating
-        self.eval_metric = EqualErrorRate(name="EER")
+        if self.task == "speaker_verification":
+            self.eval_metric = EqualErrorRate(name="EER")
 
         num_filters = self.hparams.num_filters
         num_layers = self.hparams.num_layers
@@ -98,8 +103,14 @@ class SpeakerResnet(BaseModel):
 
     def call(self, samples, training=None):
         """ call model """
-        input_features = samples["input"]
-        output = self.speaker_resnet(input_features, training=training)
+        if self.task == "speaker_verification" and "input_a" in samples and not training:
+            input_features_a, input_features_b = samples["input_a"], samples["input_b"]
+            output_a = self.speaker_resnet(input_features_a, training=training)
+            output_b = self.speaker_resnet(input_features_b, training=training)
+            output = [output_a, output_b]
+        else:
+            input_features = samples["input"]
+            output = self.speaker_resnet(input_features, training=training)
         return output
 
     def init_loss(self, loss):
@@ -124,19 +135,18 @@ class SpeakerResnet(BaseModel):
         return loss_function
 
     def get_loss(self, outputs, samples, training=None):
-        loss, outputs = self.loss_function(outputs, samples)
-        self.metric.update_state(outputs, samples)
-        metrics = {self.metric.name: self.metric.result()}
+        # report eer rather than loss during evaluating for speaker verification
+        if self.task == "speaker_verification" and "input_a" in samples and not training:
+            loss, metrics = self.get_eer(outputs, samples, training)
+        else:
+            loss, outputs = self.loss_function(outputs, samples)
+            self.metric.update_state(outputs, samples)
+            metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
-    def get_eer(self, samples, training=False):
+    def get_eer(self, outputs, samples, training=False):
         """ get equal error rates """
-        # only input will be used
-        samples_a = {"input": samples['input_a']}
-        samples_b = {"input": samples['input_b']}
-        output_a = self.speaker_resnet(samples_a, training=training)
-        output_b = self.speaker_resnet(samples_b, training=training)
-
+        output_a, output_b = outputs
         cosine_simil = -tf.keras.losses.cosine_similarity(output_a, output_b, axis=1)
         self.eval_metric.update_state(cosine_simil, samples)
         metrics = {self.eval_metric.name: self.eval_metric.result()}
@@ -144,7 +154,7 @@ class SpeakerResnet(BaseModel):
         # training with classfication-based objectives, speakers in
         # dev set are not included in training set, so it is
         # impossible to calculate loss during evaluating
-        loss = 0
+        loss = -1.0
         return loss, metrics
 
     def make_resnet_block_layer(self, num_filter, num_blocks, stride=1):

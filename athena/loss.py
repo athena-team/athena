@@ -276,7 +276,7 @@ class SoftmaxLoss(tf.keras.losses.Loss):
         outputs = self.dense(outputs)
         label_onehot = tf.one_hot(labels, self.num_classes)
         loss = tf.reduce_mean(self.criterion(label_onehot, outputs))
-        return loss
+        return loss, outputs
 
 
 class AMSoftmaxLoss(tf.keras.losses.Loss):
@@ -355,7 +355,7 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         output = (label_onehot * phi) + ((1.0 - label_onehot) * cosine)
         output = output * self.s
         loss = tf.reduce_mean(self.criterion(label_onehot, output))
-        return loss
+        return loss, output
 
 
 class ProtoLoss(tf.keras.losses.Loss):

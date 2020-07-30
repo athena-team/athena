@@ -19,15 +19,15 @@
 from absl import logging
 import numpy as np
 import tensorflow as tf
+from scipy.optimize import brentq
+from scipy.interpolate import interp1d
+from sklearn.metrics import roc_curve
 from .utils.misc import validate_seqs
 try:
     import horovod.tensorflow as hvd
 except ImportError:
     print("There is some problem with your horovod installation. \
 But it wouldn't affect single-gpu training")
-from scipy.optimize import brentq
-from sklearn.metrics import roc_curve
-from scipy.interpolate import interp1d
 
 
 class Accuracy:
@@ -189,8 +189,8 @@ class EqualErrorRate:
 
     def result(self):
         """ calculate equal error rate """
-        fpr, tpr, thresholds = roc_curve(self.labels.concat(),
-                                         self.predictions.concat(), pos_label=1)
+        fpr, tpr, _ = roc_curve(self.labels.concat(),
+                                self.predictions.concat(), pos_label=1)
         eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
         eer = eer * 100
         return eer
