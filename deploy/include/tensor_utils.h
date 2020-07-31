@@ -17,10 +17,20 @@ limitations under the License.
 #include "tensorflow/core/public/session.h"
 
 
-int initSession(tensorflow::Session *&session, const std::string &graph_path, tensorflow::Status &status);
+int initSession(tensorflow::Session *&session,
+                const std::string &graph_path,
+                tensorflow::Status &status);
 
 tensorflow::Tensor getMatrixFromFile(const std::string &filename);
 
-void createInputStructureEncoder(std::vector <std::pair<std::string, tensorflow::Tensor>> &inputs);
+Eigen::Tensor<float, 1> computeLogSoftmax(tensorflow::Tensor score);
+
+void createInputStructureEncoder(std::vector
+                                 <std::pair<std::string, tensorflow::Tensor>> &inputs);
 
 void createOutputNameStructureEncoder(std::vector<std::string> &output_names);
+
+void createInputStructureDecoder(std::vector
+                                 <std::pair<std::string, tensorflow::Tensor>> &inputs);
+
+void createOutputNameStructureDecoder(std::vector<std::string> &output_names);

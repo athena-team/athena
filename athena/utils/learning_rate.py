@@ -105,8 +105,8 @@ class ExponentialDecayLearningRateSchedule(tf.keras.optimizers.schedules.Learnin
 
     def __call__(self, step):
         factor = tf.cond(step < self.start_decay_steps,
-                         lambda : tf.cast(1, tf.float32),
-                         lambda : self.decay_rate ** ((step - self.start_decay_steps) // self.decay_steps))
+                         lambda: tf.cast(1, tf.float32),
+                         lambda: self.decay_rate ** ((step - self.start_decay_steps) // self.decay_steps))
         lr = self.initial_lr * factor
         return tf.minimum(tf.maximum(lr, self.final_lr), self.initial_lr)
 
