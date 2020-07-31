@@ -158,7 +158,6 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         bce_loss *= mask
         final_loss['mse_loss'] = tf.reduce_sum(mse_loss) / total_size
         final_loss['bce_loss'] = tf.reduce_sum(bce_loss) / total_size
-
         if self.guided_attn_loss_function is not None and \
                 self.guided_attn_loss_function.guided_attn_weight > 0:
             final_loss['guided_attn_loss'] = self.guided_attn_loss_function(att_ws_stack, samples)
@@ -358,11 +357,11 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
 
 class AAMSoftmaxLoss(tf.keras.losses.Loss):
     """ Additive Angular Margin Softmax Loss
-        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition" 
+        Reference to paper "ArcFace: Additive Angular Margin Loss for Deep Face Recognition"
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
-    def __init__(self, embedding_size, num_classes, 
+    def __init__(self, embedding_size, num_classes,
                  m=0.3, s=15, easy_margin=False, name="AAMSoftmaxLoss"):
         super().__init__(name=name)
         self.embedding_size = embedding_size
