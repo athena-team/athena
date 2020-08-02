@@ -65,7 +65,6 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         "codedsp_dim": 36,
         "fs": 16000,
         "fft_size": 1024,
-        "speaker_num": 9
     }
 
     def __init__(self, config=None):
@@ -77,7 +76,6 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         self.sp_dim = self.hparams.codedsp_dim
         self.fs = self.hparams.fs
         self.fft_size = self.hparams.fft_size
-        self.speaker_num = self.hparams.speaker_num
         self.enable_load_from_disk = self.hparams.enable_load_from_disk
         self.feature_normalizer = WorldFeatureNormalizer(self.hparams.cmvn_file)
         self.entries, self.entries_person_wavs = [], {}
