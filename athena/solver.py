@@ -381,7 +381,7 @@ class GanSolver(BaseSolver):
             samples = self.model.prepare_samples(samples)
             total_loss, metrics = train_step(samples)
             if batch % self.hparams.log_interval == 0:
-                logging.info(self.metric_checker(total_loss, metrics, loss_name="total_loss"))
+                logging.info(self.metric_checker(total_loss, metrics))
                 self.model.reset_metrics()
 
     def evaluate_step(self, samples):

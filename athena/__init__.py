@@ -53,6 +53,7 @@ from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
+from .models.stargan_vc import StarganModel
 
 # solver & loss & accuracy
 from .solver import BaseSolver

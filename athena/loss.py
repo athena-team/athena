@@ -510,6 +510,7 @@ class StarganLoss(tf.keras.losses.Loss):
                 outputs["discirmination"], outputs["domain_out_fake"], outputs["gradient_penalty"]
             loss = DiscriminatorLoss(discrimination_real, discirmination,\
                                              target_label_reshaped, domain_out_fake, gradient_penalty)
+        return loss
 
 
 def GeneratorLoss(discirmination, input_real, generated_back, identity_map, target_label_reshaped,\
