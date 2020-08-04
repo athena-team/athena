@@ -84,7 +84,7 @@ python -m pip install --ignore-installed dist/athena-0.1.0*.whl
 - Once athena is successfully installed , you should do `source tools/env.sh` firstly before doing other things.
 - For installing some other supporting tools, you can check the `tools/install*.sh` to install kenlm, sph2pipe, spm and ... [Optional]
 
-### 3.5) Test your installation
+### 3.6) Test your installation
 
 - On a single cpu/gpu
 
