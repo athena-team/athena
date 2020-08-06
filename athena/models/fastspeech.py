@@ -347,13 +347,6 @@ class DurationCalculator(tf.keras.layers.Layer):
         """
         y_steps = tf.reduce_max(samples['output_length'])
         x_steps = tf.reduce_max(samples['input_length'])
-        if 'duration' in samples:
-            durations = samples['duration'] # [batch, x_steps]
-            durations = tf.cast(durations, dtype=tf.float32)
-            durations = durations / 0.0125
-            durations = tf.cast(tf.clip_by_value(tf.math.round(durations), 0.0,
-                                                 tf.cast(10000, dtype=tf.float32)), dtype=tf.int32)
-            return None, None, durations
         if self.teacher_model is None:
             raise ValueError("teacher model should not be None")
         if self.teacher_type == 'tts_transformer':
