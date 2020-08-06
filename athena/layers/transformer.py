@@ -267,33 +267,36 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 
     def __init__(
         self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu",
-            unidirectional=False, look_ahead=0
+            unidirectional=False, look_ahead=0, ffn=None
     ):
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
         # Implementation of Feedforward model
         layers = tf.keras.layers
-        self.ffn = tf.keras.Sequential(
-            [
-                layers.Dense(
-                    dim_feedforward,
-                    activation=ACTIVATIONS[activation],
-                    kernel_initializer=tf.compat.v1.truncated_normal_initializer(
-                        stddev=0.02
+        if ffn is None:
+            self.ffn = tf.keras.Sequential(
+                [
+                    layers.Dense(
+                        dim_feedforward,
+                        activation=ACTIVATIONS[activation],
+                        kernel_initializer=tf.compat.v1.truncated_normal_initializer(
+                            stddev=0.02
+                        ),
+                        input_shape=(d_model,),
                     ),
-                    input_shape=(d_model,),
-                ),
-                layers.Dropout(dropout, input_shape=(dim_feedforward,)),
-                layers.Dense(
-                    d_model,
-                    kernel_initializer=tf.compat.v1.truncated_normal_initializer(
-                        stddev=0.02
+                    layers.Dropout(dropout, input_shape=(dim_feedforward,)),
+                    layers.Dense(
+                        d_model,
+                        kernel_initializer=tf.compat.v1.truncated_normal_initializer(
+                            stddev=0.02
+                        ),
+                        input_shape=(dim_feedforward,),
                     ),
-                    input_shape=(dim_feedforward,),
-                ),
-                layers.Dropout(dropout, input_shape=(d_model,)),
-            ]
-        )
+                    layers.Dropout(dropout, input_shape=(d_model,)),
+                ]
+            )
+        else:
+            self.ffn = ffn
 
         self.norm1 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
         self.norm2 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
