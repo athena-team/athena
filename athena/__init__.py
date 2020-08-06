@@ -20,6 +20,8 @@ from .data import SpeechRecognitionDatasetKaldiIOBuilder
 from .data import SpeechSynthesisDatasetBuilder
 from .data import SpeechDatasetBuilder
 from .data import SpeechDatasetKaldiIOBuilder
+from .data import SpeakerRecognitionDatasetBuilder
+from .data import SpeakerVerificationDatasetBuilder
 from .data import LanguageDatasetBuilder
 from .data import FeatureNormalizer
 from .data.text_featurizer import TextFeaturizer
@@ -41,6 +43,7 @@ from .layers.transformer import TransformerEncoder
 from .layers.transformer import TransformerDecoder
 from .layers.transformer import TransformerEncoderLayer
 from .layers.transformer import TransformerDecoderLayer
+from .layers.resnet_block import ResnetBasicBlock
 
 # models
 from .models.base import BaseModel
@@ -52,6 +55,7 @@ from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
+from .models.speaker_resnet import SpeakerResnet
 
 # solver & loss & accuracy
 from .solver import BaseSolver

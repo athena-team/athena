@@ -24,7 +24,8 @@ from absl import logging
 try:
     import horovod.tensorflow as hvd
 except ImportError:
-    print("There is some problem with your horovod installation. But it wouldn't affect single-gpu training")
+    print("There is some problem with your horovod installation. \
+           But it wouldn't affect single-gpu training")
 from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
@@ -35,7 +36,6 @@ try:
     from pydecoders import WFSTDecoder
 except ImportError:
     print("pydecoder is not installed, this will only affect WFST decoding")
-import time
 
 
 class BaseSolver(tf.keras.Model):
@@ -46,12 +46,14 @@ class BaseSolver(tf.keras.Model):
         "log_interval": 10,
         "enable_tf_function": True
     }
-    def __init__(self, model, optimizer, sample_signature, config=None, **kwargs):
+    def __init__(self, model, optimizer, sample_signature, eval_sample_signature=None,
+                 config=None, **kwargs):
         super().__init__(**kwargs)
         self.model = model
         self.optimizer = optimizer
         self.metric_checker = MetricChecker(self.optimizer)
         self.sample_signature = sample_signature
+        self.eval_sample_signature = eval_sample_signature
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
     @staticmethod
@@ -117,7 +119,7 @@ class BaseSolver(tf.keras.Model):
         evaluate_step = self.evaluate_step
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
-            evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
+            evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
         self.model.reset_metrics()  # init metric.result() with 0
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
@@ -189,7 +191,7 @@ class HorovodSolver(BaseSolver):
         evaluate_step = self.evaluate_step
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
-            evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
+            evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
         self.model.reset_metrics()
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
