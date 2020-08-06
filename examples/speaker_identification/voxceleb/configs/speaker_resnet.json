@@ -1,0 +1,48 @@
+{
+  "batch_size":128,
+  "num_epochs":300,
+  "sorta_epoch":1,
+  "ckpt":"examples/speaker_identification/voxceleb/ckpts/speaker_resnet/",
+  "summary_dir":"examples/speaker_identification/voxceleb/ckpts/speaker_resnet/event",
+
+  "solver_gpu":[3],
+  "solver_config":{
+    "clip_norm":100,
+    "log_interval":10,
+    "enable_tf_function":true
+  },
+
+  "model":"speaker_resnet",
+  "num_classes":null,
+  "pretrained_model":null,
+  "model_config":{
+    "task":"speaker_identification",
+    "hidden_size":512,
+    "num_filters":[64, 128, 256, 512],
+    "num_layers":[3, 4, 6, 3],
+    "loss":"amsoftmax",
+    "margin":0.2,
+    "scale":30
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":4000,
+    "k":5
+  },
+
+  "dataset_builder":"speaker_recognition_dataset",
+  "num_data_threads":1,
+  "trainset_config":{
+      "data_csv":"examples/speaker_identification/voxceleb/data/vox1_iden_train.csv",
+      "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+      "cmvn_file":"examples/speaker_identification/voxceleb/data/cmvn",
+      "input_length_range":[10, 20000]
+  },
+  "devset_config":{
+    "data_csv":"examples/speaker_identification/voxceleb/data/vox1_iden_test.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/speaker_identification/voxceleb/data/cmvn"
+  }
+}
