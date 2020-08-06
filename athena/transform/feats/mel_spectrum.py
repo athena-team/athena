@@ -87,9 +87,11 @@ class MelSpectrum(BaseFrontend):
         upper_frequency_limit = 0
         lower_frequency_limit = 60
         filterbank_channel_count = 40
+        sample_rate = -1
         hparams.add_hparam('upper_frequency_limit', upper_frequency_limit)
         hparams.add_hparam('lower_frequency_limit', lower_frequency_limit)
         hparams.add_hparam('filterbank_channel_count', filterbank_channel_count)
+        hparams.add_hparam('sample_rate', sample_rate)
 
         # delta
         delta_delta = False  # True
@@ -122,22 +124,43 @@ class MelSpectrum(BaseFrontend):
         """
         p = self.config
 
-        with tf.name_scope('melspectrum'):
+        if p.sample_rate == -1:
 
-            spectrum = self.spect(audio_data, sample_rate)
-            spectrum = tf.expand_dims(spectrum, 0)
-            sample_rate = tf.cast(sample_rate, dtype=tf.int32)
+            with tf.name_scope('melspectrum'):
+                spectrum = self.spect(audio_data, sample_rate)
+                spectrum = tf.expand_dims(spectrum, 0)
+                sample_rate = tf.cast(sample_rate, dtype=tf.int32)
 
-            mel_spectrum = py_x_ops.mel_spectrum(
-                spectrum,
-                sample_rate,
-                upper_frequency_limit=p.upper_frequency_limit,
-                lower_frequency_limit=p.lower_frequency_limit,
-                filterbank_channel_count=p.filterbank_channel_count)
+                mel_spectrum = py_x_ops.mel_spectrum(
+                    spectrum,
+                    sample_rate,
+                    upper_frequency_limit=p.upper_frequency_limit,
+                    lower_frequency_limit=p.lower_frequency_limit,
+                    filterbank_channel_count=p.filterbank_channel_count)
 
-            mel_spectrum_out = tf.squeeze(mel_spectrum, axis=0)
+                mel_spectrum_out = tf.squeeze(mel_spectrum, axis=0)
 
-            return mel_spectrum_out
+                return mel_spectrum_out
+        else:
+            assert_op = tf.assert_equal(
+                tf.constant(p.sample_rate), tf.cast(sample_rate, dtype=tf.int32))
+
+            with tf.control_dependencies([assert_op]):
+
+                spectrum = self.spect(audio_data, sample_rate)
+                spectrum = tf.expand_dims(spectrum, 0)
+                sample_rate = tf.cast(sample_rate, dtype=tf.int32)
+
+                mel_spectrum = py_x_ops.mel_spectrum(
+                    spectrum,
+                    sample_rate,
+                    upper_frequency_limit=p.upper_frequency_limit,
+                    lower_frequency_limit=p.lower_frequency_limit,
+                    filterbank_channel_count=p.filterbank_channel_count)
+
+                mel_spectrum_out = tf.squeeze(mel_spectrum, axis=0)
+
+                return mel_spectrum_out
 
     def dim(self):
         p = self.config

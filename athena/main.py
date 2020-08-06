@@ -29,6 +29,8 @@ SUPPORTED_DATASET_BUILDER = {
     "speech_systhesis_dataset": SpeechSynthesisDatasetBuilder,
     "speech_dataset": SpeechDatasetBuilder,
     "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
+    "speaker_recognition_dataset": SpeakerRecognitionDatasetBuilder,
+    "speaker_verification_dataset": SpeakerVerificationDatasetBuilder,
     "language_dataset": LanguageDatasetBuilder,
 }
 
@@ -43,6 +45,7 @@ SUPPORTED_MODEL = {
     "tacotron2": Tacotron2,
     "tts_transformer": TTSTransformer,
     "fastspeech": FastSpeech
+    "speaker_resnet": SpeakerResnet
 }
 
 SUPPORTED_OPTIMIZER = {
@@ -67,6 +70,7 @@ DEFAULT_CONFIGS = {
     "optimizer_config": None,
     "num_data_threads": 1,
     "dataset_builder": "speech_recognition_dataset",
+    "dev_dataset_builder": None,
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
@@ -137,11 +141,18 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     trainset_builder.compute_cmvn_if_necessary(rank == 0)
     trainset_builder.shard(rank_size, rank)
 
+    if p.dev_dataset_builder is not None:
+        devset_builder = p.dev_dataset_builder
+    else:
+        devset_builder = p.dataset_builder
+    devset_builder = SUPPORTED_DATASET_BUILDER[devset_builder](p.devset_config)
+
     # train
     solver = Solver(
         model,
         optimizer,
         sample_signature=trainset_builder.sample_signature,
+        eval_sample_signature=devset_builder.sample_signature,
         config=p.solver_config,
     )
     loss = 0.0
@@ -153,12 +164,10 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
             trainset_builder.batch_wise_shuffle(p.batch_size)
         solver.train(trainset_builder.as_dataset(p.batch_size, p.num_data_threads))
 
-        if p.devset_config is not None:
-            if rank == 0:
-                logging.info(">>>>> start evaluate in epoch %d" % epoch)
-            devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
-            devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-            loss, metrics = solver.evaluate(devset, epoch)
+        if rank == 0:
+            logging.info(">>>>> start evaluate in epoch %d" % epoch)
+        devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
+        loss, metrics = solver.evaluate(devset, epoch)
 
         if rank == 0:
             checkpointer(loss, metrics)
