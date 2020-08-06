@@ -297,6 +297,66 @@ class GuidedMultiHeadAttentionLoss(GuidedAttentionLoss):
         return total_loss
 
 
+class FastSpeechLoss(tf.keras.losses.Loss):
+    """used for training of fastspeech"""
+
+    def __init__(self, duration_predictor_loss_weight, eps=1.0, use_mask=True, teacher_guide=False):
+        super().__init__()
+        self.eps = eps
+        self.duration_predictor_loss_weight = duration_predictor_loss_weight
+        self.use_mask = use_mask
+        self.teacher_guide = teacher_guide
+
+    def __call__(self, outputs, samples):
+        """
+        Its corresponding log value is calculated to make it Gaussian.
+        Args:
+            outputs: it contains four elements:
+                before_outs: outputs before postnet, shape: [batch, y_steps, feat_dim]
+                teacher_outs: teacher outputs, shape: [batch, y_steps, feat_dim]
+                after_outs: outputs after postnet, shape: [batch, y_steps, feat_dim]
+                duration_sequences: duration predictions from teacher model, shape: [batch, x_steps]
+                pred_duration_sequences: duration predictions from trained predictor
+                    shape: [batch, x_steps]
+            samples: samples from dataset
+
+        """
+        final_loss = {}
+        before_outs, teacher_outs, after_outs, duration_sequences, pred_duration_sequences = outputs
+        # perform masking for padded values
+        output_length = samples["output_length"]
+        output = samples["output"] # [batch, y_steps, feat_dim]
+        input_length = samples['input_length']
+        x_steps = tf.reduce_max(input_length)
+        y_steps = tf.shape(output)[1]
+        feat_dim = tf.shape(output)[2]
+        if self.use_mask:
+            mask = tf.sequence_mask(output_length, y_steps, dtype=tf.float32)
+            mask = tf.tile(tf.expand_dims(mask, axis=-1), [1, 1, feat_dim])
+        else:
+            mask = tf.ones_like(output)
+        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+
+        if self.teacher_guide:
+            l1_loss = tf.abs(after_outs - teacher_outs) + tf.abs(before_outs - teacher_outs)
+        else:
+            l1_loss = tf.abs(after_outs - output) + tf.abs(before_outs - output)
+        l1_loss *= mask
+        final_loss['l1_loss'] = tf.reduce_sum(l1_loss) / total_size
+
+        teacher_duration = tf.math.log(tf.cast(duration_sequences, dtype=tf.float32) + self.eps)
+        if self.use_mask:
+            mask = tf.sequence_mask(input_length, x_steps, dtype=tf.float32)
+        else:
+            mask = tf.ones_like(teacher_duration)
+        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+        duration_loss = tf.square(teacher_duration - pred_duration_sequences)
+        duration_loss *= mask
+        final_loss['duration_loss'] = tf.reduce_sum(duration_loss) / total_size
+
+        return final_loss
+
+
 class SoftmaxLoss(tf.keras.losses.Loss):
     """ Softmax Loss
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
