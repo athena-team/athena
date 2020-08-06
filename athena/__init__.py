@@ -49,6 +49,7 @@ from .layers.resnet_block import ResnetBasicBlock
 from .models.base import BaseModel
 from .models.speech_transformer import SpeechTransformer, SpeechTransformer2
 from .models.tacotron2 import Tacotron2
+from .models.tts_transformer import TTSTransformer
 from .models.masked_pc import MaskedPredictCoding
 from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
