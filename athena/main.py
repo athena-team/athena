@@ -41,7 +41,8 @@ SUPPORTED_MODEL = {
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
     "tacotron2": Tacotron2,
-    "tts_transformer": TTSTransformer
+    "tts_transformer": TTSTransformer,
+    "fastspeech": FastSpeech
 }
 
 SUPPORTED_OPTIMIZER = {
@@ -61,6 +62,7 @@ DEFAULT_CONFIGS = {
     "num_classes": None,
     "model_config": None,
     "pretrained_model": None,
+    "teacher_model": None,
     "optimizer": "warmup_adam",
     "optimizer_config": None,
     "num_data_threads": 1,
@@ -124,7 +126,9 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     if p.pretrained_model is not None and epoch == 0:
         p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
         model.restore_from_pretrained_model(pretrained_model, p2.model)
-
+    if p.teacher_model is not None:
+        p3, teacher_model, _, _ = build_model_from_jsonfile(p.teacher_model)
+        model.set_teacher_model(teacher_model, p3.model)
     if rank == 0:
         set_default_summary_writer(p.summary_dir)
 
