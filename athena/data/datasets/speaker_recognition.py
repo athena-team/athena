@@ -48,6 +48,7 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
     default_config = {
         "audio_config": {"type": "Fbank"},
         "cmvn_file": None,
+        "cut_frame": None,
         "input_length_range": [20, 50000],
         "data_csv": None
     }
@@ -89,6 +90,17 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         self.filter_sample_by_input_length()
         return self
 
+    def cut_features(self, feature):
+        """ Cut acoustic featuers
+        """
+        length = self.hparams.cut_frame
+        # randomly select a start frame
+        max_start_frames = tf.shape(feature)[0] - length
+        if max_start_frames <= 0:
+            return feature
+        start_frames = tf.random.uniform([], 0, max_start_frames, tf.int32)
+        return feature[start_frames:start_frames + length, :, :]
+
     def load_csv(self, data_csv_path):
         """ load csv file """
         return self.preprocess_data(data_csv_path)
@@ -97,6 +109,8 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         audio_data, _, spkid, spkname = self.entries[index]
         feat = self.audio_featurizer(audio_data)
         feat = self.feature_normalizer(feat, spkname)
+        if self.hparams.cut_frame is not None:
+            feat = self.cut_features(feat)
         feat_length = feat.shape[0]
         spkid = [spkid]
         return {

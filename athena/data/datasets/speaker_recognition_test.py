@@ -25,18 +25,17 @@ def test():
     ''' test the speed of speaker dataset '''
     dataset_builder = SpeakerRecognitionDatasetBuilder(
         {
-            "data_csv": "examples/speaker/voxceleb/data/vox1_dev_wav.csv",
+            "data_csv":"examples/speaker_identification/voxceleb/data/vox1_iden_test.csv",
+            "cut_frame": 500,
             "audio_config": {
                 "type": "Fbank",
-                "filterbank_channel_count": 40,
-                "sample_rate": 16000,
-                "local_cmvn": False,
+                "filterbank_channel_count": 40
             },
-            "cmvn_file":"examples/speaker/voxceleb/data/cmvn"
+            "cmvn_file":"examples/speaker_identification/voxceleb/data/vox1_iden_cmvn_speaker"
         }
     )
-    dataset_builder.compute_cmvn_if_necessary(True)
-    dataset = dataset_builder.as_dataset(16, 4)
+    dataset_builder.compute_cmvn_if_necessary(False)
+    dataset = dataset_builder.as_dataset(16, 1)
     start = time.time()
     for _ in tqdm.tqdm(dataset, total=len(dataset_builder)//16):
         pass
