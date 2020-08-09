@@ -84,7 +84,7 @@ python -m pip install --ignore-installed dist/athena-0.1.0*.whl
 - Once athena is successfully installed , you should do `source tools/env.sh` firstly before doing other things.
 - For installing some other supporting tools, you can check the `tools/install*.sh` to install kenlm, sph2pipe, spm and ... [Optional]
 
-### 3.5) Test your installation
+### 3.6) Test your installation
 
 - On a single cpu/gpu
 
@@ -235,7 +235,7 @@ Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
 English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
 English  | Transformer | [Switchboard Dataset](https://catalog.ldc.upenn.edu/LDC97S62) | 260h | 8.6% (WER) |
-English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 3 h | 16.8% (WER) |
+English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 3 h | 16.8% (PER) |
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
 Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 6.6% (CER)
 

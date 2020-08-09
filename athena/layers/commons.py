@@ -42,6 +42,23 @@ class PositionalEncoding(tf.keras.layers.Layer):
         return x
 
 
+class ScaledPositionalEncoding(PositionalEncoding):
+    """ scaled positional encoding,
+        reference: https://arxiv.org/pdf/1809.08895.pdf"""
+    def __init__(self, d_model, max_position=800):
+        super().__init__(d_model, max_position, scale=False)
+
+    def build(self, _):
+        self.alpha = self.add_weight(
+            name="alpha", initializer=tf.keras.initializers.constant(1)
+        )
+
+    def call(self, x):
+        seq_len = tf.shape(x)[1]
+        x += self.alpha * self.pos_encoding[:, :seq_len, :]
+        return x
+
+
 class Collapse4D(tf.keras.layers.Layer):
     """ callapse4d can be used in cnn-lstm for speech processing
     reshape from [N T D C] -> [N T D*C]
