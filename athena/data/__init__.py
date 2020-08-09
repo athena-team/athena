@@ -20,6 +20,8 @@ from .datasets.speech_recognition_kaldiio import SpeechRecognitionDatasetKaldiIO
 from .datasets.speech_synthesis import SpeechSynthesisDatasetBuilder
 from .datasets.speech_set import SpeechDatasetBuilder
 from .datasets.speech_set_kaldiio import SpeechDatasetKaldiIOBuilder
+from .datasets.speaker_recognition import SpeakerRecognitionDatasetBuilder
+from .datasets.speaker_recognition import SpeakerVerificationDatasetBuilder
 from .datasets.language_set import LanguageDatasetBuilder
 from .datasets.voice_conversion import VoiceConversionDatasetBuilder
 from .feature_normalizer import FeatureNormalizer

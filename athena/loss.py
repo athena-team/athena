@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 # Only support eager mode and TF>=2.0.0
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, too-many-arguments
 """ some losses """
 import math
 import tensorflow as tf
@@ -104,16 +104,16 @@ class Tacotron2Loss(tf.keras.losses.Loss):
     """ Tacotron2 Loss
     """
 
-    def __init__(self, model, guided_attn_weight=0.0, regularization_weight=0.0,
-                 l1_loss_weight=0.0, attn_sigma=0.4, mask_decoder=False,
+    def __init__(self, model, guided_attn_loss_function, regularization_weight=0.0,
+                 l1_loss_weight=0.0, mask_decoder=False, pos_weight=1.0,
                  name="Tacotron2Loss"):
         super().__init__(name=name)
         self.model = model
-        self.guided_attn_weight = guided_attn_weight
         self.regularization_weight = regularization_weight
         self.l1_loss_weight = l1_loss_weight
         self.mask_decoder = mask_decoder
-        self.attn_sigma = attn_sigma
+        self.guided_attn_loss_function = guided_attn_loss_function
+        self.pos_weight = pos_weight
 
     def __call__(self, outputs, samples, logit_length=None):
         """
@@ -151,25 +151,16 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         ones = tf.ones_like(indexes, dtype=tf.float32)
         labels = tf.where(end_index <= indexes, ones, zeroes) # [batch, y_steps]
         # bce_loss is used for stop token prediction
-        bce_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits_stack[:, :, 0])
+        bce_loss = tf.nn.weighted_cross_entropy_with_logits(labels=labels,
+                                                            logits=logits_stack[:, :, 0],
+                                                            pos_weight=self.pos_weight)
         bce_loss = bce_loss[:, :, tf.newaxis]
         bce_loss *= mask
         final_loss['mse_loss'] = tf.reduce_sum(mse_loss) / total_size
         final_loss['bce_loss'] = tf.reduce_sum(bce_loss) / total_size
-
-        input_length = samples["input_length"]
-        if self.guided_attn_weight > 0:
-            reduction_output_length = (output_length - 1) // self.model.reduction_factor + 1
-            # guided_attn_masks shape: [batch_size, reduction_y_steps, x_steps]
-            attn_masks = self._create_attention_masks(input_length, reduction_output_length)
-            # length_masks shape: [batch_size, reduction_y_steps, x_steps]
-            length_masks = self._create_length_masks(input_length, reduction_output_length)
-            att_ws_stack = tf.cast(att_ws_stack, dtype=tf.float32)
-            losses = attn_masks * att_ws_stack
-            losses *= length_masks
-            loss = tf.reduce_sum(losses)
-            total_size = tf.cast(tf.reduce_sum(length_masks), dtype=tf.float32)
-            final_loss['guided_attn_loss'] = self.guided_attn_weight * loss / total_size
+        if self.guided_attn_loss_function is not None and \
+                self.guided_attn_loss_function.guided_attn_weight > 0:
+            final_loss['guided_attn_loss'] = self.guided_attn_loss_function(att_ws_stack, samples)
         if self.regularization_weight > 0:
             computed_vars = [var for var in self.model.trainable_variables
                              if 'bias' not in var.name and \
@@ -183,6 +174,33 @@ class Tacotron2Loss(tf.keras.losses.Loss):
 
         return final_loss
 
+
+class GuidedAttentionLoss(tf.keras.losses.Loss):
+
+    def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4,
+                 name='GuidedAttentionLoss'):
+        super().__init__(name=name)
+        self.guided_attn_weight = guided_attn_weight
+        self.reduction_factor = reduction_factor
+        self.attn_sigma = attn_sigma
+
+    def __call__(self, att_ws_stack, samples):
+        output_length = samples["output_length"]
+        input_length = samples["input_length"]
+        reduction_output_length = (output_length - 1) // self.reduction_factor + 1
+        # attn_masks shape: [batch_size, 1, reduction_y_steps, x_steps]
+        attn_masks = self._create_attention_masks(input_length, reduction_output_length)
+        # length_masks shape: [batch_size, 1, reduction_y_steps, x_steps]
+        length_masks = self._create_length_masks(input_length, reduction_output_length)
+        att_ws_stack = tf.cast(att_ws_stack, dtype=tf.float32)
+        if len(tf.shape(att_ws_stack)) == 3:
+            att_ws_stack = tf.expand_dims(att_ws_stack, axis=1)
+        losses = attn_masks * att_ws_stack
+        losses *= length_masks
+        loss = tf.reduce_sum(losses)
+        total_size = tf.cast(tf.reduce_sum(length_masks), dtype=tf.float32)
+        return self.guided_attn_weight * loss / total_size
+
     def _create_attention_masks(self, input_length, output_length):
         """masks created by attention location
 
@@ -191,7 +209,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
             output_length: shape: [batch_size]
 
         Returns:
-            masks: shape: [batch_size, y_steps, x_steps]
+            masks: shape: [batch_size, 1, y_steps, x_steps]
         """
         batch_size = tf.shape(input_length)[0]
         input_max_len = tf.reduce_max(input_length)
@@ -209,6 +227,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         # masks shape: [batch_size, y_steps, x_steps]
         masks = 1.0 - tf.math.exp(-(grid_y / input_length - grid_x / output_length) ** 2
                                  / (2 * (self.attn_sigma ** 2)))
+        masks = tf.expand_dims(masks, axis=1)
         masks = tf.cast(masks, dtype=tf.float32)
         return masks
 
@@ -220,7 +239,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
             output_length: shape: [batch_size]
 
         Returns:
-            masks: shape: [batch_size, output_length, input_length]
+            masks: shape: [batch_size, 1, output_length, input_length]
 
         Examples:
             output_length: [6, 8]
@@ -252,8 +271,90 @@ class Tacotron2Loss(tf.keras.losses.Loss):
         output_masks = tf.sequence_mask(output_length)
         output_masks = tf.tile(tf.expand_dims(output_masks, -1), [1, 1, input_max_len])
         masks = tf.math.logical_and(input_masks, output_masks)
+        masks = tf.expand_dims(masks, axis=1)
         masks = tf.cast(masks, dtype=tf.float32)
         return masks
+
+
+class GuidedMultiHeadAttentionLoss(GuidedAttentionLoss):
+    """Guided multihead attention loss function module for multi head attention."""
+
+    def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4, num_heads=2,
+                 num_layers=2, name='GuidedMultiHeadAttentionLoss'):
+        super().__init__(guided_attn_weight, reduction_factor, attn_sigma, name=name)
+        self.num_heads = num_heads
+        self.num_layers = num_layers
+
+    def __call__(self, att_ws_stack, samples):
+        # att_ws_layer: shape: [batch, head, y_steps, x_steps]
+        total_loss = 0
+        total_layers = len(att_ws_stack)
+        for index, layer_index in enumerate(reversed(range(total_layers))):
+            if index >= self.num_layers:
+                break
+            att_ws_layer = att_ws_stack[layer_index]
+            total_loss += super().__call__(att_ws_layer[:, :self.num_heads], samples)
+        return total_loss
+
+
+class FastSpeechLoss(tf.keras.losses.Loss):
+    """used for training of fastspeech"""
+
+    def __init__(self, duration_predictor_loss_weight, eps=1.0, use_mask=True, teacher_guide=False):
+        super().__init__()
+        self.eps = eps
+        self.duration_predictor_loss_weight = duration_predictor_loss_weight
+        self.use_mask = use_mask
+        self.teacher_guide = teacher_guide
+
+    def __call__(self, outputs, samples):
+        """
+        Its corresponding log value is calculated to make it Gaussian.
+        Args:
+            outputs: it contains four elements:
+                before_outs: outputs before postnet, shape: [batch, y_steps, feat_dim]
+                teacher_outs: teacher outputs, shape: [batch, y_steps, feat_dim]
+                after_outs: outputs after postnet, shape: [batch, y_steps, feat_dim]
+                duration_sequences: duration predictions from teacher model, shape: [batch, x_steps]
+                pred_duration_sequences: duration predictions from trained predictor
+                    shape: [batch, x_steps]
+            samples: samples from dataset
+
+        """
+        final_loss = {}
+        before_outs, teacher_outs, after_outs, duration_sequences, pred_duration_sequences = outputs
+        # perform masking for padded values
+        output_length = samples["output_length"]
+        output = samples["output"] # [batch, y_steps, feat_dim]
+        input_length = samples['input_length']
+        x_steps = tf.reduce_max(input_length)
+        y_steps = tf.shape(output)[1]
+        feat_dim = tf.shape(output)[2]
+        if self.use_mask:
+            mask = tf.sequence_mask(output_length, y_steps, dtype=tf.float32)
+            mask = tf.tile(tf.expand_dims(mask, axis=-1), [1, 1, feat_dim])
+        else:
+            mask = tf.ones_like(output)
+        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+
+        if self.teacher_guide:
+            l1_loss = tf.abs(after_outs - teacher_outs) + tf.abs(before_outs - teacher_outs)
+        else:
+            l1_loss = tf.abs(after_outs - output) + tf.abs(before_outs - output)
+        l1_loss *= mask
+        final_loss['l1_loss'] = tf.reduce_sum(l1_loss) / total_size
+
+        teacher_duration = tf.math.log(tf.cast(duration_sequences, dtype=tf.float32) + self.eps)
+        if self.use_mask:
+            mask = tf.sequence_mask(input_length, x_steps, dtype=tf.float32)
+        else:
+            mask = tf.ones_like(teacher_duration)
+        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+        duration_loss = tf.square(teacher_duration - pred_duration_sequences)
+        duration_loss *= mask
+        final_loss['duration_loss'] = tf.reduce_sum(duration_loss) / total_size
+
+        return final_loss
 
 
 class SoftmaxLoss(tf.keras.losses.Loss):
@@ -271,11 +372,12 @@ class SoftmaxLoss(tf.keras.losses.Loss):
             input_shape=(embedding_size,),
         )
 
-    def __call__(self, inputs, labels):
-        inputs = self.dense(inputs)
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = tf.squeeze(samples['output'])
+        outputs = self.dense(outputs)
         label_onehot = tf.one_hot(labels, self.num_classes)
-        loss = tf.reduce_mean(self.criterion(label_onehot, inputs))
-        return loss
+        loss = tf.reduce_mean(self.criterion(label_onehot, outputs))
+        return loss, outputs
 
 
 class AMSoftmaxLoss(tf.keras.losses.Loss):
@@ -296,22 +398,19 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
                              name="AMSoftmaxLoss_weight")
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
 
-    def __call__(self, inputs, labels):
-        assert tf.shape(inputs)[0] == tf.shape(labels)[0]
-        assert tf.shape(inputs)[1] == self.embedding_size
-        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = tf.squeeze(samples['output'])
+        outputs_norm = tf.math.l2_normalize(outputs, axis=1)
         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
-        costh = tf.matmul(inputs_norm, weight_norm)
+        costh = tf.matmul(outputs_norm, weight_norm)
 
         label_onehot = tf.one_hot(labels, self.num_classes)
-        costh_shape = tf.cast(tf.shape(costh), dtype=tf.int64)
-        m_reshape = tf.constant(self.m, shape=costh_shape)
-        delt_costh = tf.math.multiply(label_onehot, m_reshape)
+        delt_costh = self.m * label_onehot
 
         costh_m = costh - delt_costh
         costh_m_s = self.s * costh_m
         loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
-        return loss
+        return loss, costh_m_s
 
 
 class AAMSoftmaxLoss(tf.keras.losses.Loss):
@@ -330,7 +429,7 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         initializer = tf.initializers.GlorotNormal()
         self.weight = tf.Variable(initializer(
                              shape=[embedding_size, num_classes], dtype=tf.float32),
-                             name="AMSoftmaxLoss_weight")
+                             name="AAMSoftmaxLoss_weight")
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.easy_margin = easy_margin
         self.cos_m = math.cos(self.m)
@@ -340,10 +439,11 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         self.th = math.cos(math.pi - self.m)
         self.mm = math.sin(math.pi - self.m) * self.m
 
-    def __call__(self, inputs, labels):
-        inputs_norm = tf.math.l2_normalize(inputs, axis=1)
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = tf.squeeze(samples['output'])
+        outputs_norm = tf.math.l2_normalize(outputs, axis=1)
         weight_norm = tf.math.l2_normalize(self.weight, axis=0)
-        cosine = tf.matmul(inputs_norm, weight_norm)
+        cosine = tf.matmul(outputs_norm, weight_norm)
         sine = tf.clip_by_value(tf.math.sqrt(1.0 - tf.math.pow(cosine, 2)), 0, 1)
         phi = cosine * self.cos_m - sine * self.sin_m
 
@@ -356,7 +456,7 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
         output = (label_onehot * phi) + ((1.0 - label_onehot) * cosine)
         output = output * self.s
         loss = tf.reduce_mean(self.criterion(label_onehot, output))
-        return loss
+        return loss, output
 
 
 class ProtoLoss(tf.keras.losses.Loss):
@@ -369,14 +469,13 @@ class ProtoLoss(tf.keras.losses.Loss):
         super().__init__(name=name)
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
 
-    def __call__(self, inputs, labels=None):
+    def __call__(self, outputs, samples=None, logit_length=None):
         """
             Args:
-                inputs: [batch_size, num_speaker_utts, embedding_size]
-                labels: [batch_size]
+                outputs: [batch_size, num_speaker_utts, embedding_size]
         """
-        out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
-        out_positive = inputs[:, 0, :]
+        out_anchor = tf.math.reduce_mean(outputs[:, 1:, :], axis=1)
+        out_positive = outputs[:, 0, :]
         step_size = tf.shape(out_anchor)[0]
 
         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
@@ -402,14 +501,13 @@ class AngleProtoLoss(tf.keras.losses.Loss):
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.cosine_similarity = tf.keras.losses.cosine_similarity
 
-    def __call__(self, inputs, labels=None):
+    def __call__(self, outputs, samples=None, logit_length=None):
         """
              Args:
-                inputs: [batch_size, num_speaker_utts, embedding_size]
-                labels: [batch_size]
+                outputs: [batch_size, num_speaker_utts, embedding_size]
         """
-        out_anchor = tf.math.reduce_mean(inputs[:, 1:, :], axis=1)
-        out_positive = inputs[:, 0, :]
+        out_anchor = tf.math.reduce_mean(outputs[:, 1:, :], axis=1)
+        out_positive = outputs[:, 0, :]
         step_size = tf.shape(out_anchor)[0]
 
         out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
@@ -437,22 +535,21 @@ class GE2ELoss(tf.keras.losses.Loss):
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.cosine_similarity = tf.keras.losses.cosine_similarity
 
-    def __call__(self, inputs, labels=None):
+    def __call__(self, outputs, samples=None, logit_length=None):
         """
              Args:
-                inputs: [batch_size, num_speaker_utts, embedding_size]
-                labels: [batch_size]
+                outputs: [batch_size, num_speaker_utts, embedding_size]
         """
-        step_size = tf.shape(inputs)[0]
-        num_speaker_utts = tf.shape(inputs)[1]
-        centroids = tf.math.reduce_mean(inputs, axis=1)
+        step_size = tf.shape(outputs)[0]
+        num_speaker_utts = tf.shape(outputs)[1]
+        centroids = tf.math.reduce_mean(outputs, axis=1)
         cosine_all = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
         for utt in range(0, num_speaker_utts):
             index = [*range(0, num_speaker_utts)]
             index.remove(utt)
-            out_positive = inputs[:, utt, :]
-            out_anchor = tf.math.reduce_mean(tf.gather(inputs, tf.constant(index), axis=1), axis=1)
+            out_positive = outputs[:, utt, :]
+            out_anchor = tf.math.reduce_mean(tf.gather(outputs, tf.constant(index), axis=1), axis=1)
 
             out_positive_reshape = tf.tile(tf.expand_dims(out_positive, -1), [1, 1, step_size])
             centroids_reshape = tf.transpose(tf.tile(
