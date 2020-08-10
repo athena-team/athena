@@ -34,11 +34,11 @@ if __name__ == "__main__":
     tf.random.set_seed(1)
 
     json_file = sys.argv[1]
-    #config = None
-    #with open(json_file) as f:
-    #    config = json.load(f)
-    #p = parse_config(config)
-    HorovodSolver.initialize_devices()
+    config = None
+    with open(json_file) as f:
+        config = json.load(f)
+    p = parse_config(config)
+    HorovodSolver.initialize_devices(p.solver_gpu)
     #multi-servers training should use hvd.rank()
     train(json_file, HorovodSolver, hvd.size(), hvd.rank())
 

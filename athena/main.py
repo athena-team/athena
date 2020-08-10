@@ -44,7 +44,7 @@ SUPPORTED_MODEL = {
     "translate_transformer": NeuralTranslateTransformer,
     "tacotron2": Tacotron2,
     "tts_transformer": TTSTransformer,
-    "fastspeech": FastSpeech
+    "fastspeech": FastSpeech,
     "speaker_resnet": SpeakerResnet
 }
 
@@ -59,6 +59,7 @@ DEFAULT_CONFIGS = {
     "sorta_epoch": 1,
     "ckpt": None,
     "summary_dir": None,
+    "solver_type": "asr",
     "solver_gpu": [0],
     "solver_config": None,
     "model": "speech_transformer",
