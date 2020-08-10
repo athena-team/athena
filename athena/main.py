@@ -44,7 +44,7 @@ SUPPORTED_MODEL = {
     "translate_transformer": NeuralTranslateTransformer,
     "tacotron2": Tacotron2,
     "tts_transformer": TTSTransformer,
-    "fastspeech": FastSpeech
+    "fastspeech": FastSpeech,
     "speaker_resnet": SpeakerResnet
 }
 
