@@ -90,6 +90,11 @@ def create_multihead_mask(x, x_length, y, reverse=False):
     return x_mask, y_mask
 
 
+def gated_linear_layer(inputs, gates, name=None):
+    h1_glu = tf.keras.layers.multiply(inputs=[inputs, tf.sigmoid(gates)], name=name)
+    return h1_glu
+
+
 def validate_seqs(seqs, eos):
     """  Discard end symbol and elements after end symbol
     Args:
