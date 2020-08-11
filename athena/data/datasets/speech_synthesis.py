@@ -271,5 +271,5 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
                 self.entries, self.speakers, self.audio_featurizer, feature_dim,
                 num_cmvn_workers=self.hparams.num_cmvn_workers
             )
-        self.feature_normalizer.save_cmvn()
+        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
         return self
