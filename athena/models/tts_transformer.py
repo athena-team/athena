@@ -26,7 +26,7 @@ from ..loss import Tacotron2Loss, GuidedMultiHeadAttentionLoss
 from ..layers.commons import ScaledPositionalEncoding
 from ..layers.transformer import Transformer
 from ..utils.hparam import register_and_parse_hparams
-from ..utils.misc import generate_square_subsequent_mask
+from ..utils.misc import generate_square_subsequent_mask, create_multihead_mask
 
 
 class TTSTransformer(Tacotron2):
@@ -118,26 +118,6 @@ class TTSTransformer(Tacotron2):
             self.hparams.rate
         )
 
-    @staticmethod
-    def _create_masks(y, output_length, x):
-        r""" Generate a square mask for the sequence. The masked positions are
-        filled with float(1.0). Unmasked positions are filled with float(0.0).
-        """
-        input_mask, output_mask = None, None
-        if y is not None:
-            output_mask = 1.0 - tf.sequence_mask(
-                output_length, tf.shape(y)[1], dtype=tf.float32
-            )
-            output_mask = output_mask[:, tf.newaxis, tf.newaxis, :]
-            look_ahead_mask = generate_square_subsequent_mask(tf.shape(y)[1])
-            output_mask = tf.maximum(output_mask, look_ahead_mask)
-            output_mask.set_shape([None, None, None, None])
-        if x is not None:
-            input_mask = tf.cast(tf.math.equal(x, 0), tf.float32)
-            input_mask = input_mask[:, tf.newaxis, tf.newaxis, :]
-            input_mask.set_shape([None, None, None, None])
-        return output_mask, input_mask
-
     def call(self, samples, training: bool = None):
         x0 = samples["input"]
         x = self.x_net(x0, training=training)
@@ -149,7 +129,7 @@ class TTSTransformer(Tacotron2):
             reduction_output_length = (samples['output_length'] - 1) // self.reduction_factor + 1
         y0 = self.initialize_input_y(y0)
         y = self.y_net(y0, training=training)
-        output_mask, input_mask = self._create_masks(y0, reduction_output_length, x0)
+        output_mask, input_mask = create_multihead_mask(y0, reduction_output_length, x0, reverse=True)
         y, attention_weights = self.transformer(
             x,
             y,
@@ -220,7 +200,7 @@ class TTSTransformer(Tacotron2):
 
         x0 = samples["input"]
         input_length = samples['input_length']
-        _, input_mask = self._create_masks(None, None, x0)
+        _, input_mask = create_multihead_mask(None, None, x0, reverse=True)
         x = self.x_net(x0, training=False)
         encoder_output = self.transformer.encoder(x, input_mask, training=False)
 

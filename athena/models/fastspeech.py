@@ -3,9 +3,8 @@ import tensorflow as tf
 from .base import BaseModel
 from ..utils.hparam import register_and_parse_hparams
 from ..layers.transformer import TransformerEncoderLayer, TransformerEncoder
-from ..models.tts_transformer import TTSTransformer
-from ..models.speech_transformer import SpeechTransformer
 from ..layers.commons import ScaledPositionalEncoding
+from ..utils.misc import create_multihead_mask
 from ..loss import FastSpeechLoss
 from absl import logging
 
@@ -62,8 +61,6 @@ class FastSpeech(BaseModel):
         inner = ScaledPositionalEncoding(self.hparams.d_model)(inner)
         inner = layers.Dropout(self.hparams.rate)(inner)  # self.hparams.rate
         self.x_net = tf.keras.Model(inputs=input_features, outputs=inner, name="x_net")
-        self.synthesis = tf.function(self._synthesize,
-                                     input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32)])
         print(self.x_net.summary())
 
         ffn_list = []
@@ -208,7 +205,7 @@ class FastSpeech(BaseModel):
                                                              alpha=self.hparams.alpha)
             expanded_length = tf.reduce_sum(duration_sequences, axis=1) # [batch]
         expanded_array = tf.ensure_shape(expanded_array, [None, None, self.hparams.d_model])
-        expanded_mask, _ = SpeechTransformer._create_masks(expanded_array, expanded_length, None)
+        expanded_mask, _ = create_multihead_mask(expanded_array, expanded_length, None)
         expanded_output = self.y_net(expanded_array, training=training)
         # decoder_output, shape: [batch, expanded_length, d_model]
         decoder_output = self.decoder(expanded_output, expanded_mask, training=training)
@@ -220,7 +217,7 @@ class FastSpeech(BaseModel):
 
     def call(self, samples, training: bool = None):
         x0 = self.x_net(samples['input'], training=training)
-        _, input_mask = TTSTransformer._create_masks(None, None, samples['input'])
+        _, input_mask = create_multihead_mask(None, None, samples['input'], reverse=True)
         encoder_output = self.encoder(x0, input_mask, training=training) # [batch, x_steps, d_model]
         teacher_outs, duration_indexes, duration_sequences = self.duration_calculator(samples)
         pred_duration_sequences = self.duration_predictor(encoder_output, training=training)
@@ -232,7 +229,7 @@ class FastSpeech(BaseModel):
 
     def synthesize(self, samples):
         x0 = self.x_net(samples['input'], training=False)
-        _, input_mask = TTSTransformer._create_masks(None, None, samples['input'])
+        _, input_mask = create_multihead_mask(None, None, samples['input'], reverse=True)
         encoder_output = self.encoder(x0, input_mask, training=False) # [batch, x_steps, d_model]
 
         duration_sequences = self.duration_predictor(encoder_output, training=False)
