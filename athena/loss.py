@@ -76,7 +76,7 @@ class Seq2SeqSparseCategoricalCrossentropy(tf.keras.losses.CategoricalCrossentro
 
 
 class MPCLoss(tf.keras.losses.Loss):
-    """MPC LOSS
+    """ MPC LOSS
     L1 loss for each masked acoustic features in a batch
     """
 
@@ -101,7 +101,7 @@ class MPCLoss(tf.keras.losses.Loss):
 
 
 class Tacotron2Loss(tf.keras.losses.Loss):
-    """Tacotron2 Loss
+    """ Tacotron2 Loss
     """
 
     def __init__(self, model, guided_attn_loss_function, regularization_weight=0.0,
@@ -572,3 +572,92 @@ class GE2ELoss(tf.keras.losses.Loss):
         labels_onehot = tf.one_hot(labels_repeat, step_size)
         loss = tf.reduce_mean(self.criterion(labels_onehot, cosine_w_b_reshape))
         return loss
+
+
+class StarganLoss(tf.keras.losses.Loss):
+    """ Loss for stargan model, it consists of three parts, generator_loss,
+        discriminator_loss and classifier_loss. lambda_identity and lambda_classifier 
+        is added to make loss values comparable
+    """
+    def __init__(self, lambda_cycle, lambda_identity, lambda_classifier, name="StarganLoss"):
+        super().__init__(name=name)
+        self.lambda_cycle = lambda_cycle
+        self.lambda_identity = lambda_identity
+        self.lambda_classifier = lambda_classifier
+
+    def __call__(self, outputs, samples, logit_length=None, stage=None):
+        input_real, target_real, target_label, source_label = \
+            samples["src_coded_sp"], samples["tar_coded_sp"], \
+            samples["tar_speaker"], samples["src_speaker"]
+
+        target_label_reshaped = outputs["target_label_reshaped"]
+
+        if stage == "classifier":
+            domain_out_real = outputs["domain_out_real"]
+            loss = ClassifyLoss(target_label_reshaped, domain_out_real)
+        elif stage == "generator":
+            discirmination, generated_back, identity_map, domain_out_real = \
+            outputs["discirmination"], outputs["generated_back"], outputs["identity_map"], outputs["domain_out_real"]
+
+            loss = GeneratorLoss(discirmination, input_real, generated_back, identity_map,\
+                                           target_label_reshaped, domain_out_real, self.lambda_cycle,\
+                                           self.lambda_identity, self.lambda_classifier)
+        else:
+            discrimination_real, discirmination, domain_out_fake, gradient_penalty = outputs["discrimination_real"], \
+                outputs["discirmination"], outputs["domain_out_fake"], outputs["gradient_penalty"]
+            loss = DiscriminatorLoss(discrimination_real, discirmination,\
+                                             target_label_reshaped, domain_out_fake, gradient_penalty)
+        return loss
+
+
+def GeneratorLoss(discirmination, input_real, generated_back, identity_map, target_label_reshaped,\
+                  domain_out_real, lambda_cycle, lambda_identity, lambda_classifier):
+    """ Loss for generator part of stargan model, it consists of cycle_loss with unparallel data, 
+        identity loss for data coming from same class and another loss from tricking the discriminator
+    """
+    domain_real_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits \
+                                      (labels=target_label_reshaped, logits=domain_out_real))
+
+    # we need to trim input to have the same length as output because it might not be divisible with 4
+    length = tf.math.minimum(tf.shape(generated_back)[2], tf.shape(input_real)[2])
+    cycle_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - generated_back[:, :, 0: length, :]))
+    identity_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - identity_map[:, :, 0: length, :]))
+
+    generator_loss = tf.reduce_mean(\
+    tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discirmination),\
+                                            logits=discirmination))
+
+    generator_loss_all = generator_loss + lambda_cycle * cycle_loss + \
+                         lambda_identity * identity_loss + lambda_classifier * domain_real_loss
+    return generator_loss_all
+
+
+def DiscriminatorLoss(discrimination_real, discirmination_fake, target_label_reshaped,\
+                                             domain_out_fake, gradient_penalty):
+    """ Loss for discriminator part of stargan model, it consists of discrimination loss from real and 
+        generated data and domain classification loss from generated data  
+    """
+    discrimination_real_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discrimination_real),\
+                                                logits=discrimination_real))
+
+    discrimination_fake_loss = tf.reduce_mean(
+        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(discirmination_fake),\
+                                                logits=discirmination_fake))
+
+    domain_fake_loss = tf.reduce_mean(\
+        tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_fake))
+
+    discrimator_loss = discrimination_fake_loss + discrimination_real_loss + domain_fake_loss \
+                        + gradient_penalty
+    return discrimator_loss
+
+
+def ClassifyLoss(target_label_reshaped, domain_out_real):
+    """ Loss for classifier part of stargan model, it consists of classifier loss from real data 
+    """
+    domain_real_loss = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_real))
+    return domain_real_loss
+
+
