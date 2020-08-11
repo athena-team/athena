@@ -19,8 +19,8 @@
 """ preprecessing for speech features """
 import random
 from PIL import Image
-from ...utils.hparam import register_and_parse_hparams
 import tensorflow as tf
+from ...utils.hparam import register_and_parse_hparams
 
 class SpecAugment:
     """ Implementation of specaugument from paper "SpecAugment: A Simple Data

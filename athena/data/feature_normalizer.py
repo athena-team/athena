@@ -18,12 +18,12 @@
 import os
 import json
 import time
+import multiprocessing as mp
+from multiprocessing import cpu_count
 import pandas
 from absl import logging
 import tensorflow as tf
 import numpy as np
-import multiprocessing as mp
-from multiprocessing import cpu_count
 import tqdm
 
 def compute_cmvn_by_chunk_for_all_speaker(feature_dim, speakers, featurizer, entries):

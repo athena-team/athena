@@ -176,6 +176,8 @@ class Tacotron2Loss(tf.keras.losses.Loss):
 
 
 class GuidedAttentionLoss(tf.keras.losses.Loss):
+    """ GuidedAttention Loss to make attention alignments more monotonic
+    """
 
     def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4,
                  name='GuidedAttentionLoss'):
