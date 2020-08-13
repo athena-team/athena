@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) 2019 ATHENA AUTHORS; Ne Luo
+# Copyright (C) 2020 ATHENA AUTHORS; Ne Luo
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,16 +37,13 @@ SUPPORTED_LOSS = {
 }
 
 class SpeakerResnet(BaseModel):
-    """ A sample implementation of resnet 34
+    """ A sample implementation of resnet 34 for speaker recognition
         Reference to paper "Deep residual learning for image recognition"
         The implementation is the same as the standard resnet with 34 weighted layers,
         excepts using only 1/4 amount of filters to reduce computation.
-        config:
-            task: "speaker_identification" or "speaker_verification"
     """
     default_config = {
-        "task": "speaker_identification",
-        "hidden_size": 512,
+        "hidden_size": 128,
         "num_filters": [16, 32, 64, 128],
         "num_layers": [3, 4, 6, 3],
         "loss": "amsoftmax",
@@ -60,12 +57,7 @@ class SpeakerResnet(BaseModel):
         # number of speakers
         self.num_class = data_descriptions.num_class
         self.loss_function = self.init_loss(self.hparams.loss)
-        self.task = self.hparams.task
-        self.metric = ClassificationAccuracy(name="Top1-Accuracy")
-        # equal error rate metric for evaluating
-        if self.task == "speaker_verification":
-            self.eval_metric = EqualErrorRate(name="EER")
-
+        self.metric = ClassificationAccuracy(top_k=1, name="Top1-Accuracy")
         num_filters = self.hparams.num_filters
         num_layers = self.hparams.num_layers
 
@@ -101,47 +93,105 @@ class SpeakerResnet(BaseModel):
                                              name="speaker_resnet")
         print(self.speaker_resnet.summary())
 
+        self.final_layer = self.make_final_layer(self.hparams.hidden_size,
+                                                 self.num_class, self.hparams.loss)
+
+    def make_resnet_block_layer(self, num_filter, num_blocks, stride=1):
+        resnet_block = tf.keras.Sequential()
+        resnet_block.add(ResnetBasicBlock(num_filter, stride))
+        for _ in range(1, num_blocks):
+            resnet_block.add(ResnetBasicBlock(num_filter, 1))
+        return resnet_block
+
+    def make_final_layer(self, embedding_size, num_class, loss):
+        layers = tf.keras.layers
+        if loss == "softmax":
+            final_layer = layers.Dense(
+                num_class,
+                kernel_initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02),
+                input_shape=(embedding_size,),
+            )
+        elif loss in ("amsoftmax", "aamsoftmax"):
+            # calculate cosine
+            embedding = layers.Input(shape=tf.TensorShape([None, embedding_size]), dtype=tf.float32)
+            initializer = tf.initializers.GlorotNormal()
+            weight = tf.Variable(initializer(
+                                shape=[embedding_size, num_class], dtype=tf.float32))
+            embedding_norm = tf.math.l2_normalize(embedding, axis=1)
+            weight_norm = tf.math.l2_normalize(weight, axis=0)
+            cosine = tf.matmul(embedding_norm, weight_norm)
+            final_layer = tf.keras.Model(inputs=embedding,
+                                         outputs=cosine, name="final_layer")
+        else:
+            # return embedding directly
+            final_layer = lambda x: x
+        return final_layer
+
     def call(self, samples, training=None):
         """ call model """
-        if self.task == "speaker_verification" and "input_a" in samples and not training:
-            input_features_a, input_features_b = samples["input_a"], samples["input_b"]
-            output_a = self.speaker_resnet(input_features_a, training=training)
-            output_b = self.speaker_resnet(input_features_b, training=training)
-            output = [output_a, output_b]
-        else:
-            input_features = samples["input"]
-            output = self.speaker_resnet(input_features, training=training)
+        input_features = samples["input"]
+        embedding = self.speaker_resnet(input_features, training=training)
+        output = self.final_layer(embedding, training=training)
         return output
 
     def init_loss(self, loss):
         """ initialize loss function """
         if loss == "softmax":
             loss_function = SUPPORTED_LOSS[loss](
-                                embedding_size=self.hparams.hidden_size,
                                 num_classes=self.num_class
                             )
         elif loss in ("amsoftmax", "aamsoftmax"):
             loss_function = SUPPORTED_LOSS[loss](
-                                embedding_size=self.hparams.hidden_size,
                                 num_classes=self.num_class,
-                                m=self.hparams.margin,
-                                s=self.hparams.scale
+                                margin=self.hparams.margin,
+                                scale=self.hparams.scale
                             )
-        elif loss in ("prototypical", "angular_prototypical", "ge2e"):
-            # need special dataset builder
-            raise NotImplementedError()
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
         return loss_function
 
     def get_loss(self, outputs, samples, training=None):
-        # report eer rather than loss during evaluating for speaker verification
-        if self.task == "speaker_verification" and "input_a" in samples and not training:
-            loss, metrics = self.get_eer(outputs, samples, training)
+        loss = self.loss_function(outputs, samples)
+        self.metric.update_state(outputs, samples)
+        metrics = {self.metric.name: self.metric.result()}
+        return loss, metrics
+
+    def decode(self, samples, hparams=None, decoder=None):
+        outputs = self.call(samples, training=False)
+        return outputs
+
+class SpeakerVerificationResnet(SpeakerResnet):
+    """ for task speaker_verification
+    the model is the same as SpeakerResnet,
+    but call, loss calculation and inference methods are different
+    """
+    def __init__(self, data_descriptions, config=None):
+        super().__init__(data_descriptions=data_descriptions, config=config)
+        self.eval_metric = EqualErrorRate(name="EER")
+
+    def call(self, samples, training=None):
+        """ call model """
+        # "input" in samples, only for pre_run
+        if training or "input" in samples:
+            input_features = samples["input"]
+            embedding = self.speaker_resnet(input_features, training=training)
+            output = self.final_layer(embedding, training=training)
         else:
-            loss, outputs = self.loss_function(outputs, samples)
+            # get speaker embedding
+            input_features_a, input_features_b = samples["input_a"], samples["input_b"]
+            output_a = self.speaker_resnet(input_features_a, training=training)
+            output_b = self.speaker_resnet(input_features_b, training=training)
+            output = [output_a, output_b]
+        return output
+
+    def get_loss(self, outputs, samples, training=None):
+        # report eer rather than loss during evaluating for speaker verification
+        if training or "input" in samples:
+            loss = self.loss_function(outputs, samples)
             self.metric.update_state(outputs, samples)
             metrics = {self.metric.name: self.metric.result()}
+        else:
+            loss, metrics = self.get_eer(outputs, samples, training)
         return loss, metrics
 
     def get_eer(self, outputs, samples, training=False):
@@ -157,11 +207,8 @@ class SpeakerResnet(BaseModel):
         loss = -1.0
         return loss, metrics
 
-    def make_resnet_block_layer(self, num_filter, num_blocks, stride=1):
-        resnet_block = tf.keras.Sequential()
-        resnet_block.add(ResnetBasicBlock(num_filter, stride))
-
-        for _ in range(1, num_blocks):
-            resnet_block.add(ResnetBasicBlock(num_filter, 1))
-
-        return resnet_block
+    def decode(self, samples, hparams, decoder=None):
+        """ calculate cosine similarity """
+        output_a, output_b = self.call(samples, training=False)
+        outputs = -tf.keras.losses.cosine_similarity(output_a, output_b, axis=1)
+        return outputs

@@ -56,6 +56,7 @@ from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
 from .models.speaker_resnet import SpeakerResnet
+from .models.speaker_resnet import SpeakerVerificationResnet
 
 # solver & loss & accuracy
 from .solver import BaseSolver

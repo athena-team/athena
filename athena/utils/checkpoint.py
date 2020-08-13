@@ -45,6 +45,8 @@ class Checkpoint(tf.train.Checkpoint):
         self.best_loss = np.inf
         self.n_best_model = {}
         self.metric_name = model.metric.name
+        if hasattr(model, 'eval_metric'):
+            self.metric_name = model.eval_metric.name
         if checkpoint_directory is None:
             checkpoint_directory = os.path.join(os.path.expanduser("~"), ".athena")
         self.checkpoint_prefix = os.path.join(checkpoint_directory, "ckpt")
