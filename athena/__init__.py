@@ -23,7 +23,9 @@ from .data import SpeechDatasetKaldiIOBuilder
 from .data import SpeakerRecognitionDatasetBuilder
 from .data import SpeakerVerificationDatasetBuilder
 from .data import LanguageDatasetBuilder
+from .data import VoiceConversionDatasetBuilder
 from .data import FeatureNormalizer
+from .data import WorldFeatureNormalizer
 from .data.text_featurizer import TextFeaturizer
 
 # layers
@@ -50,21 +52,26 @@ from .models.base import BaseModel
 from .models.speech_transformer import SpeechTransformer, SpeechTransformer2
 from .models.tacotron2 import Tacotron2
 from .models.tts_transformer import TTSTransformer
+from .models.fastspeech import FastSpeech
 from .models.masked_pc import MaskedPredictCoding
 from .models.deep_speech import DeepSpeechModel
 from .models.mtl_seq2seq import MtlTransformerCtc
 from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
+from .models.stargan_vc import StarganModel
 from .models.speaker_resnet import SpeakerResnet
 from .models.speaker_resnet import SpeakerVerificationResnet
 
 # solver & loss & accuracy
 from .solver import BaseSolver
+from .solver import GanSolver
 from .solver import HorovodSolver
 from .solver import DecoderSolver
 from .solver import SynthesisSolver
+from .solver import ConvertSolver
 from .loss import CTCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy
+from .loss import StarganLoss
 from .metrics import CTCAccuracy
 from .metrics import Seq2SeqSparseCategoricalAccuracy
 
