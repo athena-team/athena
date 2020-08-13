@@ -20,6 +20,7 @@ from absl import logging
 import tensorflow as tf
 from .base import SpeechBaseDatasetBuilder
 
+
 class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
     """ SpeakerRecognitionDatasetBuilder
 
