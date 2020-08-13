@@ -121,3 +121,18 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
             "output_length": label_length,
             "output": label,
         }
+
+    def compute_cmvn_if_necessary(self, is_necessary=True):
+        """ compute cmvn file
+        """
+        if not is_necessary:
+            return self
+        if os.path.exists(self.hparams.cmvn_file):
+            return self
+        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
+        with tf.device("/cpu:0"):
+            self.feature_normalizer.compute_cmvn_kaldiio(
+                self.entries, self.speakers, self.kaldi_io_feats, feature_dim
+            )
+        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
+        return self
