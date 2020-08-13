@@ -68,20 +68,15 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
     }
 
     def __init__(self, config=None):
-        super().__init__()
-        # hparams
-        self.hparams = register_and_parse_hparams(
-            self.default_config, config, cls=self.__class__)
-        logging.info("hparams: {}".format(self.hparams))
+        super().__init__(config=config)
         self.sp_dim = self.hparams.codedsp_dim
         self.fs = self.hparams.fs
         self.fft_size = self.hparams.fft_size
         self.enable_load_from_disk = self.hparams.enable_load_from_disk
         self.feature_normalizer = WorldFeatureNormalizer(self.hparams.cmvn_file)
-        self.entries, self.entries_person_wavs = [], {}
-        self.speakers = []
+        self.entries_person_wavs = {}
         if self.hparams.data_csv is not None:
-            self.load_csv(self.hparams.data_csv)
+            self.preprocess_data(self.hparams.data_csv)
 
         # create one-hot speaker embedding
         self.spk_num = len(self.speakers)
@@ -124,15 +119,6 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             self.entries.append(tuple([src_wav_filename, src_speaker,
                                        tar_wav_filename, tar_speaker]))
         return self
-
-    def load_csv(self, file_path):
-        """ load csv file """
-        return self.preprocess_data(file_path)
-
-    def reload_config(self, config):
-        """ reload the config """
-        if config is not None:
-            self.hparams.override_from_dict(config)
 
     def world_feature_extract(self, wav):
         """ World Vocoder parameterizes speech into three components:
@@ -199,10 +185,6 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             "input_length": src_coded_sp.shape[1],
         }
 
-    def __len__(self):
-        """ return the number of data samples """
-        return len(self.entries)
-
     def speaker_list(self):
         """ return the speaker list """
         return self.speakers
@@ -266,27 +248,6 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             },
         )
 
-    def filter_sample_by_input_length(self):
-        """filter samples by input length
-
-        The length of filterd samples will be in [min_length, max_length)
-
-        Args:
-            self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length(ms)
-            max_len: the maximal length(ms)
-        returns:
-            entries: a filtered list of tuples
-            (wav_filename, wav_len, speaker)
-        """
-        min_len = self.hparams.input_length_range[0]
-        max_len = self.hparams.input_length_range[1]
-        filter_entries = []
-        for wav_filename, wav_len, speaker in self.entries:
-            if int(wav_len) in range(min_len, max_len):
-                filter_entries.append(tuple([wav_filename, wav_len, speaker]))
-        self.entries = filter_entries
-
     def compute_cmvn_if_necessary(self, is_necessary=True):
         """ compute cmvn file
         """
@@ -300,4 +261,3 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
                                                        self.sp_dim, self.fft_size, self.fs, self.speakers)
         self.feature_normalizer.save_cmvn(["speaker", "codedsp_mean", "codedsp_var", "f0_mean", "f0_var"])
         return self
-
