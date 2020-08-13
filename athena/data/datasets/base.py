@@ -20,6 +20,8 @@ import random
 import os
 from absl import logging
 import tensorflow as tf
+from athena.transform import AudioFeaturizer
+from ..feature_normalizer import FeatureNormalizer
 from ...utils.hparam import register_and_parse_hparams
 from ...utils.data_queue import DataQueue
 
@@ -70,26 +72,14 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
 
 class BaseDatasetBuilder:
     """ base dataset """
-    default_config = {
-        "audio_config": {"type": "Fbank"},
-        "text_config": {"type":"vocab", "model":"athena/utils/vocabs/ch-en.vocab"},
-        "num_cmvn_workers": 1,
-        "cmvn_file": None,
-        "remove_unk": False,
-        "input_length_range": [20, 50000],
-        "output_length_range": [1, 10000],
-        "speed_permutation": [1.0],
-        "data_csv": None
-    }
+    default_config = {}
 
     def __init__(self, config=None):
         # hparams
         self.hparams = register_and_parse_hparams(
             self.default_config, config, cls=self.__class__)
         logging.info("hparams: {}".format(self.hparams))
-
         self.entries = []
-        self.speakers = []
 
     def reload_config(self, config):
         """ reload the config """
@@ -105,11 +95,6 @@ class BaseDatasetBuilder:
 
     def __len__(self):
         return len(self.entries)
-
-    @property
-    def num_class(self):
-        """ return the number of classes """
-        raise NotImplementedError
 
     @property
     def sample_type(self):
@@ -165,6 +150,27 @@ class BaseDatasetBuilder:
         shuffled_entries.extend(self.entries[max_buckets * batch_size :])
         self.entries = shuffled_entries
         return self
+
+
+class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
+    """ speech base dataset """
+    default_config = {
+        "audio_config": {"type": "Fbank"},
+        "num_cmvn_workers": 1,
+        "cmvn_file": None,
+        "data_csv": None
+    }
+
+    def __init__(self, config=None):
+        super().__init__(config=config)
+        self.speakers = []
+        self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
+        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
+
+    @property
+    def num_class(self):
+        """ return the number of classes """
+        raise NotImplementedError
 
     def compute_cmvn_if_necessary(self, is_necessary=True):
         """ compute cmvn file
