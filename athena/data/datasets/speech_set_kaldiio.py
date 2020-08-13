@@ -61,7 +61,7 @@ class SpeechDatasetKaldiIOBuilder(SpeechDatasetBuilder):
         if self.hparams.data_scps_dir is not None:
             self.preprocess_data(self.hparams.data_scps_dir)
 
-    def preprocess_data(self, file_path, apply_sort_filter=False):
+    def preprocess_data(self, file_path, apply_sort_filter=True):
         """ Generate a list of tuples (feat_key, speaker). """
         logging.info("Loading kaldi-format feats.scp \
             and utt2spk (optional) from {}".format(file_path))

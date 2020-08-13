@@ -18,13 +18,11 @@
 
 from absl import logging
 import tensorflow as tf
-from athena.transform import AudioFeaturizer
 from ..text_featurizer import TextFeaturizer
-from ..feature_normalizer import FeatureNormalizer
-from .base import BaseDatasetBuilder
+from .base import SpeechBaseDatasetBuilder
 
 
-class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
+class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
     """ SpeechSynthesisDatasetBuilder
 
     Args:
@@ -60,8 +58,6 @@ class SpeechSynthesisDatasetBuilder(BaseDatasetBuilder):
         super().__init__(config=config)
         self.speakers_dict = {}
         self.speakers_ids_dict = {}
-        self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
-        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
         if self.hparams.data_csv is not None:
             self.preprocess_data(self.hparams.data_csv)

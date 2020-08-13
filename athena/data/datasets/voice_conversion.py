@@ -16,15 +16,14 @@
 # pylint: disable=no-member, invalid-name
 """ voice conversion dataset """
 import os
+import random
 import librosa
-import pyworld
 import numpy as np
 from absl import logging
 import tensorflow as tf
-from ...utils.hparam import register_and_parse_hparams
+import pyworld
 from ..feature_normalizer import WorldFeatureNormalizer
 from .base import BaseDatasetBuilder
-import random
 
 
 class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
@@ -49,8 +48,8 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             ),
             "src_speaker": tf.TensorShape([None, spk_num]),
             "tar_speaker": tf.TensorShape([None, spk_num]),
-            "src_f0": tf.TensorShape([None]),       
-            "src_ap": tf.TensorShape([None, inc]),  
+            "src_f0": tf.TensorShape([None]),
+            "src_ap": tf.TensorShape([None, inc]),
             "src_id": tf.TensorShape([]),
             "tar_id": tf.TensorShape([]),
             "src_wav_filename": tf.TensorShape([]),
@@ -75,6 +74,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         self.enable_load_from_disk = self.hparams.enable_load_from_disk
         self.feature_normalizer = WorldFeatureNormalizer(self.hparams.cmvn_file)
         self.entries_person_wavs = {}
+        self.speakers = []
         if self.hparams.data_csv is not None:
             self.preprocess_data(self.hparams.data_csv)
 
@@ -101,7 +101,8 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             lines = file.read().splitlines()
         lines = lines[1:]
         # In the VC task, it is necessary to construct the paired training corpus of
-        # the original speaker and the target speaker and the multi-segment speech of the speaker entries
+        # the original speaker and the target speaker and the multi-segment speech of
+        # the speaker entries
         for line in lines:
             items = line.split("\t")
             src_wav_filename, src_speaker = items[0], items[1]
@@ -133,12 +134,14 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         coded_sp = pyworld.code_spectral_envelope(sp, self.fs, self.sp_dim)
 
         f0, sp, ap, coded_sp = tf.convert_to_tensor(f0, dtype=tf.float32), \
-                tf.convert_to_tensor(sp, dtype=tf.float32), tf.convert_to_tensor(ap, dtype=tf.float32), \
-                            tf.convert_to_tensor(coded_sp, dtype=tf.float32)
+            tf.convert_to_tensor(sp, dtype=tf.float32), \
+            tf.convert_to_tensor(ap, dtype=tf.float32), \
+            tf.convert_to_tensor(coded_sp, dtype=tf.float32)
         return f0, sp, ap, coded_sp
 
     def load_from_disk(self, src_wav_filename, tar_wav_filename):
-        """ Calculting world features on-the-fly takes too much time, this is another option to load vc-related features from disk 
+        """ Calculting world features on-the-fly takes too much time,
+        this is another option to load vc-related features from disk
         """
         src = np.load(src_wav_filename)
         tar = np.load(tar_wav_filename)
@@ -147,15 +150,17 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         tar_coded_sp = tar_coded_sp.T
         src_coded_sp = src_coded_sp.T
         src_f0, src_coded_sp, src_ap, tar_coded_sp = tf.convert_to_tensor(src_f0, dtype=tf.float32), \
-                               tf.convert_to_tensor(src_coded_sp, dtype=tf.float32), tf.convert_to_tensor(src_ap, dtype=tf.float32), \
-                               tf.convert_to_tensor(tar_coded_sp, dtype=tf.float32)
+            tf.convert_to_tensor(src_coded_sp, dtype=tf.float32), \
+            tf.convert_to_tensor(src_ap, dtype=tf.float32), \
+            tf.convert_to_tensor(tar_coded_sp, dtype=tf.float32)
         return src_f0, src_coded_sp, src_ap, tar_coded_sp
 
     def __getitem__(self, index):
         src_wav_filename, src_speaker, tar_wav_filename, tar_speaker = \
             self.entries[index]
         if self.hparams.enable_load_from_disk:
-            src_f0, src_coded_sp, src_ap, tar_coded_sp = self.load_from_disk(src_wav_filename, tar_wav_filename)
+            src_f0, src_coded_sp, src_ap, tar_coded_sp = self.load_from_disk(
+                src_wav_filename, tar_wav_filename)
         else:
             src_wav, _ = librosa.load(src_wav_filename, sr=self.fs, mono=True, dtype=np.float64)
             tar_wav, _ = librosa.load(tar_wav_filename, sr=self.fs, mono=True, dtype=np.float64)
@@ -239,8 +244,8 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
                     shape=(None, sp_dim, None, None), dtype=tf.float32),
                 "src_speaker": tf.TensorSpec(shape=(None, None, spk_num), dtype=tf.float32),
                 "tar_speaker": tf.TensorSpec(shape=(None, None, spk_num), dtype=tf.float32),
-                "src_f0": tf.TensorSpec(shape=(None, None), dtype=tf.float32),       # T
-                "src_ap": tf.TensorSpec(shape=(None, None, inc), dtype=tf.float32),  # T*fftsize//2+1
+                "src_f0": tf.TensorSpec(shape=(None, None), dtype=tf.float32),      # T
+                "src_ap": tf.TensorSpec(shape=(None, None, inc), dtype=tf.float32), # T*fftsize//2+1
                 "src_id": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "tar_id": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "src_wav_filename": tf.TensorSpec(shape=(None), dtype=tf.string),
@@ -257,7 +262,9 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             return self
 
         with tf.device("/cpu:0"):
-            self.feature_normalizer.compute_world_cmvn(self.enable_load_from_disk, self.entries_person_wavs, \
-                                                       self.sp_dim, self.fft_size, self.fs, self.speakers)
-        self.feature_normalizer.save_cmvn(["speaker", "codedsp_mean", "codedsp_var", "f0_mean", "f0_var"])
+            self.feature_normalizer.compute_world_cmvn(
+                self.enable_load_from_disk, self.entries_person_wavs, \
+                self.sp_dim, self.fft_size, self.fs, self.speakers)
+        self.feature_normalizer.save_cmvn(
+            ["speaker", "codedsp_mean", "codedsp_var", "f0_mean", "f0_var"])
         return self

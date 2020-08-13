@@ -33,9 +33,11 @@ def test():
             },
             "input_length_range": [200, 50000],
             "speed_permutation": [1.0],
-            "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"}
+            "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
+            "cmvn_file":"examples/asr/hkust/data/cmvn_cal"
         }
     )
+    dataset_builder.compute_cmvn_if_necessary(True)
     dataset = dataset_builder.as_dataset(16, 4)
     start = time.time()
     for _ in tqdm.tqdm(dataset, total=len(dataset_builder)//16):
