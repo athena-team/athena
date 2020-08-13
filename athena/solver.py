@@ -189,9 +189,9 @@ class HorovodSolver(BaseSolver):
         loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
         loss, metrics = None, None
         evaluate_step = self.evaluate_step
-        #if self.hparams.enable_tf_function:
-        #    logging.info("please be patient, enable tf.function, it takes time ...")
-        #    evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
         self.model.reset_metrics()
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
