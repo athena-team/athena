@@ -29,7 +29,7 @@ except ImportError:
 from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
-from .metrics import CharactorAccuracy
+from .metrics import CharactorAccuracy, ClassificationAccuracy
 from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
 try:
@@ -189,9 +189,9 @@ class HorovodSolver(BaseSolver):
         loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
         loss, metrics = None, None
         evaluate_step = self.evaluate_step
-        if self.hparams.enable_tf_function:
-            logging.info("please be patient, enable tf.function, it takes time ...")
-            evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
+        #if self.hparams.enable_tf_function:
+        #    logging.info("please be patient, enable tf.function, it takes time ...")
+        #    evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
         self.model.reset_metrics()
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
@@ -309,4 +309,50 @@ class SynthesisSolver(BaseSolver):
                 self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
             features = self.feature_normalizer(features[0], speaker, reverse=True)
             self.vocoder(features.numpy(), self.hparams, name=i)
+        logging.info("model computation elapsed: %s" % total_elapsed)
+
+
+class SpeakerSolver(BaseSolver):
+    """ SpeakerSolver
+    inference solver for speaker recognition
+    """
+    default_config = {
+        "model_avg_num": 1
+    }
+    def __init__(self, model, config=None, lm_model=None):
+        super().__init__(model, None, None)
+        self.model = model
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+
+    def decode(self, dataset, rank_size=1):
+        """ decode the model """
+        if dataset is None:
+            return
+        metric_top1 = ClassificationAccuracy(top_k=1, name="top1_acc", rank_size=rank_size)
+        metric_top5 = ClassificationAccuracy(top_k=5, name="top5_acc", rank_size=rank_size)
+
+        total_elapsed = 0
+        inference_step = tf.function(self.model.decode, input_signature=self.sample_signature)
+        for _, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            start = time.time()
+            predictions = inference_step(samples, self.hparams)
+            end = time.time() - start
+            total_elapsed += end
+            argmax = tf.argmax(predictions, axis=1)
+            _, _ = metric_top1.update_state(predictions, samples)
+            _, _ = metric_top5.update_state(predictions, samples)
+            reports = (
+                "predictions: %s\targmax:%s\tlabels: %s\t \
+                    top1_acc: %.4f\ttop5_acc: %.4f\tsec/iter: %.4f"
+                % (
+                    predictions,
+                    argmax,
+                    samples["output"].numpy(),
+                    metric_top1.result(),
+                    metric_top5.result(),
+                    end,
+                )
+            )
+            logging.info(reports)
         logging.info("model computation elapsed: %s" % total_elapsed)

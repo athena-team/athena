@@ -19,16 +19,19 @@
 from absl import logging
 import numpy as np
 import tensorflow as tf
-from scipy.optimize import brentq
-from scipy.interpolate import interp1d
-from sklearn.metrics import roc_curve
 from .utils.misc import validate_seqs
 try:
     import horovod.tensorflow as hvd
 except ImportError:
     print("There is some problem with your horovod installation. \
 But it wouldn't affect single-gpu training")
-
+try:
+    from scipy.optimize import brentq
+    from scipy.interpolate import interp1d
+    from sklearn.metrics import roc_curve
+except ImportError:
+    print("There is some problem with your scipy and sklearn installation. \
+But it would only affect evaluating for speaker verification task.")
 
 class Accuracy:
     """ Accuracy
@@ -134,18 +137,18 @@ class CTCAccuracy(CharactorAccuracy):
 
 class ClassificationAccuracy(Accuracy):
     """ ClassificationAccuracy
-        Implements top-1 accuracy calculation for speaker classification
+        Implements top-k accuracy calculation for speaker classification
         (closed-set speaker recognition)
     """
-    def __init__(self, name="ClassificationAccuracy", rank_size=1):
+    def __init__(self, top_k=1, name="ClassificationAccuracy", rank_size=1):
         super().__init__(name=name, rank_size=rank_size)
+        self.top_k = top_k
 
     def update_state(self, predictions, samples, logit_length=None):
-        labels = tf.cast(tf.squeeze(samples["output"]), dtype=tf.int64)
+        labels = tf.squeeze(samples["output"], axis=-1)
         num_labels = tf.shape(labels)[0]
-        predictions = tf.argmax(predictions, axis=1)
         num_errs = num_labels - tf.reduce_sum(
-                        tf.cast(tf.math.equal(labels, predictions), dtype=tf.int32))
+                       tf.cast(tf.math.in_top_k(labels, predictions, self.top_k), dtype=tf.int32))
 
         if self.rank_size > 1:
             num_errs = hvd.allreduce(num_errs, average=False)

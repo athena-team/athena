@@ -44,7 +44,8 @@ SUPPORTED_MODEL = {
     "translate_transformer": NeuralTranslateTransformer,
     "tacotron2": Tacotron2,
     "tts_transformer": TTSTransformer,
-    "speaker_resnet": SpeakerResnet
+    "speaker_resnet": SpeakerResnet,
+    "speaker_verification_resnet": SpeakerVerificationResnet
 }
 
 SUPPORTED_OPTIMIZER = {
