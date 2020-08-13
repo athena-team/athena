@@ -16,22 +16,23 @@
 # pylint: disable=no-member, invalid-name
 """ audio dataset """
 import time
-import tqdm
 from absl import logging
+import tqdm
 from athena import SpeechRecognitionDatasetBuilder
 
 def test():
     ''' test the speed of dataset '''
     dataset_builder = SpeechRecognitionDatasetBuilder(
         {
-            "data_csv": "examples/asr/aishell/data/train.csv",
+            "data_csv": "examples/asr/hkust/data/train.csv",
             "audio_config": {
                 "type": "Fbank",
                 "filterbank_channel_count": 40,
                 "sample_rate": 8000,
                 "local_cmvn": False,
             },
-            "speed_permutation": [0.9, 1.0],
+            "input_length_range": [200, 50000],
+            "speed_permutation": [1.0],
             "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"}
         }
     )

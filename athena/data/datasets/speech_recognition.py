@@ -16,11 +16,9 @@
 # pylint: disable=no-member, invalid-name
 """ audio dataset """
 
-import os
 from absl import logging
 import tensorflow as tf
 from athena.transform import AudioFeaturizer
-from ...utils.hparam import register_and_parse_hparams
 from ..text_featurizer import TextFeaturizer
 from ..feature_normalizer import FeatureNormalizer
 from .base import BaseDatasetBuilder
@@ -50,32 +48,22 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
     default_config = {
         "audio_config": {"type": "Fbank"},
         "text_config": {"type":"vocab", "model":"athena/utils/vocabs/ch-en.vocab"},
+        "num_cmvn_workers": 1,
         "cmvn_file": None,
         "remove_unk": True,
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
-        "data_csv": None,
-        "words": None
+        "data_csv": None
     }
 
     def __init__(self, config=None):
-        super().__init__()
-        # hparams
-        self.hparams = register_and_parse_hparams(
-            self.default_config, config, cls=self.__class__)
-        logging.info("hparams: {}".format(self.hparams))
-
+        super().__init__(config=config)
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
         if self.hparams.data_csv is not None:
-            self.load_csv(self.hparams.data_csv)
-
-    def reload_config(self, config):
-        """ reload the config """
-        if config is not None:
-            self.hparams.override_from_dict(config)
+            self.preprocess_data(self.hparams.data_csv)
 
     def preprocess_data(self, file_path):
         """ Generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker)."""
@@ -121,14 +109,17 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
             self.text_featurizer.load_model(all_transcripts)
 
         # apply some filter
-        self.filter_sample_by_unk()
-        self.filter_sample_by_input_length()
-        self.filter_sample_by_output_length()
+        unk = self.text_featurizer.unk_index
+        if self.hparams.remove_unk and unk != -1:
+            self.entries = list(filter(lambda x: unk not in
+                                self.text_featurizer.encode(x[2]), self.entries))
+        self.entries = list(filter(lambda x: int(x[1]) in
+                            range(self.hparams.input_length_range[0],
+                            self.hparams.input_length_range[1]), self.entries))
+        self.entries = list(filter(lambda x: len(x[2]) in
+                            range(self.hparams.output_length_range[0],
+                            self.hparams.output_length_range[1]), self.entries))
         return self
-
-    def load_csv(self, file_path):
-        """ load csv file """
-        return self.preprocess_data(file_path)
 
     def __getitem__(self, index):
         audio_data, _, transcripts, speed, speaker = self.entries[index]
@@ -145,24 +136,10 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
             "output": label,
         }
 
-    def __len__(self):
-        """ return the number of data samples """
-        return len(self.entries)
-
     @property
     def num_class(self):
-        """ return the max_index of the vocabulary + 1"""
+        """ return the max_index of the vocabulary + 1 """
         return len(self.text_featurizer)
-
-    @property
-    def speaker_list(self):
-        """ return the speaker list """
-        return self.speakers
-
-    @property
-    def audio_featurizer_func(self):
-        """ return the audio_featurizer function """
-        return self.audio_featurizer
 
     @property
     def sample_type(self):
@@ -196,77 +173,3 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
                 "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
             },
         )
-
-    def filter_sample_by_unk(self):
-        """filter samples which contain unk
-        """
-        if self.hparams.remove_unk is False:
-            return self
-        filter_entries = []
-        unk = self.text_featurizer.unk_index
-        if unk == -1:
-            return self
-        for items in self.entries:
-            if unk not in self.text_featurizer.encode(items[2]):
-                filter_entries.append(items)
-        self.entries = filter_entries
-        return self
-
-    def filter_sample_by_input_length(self):
-        """filter samples by input length
-
-        The length of filterd samples will be in [min_length, max_length)
-
-        Args:
-            self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length(ms)
-            max_len: the maximal length(ms)
-        returns:
-            entries: a filtered list of tuples
-            (wav_filename, wav_len, transcripts, speed, speaker)
-        """
-        min_len = self.hparams.input_length_range[0]
-        max_len = self.hparams.input_length_range[1]
-        filter_entries = []
-        for items in self.entries:
-            if int(items[1]) in range(min_len, max_len):
-                filter_entries.append(items)
-        self.entries = filter_entries
-        return self
-
-    def filter_sample_by_output_length(self):
-        """filter samples by output length
-
-        The length of filterd samples will be in [min_length, max_length)
-
-        Args:
-            self.hparams.output_length_range = [min_len, max_len]
-            min_len: the minimal length
-            max_len: the maximal length
-        returns:
-            entries: a filtered list of tuples
-            (wav_filename, wav_len, transcripts, speed, speaker)
-        """
-        min_len = self.hparams.output_length_range[0]
-        max_len = self.hparams.output_length_range[1]
-        filter_entries = []
-        for items in self.entries:
-            if len(items[2]) in range(min_len, max_len):
-                filter_entries.append(items)
-        self.entries = filter_entries
-        return self
-
-    def compute_cmvn_if_necessary(self, is_necessary=True):
-        """ compute cmvn file
-        """
-        if not is_necessary:
-            return self
-        if os.path.exists(self.hparams.cmvn_file):
-            return self
-        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
-        with tf.device("/cpu:0"):
-            self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim
-            )
-        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
-        return self
