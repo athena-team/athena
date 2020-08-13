@@ -25,7 +25,7 @@ import tensorflow as tf
 from .base import BaseModel
 from ..loss import Seq2SeqSparseCategoricalCrossentropy
 from ..metrics import Seq2SeqSparseCategoricalAccuracy
-from ..utils.misc import generate_square_subsequent_mask, insert_sos_in_labels
+from ..utils.misc import generate_square_subsequent_mask, insert_sos_in_labels, create_multihead_mask
 from ..layers.commons import PositionalEncoding
 from ..layers.transformer import Transformer
 from ..utils.hparam import register_and_parse_hparams
@@ -136,7 +136,7 @@ class SpeechTransformer(BaseModel):
         x = self.x_net(x0, training=training)
         y = self.y_net(y0, training=training)
         input_length = self.compute_logit_length(samples)
-        input_mask, output_mask = self._create_masks(x, input_length, y0)
+        input_mask, output_mask = create_multihead_mask(x, input_length, y0)
         y, encoder_output = self.transformer(
             x,
             y,
@@ -150,26 +150,6 @@ class SpeechTransformer(BaseModel):
         if self.hparams.return_encoder_output:
             return y, encoder_output
         return y
-
-    @staticmethod
-    def _create_masks(x, input_length, y):
-        r""" Generate a square mask for the sequence. The masked positions are
-        filled with float(1.0). Unmasked positions are filled with float(0.0).
-        """
-        input_mask, output_mask = None, None
-        if x is not None:
-            input_mask = 1.0 - tf.sequence_mask(
-                input_length, tf.shape(x)[1], dtype=tf.float32
-            )
-            input_mask = input_mask[:, tf.newaxis, tf.newaxis, :]
-            input_mask.set_shape([None, None, None, None])
-        if y is not None:
-            output_mask = tf.cast(tf.math.equal(y, 0), tf.float32)
-            output_mask = output_mask[:, tf.newaxis, tf.newaxis, :]
-            look_ahead_mask = generate_square_subsequent_mask(tf.shape(y)[1])
-            output_mask = tf.maximum(output_mask, look_ahead_mask)
-            output_mask.set_shape([None, None, None, None])
-        return input_mask, output_mask
 
     def compute_logit_length(self, samples):
         """ used for get logit length """
@@ -227,7 +207,7 @@ class SpeechTransformer(BaseModel):
         batch = tf.shape(x0)[0]
         x = self.x_net(x0, training=False)
         input_length = self.compute_logit_length(samples)
-        input_mask, _ = self._create_masks(x, input_length, None)
+        input_mask, _ = create_multihead_mask(x, input_length, None)
         encoder_output = self.transformer.encoder(x, input_mask, training=False)
         if return_encoder:
             return encoder_output, input_mask
@@ -274,7 +254,7 @@ class SpeechTransformer(BaseModel):
         }
         x = self.x_net(input_samples["input"], training=False)
         input_length = self.compute_logit_length(input_samples)
-        input_mask, _ = self._create_masks(x, input_length, None)
+        input_mask, _ = create_multihead_mask(x, input_length, None)
         encoder_output = self.transformer.encoder(x, input_mask, training=False)
         self.deploy_encoder = tf.keras.Model(inputs=[input_samples["input"],
                                                      input_samples["input_length"]],
@@ -350,7 +330,7 @@ class SpeechTransformer2(SpeechTransformer):
         x = self.x_net(x0, training=training)
         y = self.y_net(y0, training=training)
         input_length = self.compute_logit_length(samples)
-        input_mask, output_mask = self._create_masks(x, input_length, y0)
+        input_mask, output_mask = create_multihead_mask(x, input_length, y0)
         # first pass
         y, encoder_output = self.transformer(
             x,

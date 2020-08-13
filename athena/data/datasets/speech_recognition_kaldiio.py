@@ -255,5 +255,5 @@ class SpeechRecognitionDatasetKaldiIOBuilder(BaseDatasetBuilder):
             self.feature_normalizer.compute_cmvn_kaldiio(
                 self.entries, self.speakers, self.kaldi_io_feats, feature_dim
             )
-        self.feature_normalizer.save_cmvn()
+        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
         return self
