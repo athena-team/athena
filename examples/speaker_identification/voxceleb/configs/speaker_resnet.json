@@ -42,6 +42,6 @@
   "devset_config":{
     "data_csv":"examples/speaker_identification/voxceleb/data/vox1_iden_test.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/speaker_identification/voxceleb/data/vmcn"
+    "cmvn_file":"examples/speaker_identification/voxceleb/data/cmvn"
   }
 }
