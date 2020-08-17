@@ -158,6 +158,7 @@ class SpeakerResnet(BaseModel):
         return loss, metrics
 
     def make_resnet_block_layer(self, num_filter, num_blocks, stride=1):
+        """ returns sequential layer composed of resnet block  """
         resnet_block = tf.keras.Sequential()
         resnet_block.add(ResnetBasicBlock(num_filter, stride))
 
