@@ -18,8 +18,8 @@
 
 import numpy as np
 import tensorflow as tf
-from ..utils.misc import tensor_shape
 from tensorflow.python.framework import ops
+from ..utils.misc import tensor_shape
 
 
 def make_positional_encoding(position, d_model):
@@ -42,7 +42,7 @@ def collapse4d(x, name=None):
     """ reshape from [N T D C] -> [N T D*C]
     using tf.shape(x), which generate a tensor instead of x.shape
     """
-    with ops.name_scope(name, "collapse4d") as name:
+    with ops.name_scope(name, "collapse4d") as scope:
         shape = tensor_shape(x)
         N = shape[0]
         T = shape[1]

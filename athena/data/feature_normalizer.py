@@ -18,14 +18,14 @@
 import os
 import json
 import time
+import multiprocessing as mp
+from multiprocessing import cpu_count
 import pandas
 import librosa
 import pyworld
 from absl import logging
 import tensorflow as tf
 import numpy as np
-import multiprocessing as mp
-from multiprocessing import cpu_count
 import tqdm
 
 

@@ -17,8 +17,9 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=no-member, invalid-name, relative-beyond-top-level
 # pylint: disable=too-many-locals, too-many-statements, too-many-arguments, too-many-instance-attributes
-""" a implementation of deep speech 2 model can be used as a sample for ctc model """
+""" a implementation of multi-task model with attention and ctc loss """
 
+import io
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 from .base import BaseModel
@@ -26,7 +27,6 @@ from ..loss import CTCLoss
 from ..metrics import CTCAccuracy
 from .speech_transformer import SpeechTransformer, SpeechTransformer2
 from ..utils.hparam import register_and_parse_hparams
-import io
 
 
 class MtlTransformerCtc(BaseModel):
