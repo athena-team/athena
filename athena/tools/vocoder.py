@@ -24,6 +24,8 @@ import librosa
 from scipy.io.wavfile import write as write_wav
 
 class GriffinLim:
+    """ python implementation of griffinlim algorithm
+    """
 
     def __init__(self, data_descriptions):
         """ Reference to paper "Multiband Excitation Vocoder"
