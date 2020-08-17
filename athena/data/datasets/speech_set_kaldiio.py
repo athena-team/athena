@@ -64,8 +64,8 @@ class SpeechDatasetKaldiIOBuilder(SpeechDatasetBuilder):
 
     def preprocess_data(self, file_path, apply_sort_filter=True):
         """ Generate a list of tuples (feat_key, speaker). """
-        logging.info("Loading kaldi-format feats.scp \
-            and utt2spk (optional) from {}".format(file_path))
+        logging.info("Loading kaldi-format feats.scp " + \
+            "and utt2spk (optional) from {}".format(file_path))
         self.kaldi_io_feats = kaldiio.load_scp(os.path.join(file_path, "feats.scp"))
 
         # initialize all speakers with 'global'
