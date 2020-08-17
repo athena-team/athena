@@ -64,15 +64,15 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
 
     def preprocess_data(self, file_dir, apply_sort_filter=True):
         """ Generate a list of tuples (feat_key, speaker). """
-        logging.info("Loading kaldi-format feats.scp, labels.scp \
-            and utt2spk (optional) from {}".format(file_dir))
+        logging.info("Loading kaldi-format feats.scp, labels.scp " + \
+            "and utt2spk (optional) from {}".format(file_dir))
         self.kaldi_io_feats = kaldiio.load_scp(os.path.join(file_dir, "feats.scp"))
         self.kaldi_io_labels = kaldiio.load_scp(os.path.join(file_dir, "labels.scp"))
 
         # data checking
         if self.kaldi_io_feats.keys() != self.kaldi_io_labels.keys():
-            logging.info("Error: feats.scp and labels.scp does not contain same keys, \
-                please check your data.")
+            logging.info("Error: feats.scp and labels.scp does not contain same keys, " + \
+                "please check your data.")
             sys.exit()
 
         # initialize all speakers with 'global'

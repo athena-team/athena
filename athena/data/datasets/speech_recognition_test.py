@@ -34,7 +34,7 @@ def test():
             "input_length_range": [200, 50000],
             "speed_permutation": [1.0],
             "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
-            "cmvn_file":"examples/asr/hkust/data/cmvn_cal"
+            "cmvn_file":"examples/asr/hkust/data/cmvn"
         }
     )
     dataset_builder.compute_cmvn_if_necessary(True)
