@@ -20,8 +20,20 @@ from athena.transform import feats
 
 
 class AudioFeaturizer:
-    """
-        Interface of audio Features extractions.
+    """Interface of audio features extractions. The kernels of features are based on
+    Kaldi (Povey D, Ghoshal A, Boulianne G, et al. The Kaldi speech recognition toolkit[C]//IEEE
+    2011 workshop on automatic speech recognition and understanding. IEEE Signal Processing Society,
+    2011 (CONF). ) and Librosa.
+
+    Now Transform supports the following 7 features: Spectrum, MelSpectrum, Framepow,
+    Pitch, Mfcc, Fbank, FbankPitch.
+
+    Args:
+        config: A dictionary contains parameters of feature extraction.
+
+    Examples::
+        >>> fbank_op = AudioFeaturizer(config={"type":"Fbank"})
+        >>> fbank_out = fbank_op('test.wav')
     """
     #pylint: disable=dangerous-default-value
     def __init__(self, config={"type": "Fbank"}):
