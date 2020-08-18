@@ -1,4 +1,4 @@
-# User Manual
+# Speech Features - User Manual
 
 ## Introduction
 
@@ -24,7 +24,7 @@ feature_ext = AudioFeaturizer()
 
 '''
 Other default args:
-'audio_channels':1
+'audio_channels': Number of sample channels wanted. (int, default = 1)
 
 The shape of the output:
 [T, 1, 1]
@@ -39,12 +39,18 @@ feature_ext = AudioFeaturizer(conf)
 
 '''
 Other default args:
-'sample_rate' : 16000
-'window_length' : 0.025
-'frame_length' : 0.010
-'global_mean': 全局均值
-'global_variance': 全局方差
-'local_cmvn' : 默认是True, 做句子cmvn
+'window_length' : Window length in seconds. (float, default = 0.025)
+'frame_length' : Hop length in seconds. (float, default = 0.010)
+'raw_energy' : If 1, compute frame energy before preemphasis and windowing. If 2,  compute frame energy after preemphasis and windowing. (int, default = 1)
+'preEph_coeff' : Coefficient for use in frame-signal preemphasis. (float, default = 0.97)
+'window_type' : Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria"). (string, default = "povey")
+'remove_dc_offset' : Subtract mean from waveform on each frame (bool, default = true)
+'is_fbank' : If true, compute power spetrum without frame energy. If false, using the frame energy instead of the square of the constant component of the signal. (bool, default = false)
+'output_type' : If 1, return power spectrum. If 2, return log-power spectrum. (int, default = 2)
+'dither' : Dithering constant (0.0 means no dither) (float, default = 1) [add robust to training]
+'global_mean': 0.0
+'global_variance': 0.0
+'local_cmvn' : True
 
 The shape of the output:
 [T, dim, 1]
@@ -59,24 +65,101 @@ feature_ext = AudioFeaturizer(conf)
 
 '''
 Other default args:
-'sample_rate' : 采样率 16000
-'window_length' : 窗长 0.025秒
-'frame_length' : 步长 0.010秒
-'upper_frequency_limit' : 4000
-'lower_frequency_limit': 20
-'filterbank_channel_count'  : 40
-'delta_delta' : 是否做差分 False
-'window' : 差分窗长 2
-'order' : 差分阶数 2
-'global_mean': 全局均值
-'global_variance': 全局方差
-'local_cmvn' : 默认是True, 做句子cmvn
+'window_length'	: Window length in seconds. (float, default = 0.025)
+'frame_length'	: Hop length in seconds. (float, default = 0.010)
+'snip_edges' : If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)
+'raw_energy' : If 1, compute frame energy before preemphasis and windowing. If 2,  compute frame energy after preemphasis and windowing. (int, default = 1)
+'preEph_coeff' : Coefficient for use in frame-signal preemphasis. (float, default = 0.97)
+'window_type' : Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria"). (string, default = "povey")
+'remove_dc_offset' : Subtract mean from waveform on each frame (bool, default = true)
+'is_fbank': If true, compute power spetrum without frame energy. If false, using the frame energy instead of the square of the constant component of the signal. (bool, default = true)
+'output_type' : If 1, return power spectrum. If 2, return log-power spectrum. (int, default = 1)
+'upper_frequency_limit'	: High cutoff frequency for mel bins (if <= 0, offset from Nyquist) (float, default = 0)
+'lower_frequency_limit'	: Low cutoff frequency for mel bins (float, default = 20)
+'filterbank_channel_count' : Number of triangular mel-frequency bins (float, default = 23)
+'dither'	: Dithering constant (0.0 means no dither) (float, default = 1) [add robust to training]
+'delta_delta' : False
+'window' : 2
+'order' : 2
+'global_mean': 0.0
+'global_variance': 0.0
+'local_cmvn' : True
 
 Returns:
   A tensor of shape [T, dim, num_channel].
   dim = 40
   num_channel = 1 if 'delta_delta' == False else 1 + 'order'
 '''
+```
+
+#### Pitch
+```python
+conf = {'type':'Pitch'}
+feature_ext = AudioFeaturizer(conf)
+'''
+Other default args:
+'delta-pitch' : Smallest relative change in pitch that our algorithm measures (float, default = 0.005)
+'frame-length' : Frame length in seconds (float, default = 0.025)
+'frame-shift' : Frame shift in seconds (float, default = 0.010)
+'frames-per-chunk' : Only relevant for offline pitch extraction (e.g. compute-kaldi-pitch-feats), you can set it to a small nonzero value, such as 10, for better feature compatibility with online decoding (affects energy normalization in the algorithm) (int, default = 0)
+'lowpass-cutoff' : cutoff frequency for LowPass filter (Hz)  (float, default = 1000)
+'lowpass-filter-width' : Integer that determines filter width of lowpass filter, more gives sharper filter (int, default = 1)
+'max-f0' : max. F0 to search for (Hz) (float, default = 400)
+'max-frames-latency': Maximum number of frames of latency that we allow pitch tracking to introduce into the feature processing (affects output only if --frames-per-chunk > 0 and --simulate-first-pass-online=true (int, default = 0)
+'min-f0' : min. F0 to search for (Hz) (float, default = 50)
+'nccf-ballast' : Increasing this factor reduces NCCF for quiet frames (float, default = 7000)
+'nccf-ballast-online'  : This is useful mainly for debug; it affects how the NCCF ballast is computed. (bool, default = false)
+'penalty-factor' : cost factor for FO change. (float, default = 0.1)
+'preemphasis-coefficient' : Coefficient for use in signal preemphasis (deprecated) (float, default = 0)
+'ecompute-frame' : Only relevant for online pitch extraction, or for compatibility with online pitch extraction.  A non-critical parameter; the frame at which we recompute some of the forward pointers, after revising our estimate of the signal energy.  Relevant if--frames-per-chunk > 0 (int, default = 500)
+'resample-frequency' : Frequency that we down-sample the signal to.  Must be more than twice lowpass-cutoff (float, default = 4000)
+'simulate-first-pass-online' : If true, compute-kaldi-pitch-feats will output features that correspond to what an online decoder would see in the first pass of decoding-- not the final version of the features, which is the default.  Relevant if --frames-per-chunk > 0 (bool, default = false)
+'snip-edges': If this is set to false, the incomplete frames near the ending edge won't be snipped, so that the number of frames is the file size divided by the frame-shift. This makes different types of features give the same number of frames. (bool, default = true)
+'soft-min-f0' : Minimum f0, applied in soft way, must not exceed min-f0 (float, default = 10)
+'upsample-filter-width': Integer that determines filter width when upsampling NCCF (int, default = 5)
+'add-delta-pitch' : If true, time derivative of log-pitch is added to output features. (bool, default = true)
+'add-pov-feature' : If true, the warped NCCF is added to output features. (bool, default = true)
+'add-raw-log-pitch' : If true, log(pitch) is added to output features. (bool, default = false)
+'delay' : Number of frames by which the pitch information is delayed. (int, default = 0)
+'elta-pitch-noise-stddev' : Standard deviation for noise we add to the delta log-pitch (before scaling); should be about the same as delta-pitch option to pitch creation.  The purpose is
+                                    to get rid of peaks in the delta-pitch caused by discretization of pitch values. (float, default = 0.005)
+'delta-pitch-scale' : Term to scale the final delta log-pitch feature. (float, default = 10)
+'delta-window' : Number of frames on each side of central frame, to use for delta window. (int, default = 2)
+'normalization-left-context' : Left-context (in frames) for moving window normalization. (int, default = 75)
+'normalization-right-context' : Right-context (in frames) for moving window normalization. (int, default = 75)
+'pitch-scale' : Scaling factor for the final normalized log-pitch value. (float, default = 2)
+'pov-offset' : This can be used to add an offset to the POV feature. Intended for use in online decoding as a substitute for  CMN. (float, default = 0)
+'pov-scale' : Scaling factor for final POV (probability of voicing) feature. (float, default = 2)
+'''
+```
+
+#### MFCC
+```python
+conf = {'type':'Mfcc'}
+feature_ext = AudioFeaturizer(conf)
+'''
+'window_lengtt': Window length in seconds. (float, default = 0.025)
+'frame_length' : Hop length in seconds. (float, default = 0.010)
+'snip_edges' : If 1, the last frame (shorter than window_length) will be cutoff. If 2, 1 // 2 frame_length data will be padded to data. (int, default = 1)
+'raw_energy' : If 1, compute frame energy before preemphasis and windowing. If 2,  compute frame energy after preemphasis and windowing. (int, default = 1)
+'preEph_coeff' : Coefficient for use in frame-signal preemphasis. (float, default = 0.97)
+'window_type' : Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria"). (string, default = "povey")
+'remove_dc_offset' : Subtract mean from waveform on each frame (bool, default = true)
+'is_fbank' : If true, compute power spetrum without frame energy. If false, using the frame energy instead of the square of the constant component of the signal. (bool, default = true)
+'output_type' : If 1, return power spectrum. If 2, return log-power spectrum. (int, default = 1)
+'upper_frequency_limit'	: High cutoff frequency for mel bins (if < 0, offset from Nyquist) (float, default = 0)
+'lower_frequency_limit' : Low cutoff frequency for mel bins (float, default = 20)
+'filterbank_channel_count'	: Number of triangular mel-frequency bins (float, default = 23)
+'coefficient_count'  : Number of cepstra in MFCC computation.(int, default = 13)
+'cepstral_lifter' : Constant that controls scaling of MFCCs.(float, default = 22)
+'use_energy' :Use energy (not C0) in MFCC computation. (bool, default = True)
+'''
+```
+
+#### MelSpectrum
+```python
+conf = {'type':'MelSpectrum'}
+feature_ext = AudioFeaturizer(conf)
 ```
 
 #### CMVN
@@ -92,8 +175,6 @@ Other configuration
 'global_variance': global variance
 'local_cmvn' : default true
 
-'global_mean'和'global_variance'如果设置则会做全局cmvn，否则不做全局cmvn。
-'local_cmvn' 设置False不做句子cmvn
 '''
 ```
 
