@@ -13,7 +13,6 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-from recommonmark.parser import CommonMarkParser
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
@@ -27,19 +26,14 @@ release = '1.0'
 
 
 # -- General configuration ---------------------------------------------------
-
-source_parsers = {
-    '.md': CommonMarkParser,
-}
-source_suffix = ['.md', '.rst']
-
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'recommonmark',
     'sphinx_markdown_tables',
     'autoapi.extension',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -66,6 +60,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
 
 # -- Options for auto API ----------------------------------------------------
 
