@@ -85,7 +85,6 @@ class Tacotron2(BaseModel):
         self.loss_function = Tacotron2Loss(self,
                                            attention_loss_function,
                                            regularization_weight=self.hparams.regularization_weight,
-                                           guided_attn_weight=self.hparams.guided_attn_weight,
                                            l1_loss_weight=self.hparams.l1_loss_weight,
                                            mask_decoder=self.hparams.mask_decoder,
                                            pos_weight=self.hparams.pos_weight)

@@ -201,7 +201,8 @@ class HorovodSolver(BaseSolver):
             loss, metrics = evaluate_step(samples)
             if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
                 logging.info(self.metric_checker(loss, metrics, -2))
-            loss_metric.update_state(loss)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+            loss_metric.update_state(total_loss)
         if hvd.rank() == 0:
             logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
             self.model.reset_metrics()
