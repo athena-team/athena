@@ -1,4 +1,4 @@
-# The efficiency of GPU Using '``Horovod``+``Tensorflow``'
+# Accelerating Training Using Multi GPUs
 
 ## Experimental
 
