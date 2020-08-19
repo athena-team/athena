@@ -114,4 +114,4 @@ After compiling, an executable file will be generated and you can run the execut
 $ ./argmax
 ```
 
-Detailed implementation is described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
+Detailed implementation is described [here](../tutorials/deployment.md).
