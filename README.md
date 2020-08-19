@@ -233,7 +233,7 @@ Detailed implementation is described [here](https://github.com/athena-team/athen
 
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
-English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h |
+English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h | 3.1%(WER)
 English  | Transformer | [Switchboard Dataset](https://catalog.ldc.upenn.edu/LDC97S62) | 260h | 8.6% (WER) |
 English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 3 h | 16.8% (PER) |
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
