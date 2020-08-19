@@ -120,7 +120,7 @@ class Fbank(BaseFrontend):
         Caculate fbank features of audio data.
         :param audio_data: the audio signal from which to compute spectrum.
                           Should be an (1, N) tensor.
-        :param sample_rate: [option]the samplerate of the signal we working with,
+        :param sample_rate: the samplerate of the signal we working with,
                             default is 16kHz.
         :return: A float tensor of size (num_channels, num_frames, num_frequencies) containing
                fbank features of every frame in speech.
