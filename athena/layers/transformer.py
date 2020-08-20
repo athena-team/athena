@@ -25,7 +25,6 @@ from .commons import ACTIVATIONS
 
 class Transformer(tf.keras.layers.Layer):
     """A transformer model. User is able to modify the attributes as needed.
-       Users can build the BERT(https://arxiv.org/abs/1810.04805) model with corresponding parameters.
 
     Args:
         d_model: the number of expected features in the encoder/decoder inputs (default=512).
@@ -173,9 +172,6 @@ class TransformerEncoder(tf.keras.layers.Layer):
         Args:
             src: the sequnce to the encoder (required).
             mask: the mask for the src sequence (optional).
-
-        Shape:
-            see the docs in Transformer class.
         """
         output = src
         for i in range(len(self.layers)):
@@ -220,8 +216,6 @@ class TransformerDecoder(tf.keras.layers.Layer):
             tgt_mask: the mask for the tgt sequence (optional).
             memory_mask: the mask for the memory sequence (optional).
 
-        Shape:
-            see the docs in Transformer class.
         """
         output = tgt
         attention_weights = []
@@ -242,7 +236,6 @@ class TransformerDecoder(tf.keras.layers.Layer):
 
 class TransformerEncoderLayer(tf.keras.layers.Layer):
     """TransformerEncoderLayer is made up of self-attn and feedforward network.
-       Users may modify or implement in a different way during application.
 
     Args:
         d_model: the number of expected features in the input (required).
@@ -301,8 +294,6 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
             src: the sequence to the encoder layer (required).
             mask: the mask for the src sequence (optional).
 
-        Shape:
-            see the docs in Transformer class.
         """
         out = self.self_attn(src, src, src, mask=src_mask)[0]
         out = self.norm1(src + self.dropout(out, training=training))
@@ -322,8 +313,6 @@ class TransformerDecoderLayer(tf.keras.layers.Layer):
     Reference: 
         "Attention Is All You Need".
         
-    Users may modify or implement in a different way during application.
-
     Args:
         d_model: the number of expected features in the input (required).
         nhead: the number of heads in the multiheadattention models (required).
@@ -379,12 +368,10 @@ class TransformerDecoderLayer(tf.keras.layers.Layer):
 
         Args:
             tgt: the sequence to the decoder layer (required).
-            memory: the sequnce from the last layer of the encoder (required).
+            memory: the sequence from the last layer of the encoder (required).
             tgt_mask: the mask for the tgt sequence (optional).
             memory_mask: the mask for the memory sequence (optional).
 
-        Shape:
-            see the docs in Transformer class.
         """
         out = self.attn1(tgt, tgt, tgt, mask=tgt_mask)[0]
         out = self.norm1(tgt + self.dropout1(out, training=training))
