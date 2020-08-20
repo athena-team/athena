@@ -61,7 +61,7 @@ class ScaledPositionalEncoding(PositionalEncoding):
 
 class Collapse4D(tf.keras.layers.Layer):
     """collapse4d can be used in cnn-lstm for speech processing
-    reshape from [N T D C] -> [N T D*C]
+       reshape from [N T D C] -> [N T D*C]
     """
 
     def call(self, x):
@@ -70,12 +70,13 @@ class Collapse4D(tf.keras.layers.Layer):
 
 class Gelu(tf.keras.layers.Layer):
     """Gaussian Error Linear Unit.
-    This is a smoother version of the RELU.
-    Original paper: https://arxiv.org/abs/1606.08415
+
+    This is a smoother version of the RELU. Original paper: https://arxiv.org/abs/1606.08415
+
     Args:
         x: float Tensor to perform activation.
     Returns:
-        `x` with the GELU activation applied.
+        x: with the GELU activation applied.
     """
 
     def call(self, x):
