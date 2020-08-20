@@ -31,12 +31,13 @@ class Checkpoint(tf.train.Checkpoint):
         __call__: save the model
 
     Example:
-        >>>transformer = SpeechTransformer(target_vocab_size=dataset_builder.target_dim)
-        >>>optimizer = tf.keras.optimizers.Adam()
-        >>>ckpt = Checkpoint(checkpoint_directory='./train', summary_directory='./event',
-               transformer=transformer, optimizer=optimizer)
-        >>>solver = BaseSolver(transformer)
-        >>>for epoch in dataset:
+
+        >>> transformer = SpeechTransformer(target_vocab_size=dataset_builder.target_dim)
+        >>> optimizer = tf.keras.optimizers.Adam()
+        >>> ckpt = Checkpoint(checkpoint_directory='./train', summary_directory='./event',
+        >>>        transformer=transformer, optimizer=optimizer)
+        >>> solver = BaseSolver(transformer)
+        >>> for epoch in dataset:
         >>>    ckpt()
     """
 
