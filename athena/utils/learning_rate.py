@@ -16,7 +16,7 @@
 # ==============================================================================
 # Only support eager mode
 # pylint: disable=too-few-public-methods, no-member, too-many-arguments, unused-argument
-""" learning rate """
+"""base class for learning rate """
 import tensorflow as tf
 from ..utils.hparam import register_and_parse_hparams
 
@@ -24,9 +24,10 @@ from ..utils.hparam import register_and_parse_hparams
 class WarmUpLearningSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     """ WarmUp Learning rate schedule for Adam
 
-    Used as :
-        optimizer = tf.keras.optimizers.Adam(learning_rate = WarmUpLearningSchedule(512),
-            beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    Example:
+        
+        >>> optimizer = tf.keras.optimizers.Adam(learning_rate = WarmUpLearningSchedule(512),
+        >>>        beta_1=0.9, beta_2=0.98, epsilon=1e-9)
     Args:
         model_dim is the something related to total model parameters
         warmup_steps is the highest learning rate iters
@@ -90,15 +91,18 @@ class WarmUpAdam(tf.keras.optimizers.Adam):
 
 
 class ExponentialDecayLearningRateSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
-    """ ExponentialDecayLearningRateSchedule
+    """ExponentialDecayLearningRateSchedule
 
-    Used as:
-        optimizer = tf.keras.optimizers.Adam(
-        learning_rate = ExponentialDecayLearningRate(0.01, 100))
+    Example:
+
+        >>> optimizer = tf.keras.optimizers.Adam(
+        >>> learning_rate = ExponentialDecayLearningRate(0.01, 100))
+
     Args:
         initial_lr, decay_steps
+    
     Returns:
-        initial_lr * (0.5 ** (step // decay_steps))
+        >>> initial_lr * (0.5 ** (step // decay_steps))
     """
 
     def __init__(self, initial_lr=0.005, decay_steps=10000, decay_rate=0.5,
