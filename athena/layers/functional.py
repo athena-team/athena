@@ -58,6 +58,7 @@ def splice(x, context):
     Splice a tensor along the last dimension with context.
 
     Example:
+    
     >>> t = [[[1, 2, 3],
     >>>       [4, 5, 6],
     >>>       [7, 8, 9]]]

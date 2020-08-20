@@ -24,12 +24,8 @@ from .commons import ACTIVATIONS
 
 
 class Transformer(tf.keras.layers.Layer):
-    """A transformer model. User is able to modify the attributes as needed. The architecture
-    is based on the paper "Attention Is All You Need". Ashish Vaswani, Noam Shazeer,
-    Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Lukasz Kaiser, and
-    Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information
-    Processing Systems, pages 6000-6010. Users can build the BERT(https://arxiv.org/abs/1810.04805)
-    model with corresponding parameters.
+    """A transformer model. User is able to modify the attributes as needed.
+       Users can build the BERT(https://arxiv.org/abs/1810.04805) model with corresponding parameters.
 
     Args:
         d_model: the number of expected features in the encoder/decoder inputs (default=512).
@@ -246,11 +242,7 @@ class TransformerDecoder(tf.keras.layers.Layer):
 
 class TransformerEncoderLayer(tf.keras.layers.Layer):
     """TransformerEncoderLayer is made up of self-attn and feedforward network.
-    This standard encoder layer is based on the paper "Attention Is All You Need".
-    Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
-    Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in
-    Neural Information Processing Systems, pages 6000-6010. Users may modify or implement
-    in a different way during application.
+       Users may modify or implement in a different way during application.
 
     Args:
         d_model: the number of expected features in the input (required).
@@ -326,11 +318,11 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 
 class TransformerDecoderLayer(tf.keras.layers.Layer):
     """TransformerDecoderLayer is made up of self-attn, multi-head-attn and feedforward network.
-    This standard decoder layer is based on the paper "Attention Is All You Need".
-    Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
-    Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in
-    Neural Information Processing Systems, pages 6000-6010. Users may modify or implement
-    in a different way during application.
+
+    Reference: 
+        "Attention Is All You Need".
+        
+    Users may modify or implement in a different way during application.
 
     Args:
         d_model: the number of expected features in the input (required).

@@ -74,6 +74,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     """ Multi-head attention
 
     Multi-head attention consists of four parts:
+
     * Linear layers and split into heads. 
     
     * Scaled dot-product attention. 
@@ -366,8 +367,7 @@ class MatchAttention(tf.keras.layers.Layer):
 class LocationAttention(tf.keras.layers.Layer):
     """location-aware attention
 
-    Reference: Attention-Based Models for Speech Recognition
-        (https://arxiv.org/pdf/1506.07503.pdf)
+    Reference: Attention-Based Models for Speech Recognition (https://arxiv.org/pdf/1506.07503.pdf)
 
     """
 
@@ -458,8 +458,7 @@ class LocationAttention(tf.keras.layers.Layer):
 class StepwiseMonotonicAttention(LocationAttention):
     """stepwise monotonic attention
 
-    Reference: Robust Sequence-to-Sequence Acoustic Modeling with Stepwise Monotonic
-        Attention for Neural TTS (https://arxiv.org/pdf/1906.00672.pdf)
+    Reference: Robust Sequence-to-Sequence Acoustic Modeling with Stepwise Monotonic Attention for Neural TTS (https://arxiv.org/pdf/1906.00672.pdf)
 
     """
 
