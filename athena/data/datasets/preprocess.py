@@ -24,7 +24,7 @@ import tensorflow as tf
 
 class SpecAugment:
     """Implementation of specaugument from paper "SpecAugment: A Simple Data
-       Augmentation Method for Automatic Speech Recognition"
+    Augmentation Method for Automatic Speech Recognition"
 
     Args:
         preprocess_config: it contains configs below::
