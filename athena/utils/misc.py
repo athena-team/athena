@@ -35,7 +35,7 @@ def insert_sos_in_labels(labels, sos):
 
 
 def remove_eos_in_labels(input_labels, labels_length):
-    """ remove eos in labels, batch size should be larger than 1
+    """remove eos in labels, batch size should be larger than 1
     assuming 0 as the padding and the last one is the eos
     """
     labels = input_labels[:, :-1]
@@ -48,7 +48,7 @@ def remove_eos_in_labels(input_labels, labels_length):
 
 
 def insert_eos_in_labels(input_labels, eos, labels_length):
-    """ insert eos in labels, batch size should be larger than 1
+    """insert eos in labels, batch size should be larger than 1
     assuming 0 as the padding,
     """
     zero = tf.zeros([tf.shape(input_labels)[0], 1], dtype=input_labels.dtype)
@@ -58,17 +58,17 @@ def insert_eos_in_labels(input_labels, eos, labels_length):
 
 
 def generate_square_subsequent_mask(size):
-    """  Generate a square mask for the sequence. The masked positions are filled with float(1.0).
-      Unmasked positions are filled with float(0.0).
+    """Generate a square mask for the sequence. The masked positions are filled with float(1.0).
+       Unmasked positions are filled with float(0.0).
     """
     mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)
     return mask
 
 
 def create_multihead_mask(x, x_length, y, reverse=False):
-    r""" Generate a square mask for the sequence for mult-head attention.
-        The masked positions are filled with float(1.0).
-        Unmasked positions are filled with float(0.0).
+    """Generate a square mask for the sequence for mult-head attention.
+       The masked positions are filled with float(1.0).
+       Unmasked positions are filled with float(0.0).
     """
     x_mask, y_mask = None, None
     if x is not None:
@@ -96,11 +96,14 @@ def gated_linear_layer(inputs, gates, name=None):
 
 
 def validate_seqs(seqs, eos):
-    """  Discard end symbol and elements after end symbol
+    """Discard end symbol and elements after end symbol
+
     Args:
-      seqs: tf.Tensor shape=(batch_size, seq_length)
+        seqs: shape=(batch_size, seq_length)
+        eos: eos id
+
     Returns:
-      validated_preds: tf.SparseTensor
+        validated_preds: seqs without eos id
     """
     eos = tf.cast(eos, tf.int64)
     if tf.shape(seqs)[1] == 0:
@@ -124,10 +127,13 @@ def validate_seqs(seqs, eos):
 
 
 def get_wave_file_length(wave_file):
-    """  get the wave file length(duration) in ms
+    """get the wave file length(duration) in ms
 
-    :param wave_file: the path of wave file
-    :return: the length(ms) of the wave file
+    Args:
+        wave_file: the path of wave file
+
+    Returns:
+        wav_length: the length(ms) of the wave file
     """
     if not os.path.exists(wave_file):
         logging.warning("Wave file {} does not exist!".format(wave_file))
@@ -185,8 +191,8 @@ def set_default_summary_writer(summary_directory=None):
     writer.set_as_default()
 
 def tensor_shape(tensor):
-    """  Return a list with tensor shape. For each dimension,
-         use tensor.get_shape() first. If not available, use tf.shape().
+    """Return a list with tensor shape. For each dimension,
+       use tensor.get_shape() first. If not available, use tf.shape().
     """
     if tensor.get_shape().dims is None:
         return tf.shape(tensor)

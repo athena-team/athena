@@ -28,6 +28,7 @@ import tensorflow as tf
 
 class HParamsTest(tf.test.TestCase):
     def testEmpty(self):
+                
         hparams = hparam.HParams()
         self.assertDictEqual({}, hparams.values())
         hparams.parse("")
