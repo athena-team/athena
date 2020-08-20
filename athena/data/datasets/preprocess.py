@@ -19,12 +19,26 @@
 """ preprecessing for speech features """
 import random
 from PIL import Image
-import tensorflow as tf
 from ...utils.hparam import register_and_parse_hparams
+import tensorflow as tf
 
 class SpecAugment:
-    """ Implementation of specaugument from paper "SpecAugment: A Simple Data
-        Augmentation Method for Automatic Speech Recognition"
+    """Implementation of specaugument from paper "SpecAugment: A Simple Data
+       Augmentation Method for Automatic Speech Recognition"
+
+    Args:
+        preprocess_config: it contains configs below::
+
+            time_warping: warped time parameter, should be in (0, time / 2),
+                a random horizontal center point in (W, time_steps - W) will be warped
+                either to left or right by a distance chosen from range [0, W) randomly.
+            time_masking: masked time range, should be in (0, time_steps),
+                the final masked time steps will be [t_0, t_0 + t),
+                t is random from[0, T), t_0 is random from [0, time_steps - t)
+            frequency_masking: masked frequency range, should be in (0, dimension),
+                the final masked frequencies will be [f_0, f_0 + f),
+                f is random from[0, F), f_0 is random from [0, dimension - f)
+            mask_cols: masking operation is executed mask_cols times in each axis
     """
 
     default_config = {
@@ -36,21 +50,6 @@ class SpecAugment:
     }
 
     def __init__(self, preprocess_config):
-        ''' spec augment preprocess
-            https://arxiv.org/abs/1904.08779v1
-        Args:
-            preprocess_config: it contains configs below:
-                time_warping: warped time parameter, should be in (0, time / 2),
-                    a random horizontal center point in (W, time_steps - W) will be warped
-                    either to left or right by a distance chosen from range [0, W) randomly.
-                time_masking: masked time range, should be in (0, time_steps),
-                    the final masked time steps will be [t_0, t_0 + t),
-                    t is random from[0, T), t_0 is random from [0, time_steps - t)
-                frequency_masking: masked frequency range, should be in (0, dimension),
-                    the final masked frequencies will be [f_0, f_0 + f),
-                    f is random from[0, F), f_0 is random from [0, dimension - f)
-                mask_cols: masking operation is executed mask_cols times in each axis
-        '''
         hparams = register_and_parse_hparams(self.default_config, preprocess_config, cls=self.__class__)
         self.time_warping = hparams.time_warping
         self.time_masking = hparams.time_masking
@@ -59,26 +58,28 @@ class SpecAugment:
         self.mask_type = hparams.mask_type
 
     def __call__(self, feat):
-        ''' spec augment preprocess for audio features
-         Args:
-             feat: audio features, shape should be
-             [time_steps, dimension, channels]
-         Returns:
-             feat: processed features
-        '''
+        """spec augment preprocess for audio features
+
+        Args:
+            feat: audio features, shape should be [time_steps, dimension, channels]
+
+        Returns:
+            processed features
+        """
         feat = self.feat_time_warping(feat)
         feat = self.feat_masking(feat, axis=0, mask_num=self.time_masking)
         feat = self.feat_masking(feat, axis=1, mask_num=self.frequency_masking)
         return feat
 
     def feat_time_warping(self, feat):
-        ''' time warping for spec agument
+        """time warping for spec agument
+
         Args:
-           feat: audio features, shape should be
-           [time_steps, dimension, channels]
+            feat: audio features, shape should be [time_steps, dimension, channels]
+
         Returns:
-           warped_feat: time warped features
-        '''
+            time warped features
+        """
         time_steps = feat.shape[0]
         if self.time_warping >= time_steps - self.time_warping - 1 or self.time_warping == 0:
             return feat
@@ -96,16 +97,16 @@ class SpecAugment:
         return warped_feat
 
     def feat_masking(self, feat, axis=0, mask_num=0):
-        ''' masking for spec augment
-         Args:
-             feat: audio features, shape should be
-             [time_steps, dimension, channels]
-             axis: the axis to be masked
-             mask_num: masked time or frequency range
-         Returns:
-             feat: masked features
-        '''
+        """masking for spec augment
 
+        Args:
+            feat: audio features, shape should be [time_steps, dimension, channels]
+            axis (int, optional): the axis to be masked. Defaults to 0.
+            mask_num (int, optional): masked time or frequency range. Defaults to 0.
+
+        Returns:
+            masked features
+        """
         time_steps, freq_dim, channels = feat.shape
 
         dim_size = tf.shape(feat)[axis]
