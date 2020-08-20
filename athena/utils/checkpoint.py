@@ -15,14 +15,14 @@
 # ==============================================================================
 # Only support eager mode
 # pylint: disable=invalid-name
-r""" check point manager """
+r""" checkpoint manager """
 import os
 import tensorflow as tf
 from absl import logging
 import numpy as np
 
 class Checkpoint(tf.train.Checkpoint):
-    """ A wrapper for Tensorflow checkpoint
+    """A wrapper for Tensorflow checkpoint
 
     Args:
         checkpoint_directory: the directory for checkpoint
@@ -59,7 +59,7 @@ class Checkpoint(tf.train.Checkpoint):
                     self.n_best_model[key] = float(val.strip())
 
     def _compare_and_save_best(self, loss, metrics, save_path):
-        """ compare and save the best model with best_loss and N best metrics"""
+        """compare and save the best model with best_loss and N best metrics"""         
         checkpoint = save_path.split('/')[-1]
         if loss is not None and loss < self.best_loss:
             self.best_loss = loss
@@ -74,7 +74,7 @@ class Checkpoint(tf.train.Checkpoint):
                 wf.write('%s\t%s\n' % (key, float(self.n_best_model[key])))
 
     def compute_nbest_avg(self, model_avg_num):
-        """ restore n-best avg checkpoint """
+        """restore n-best avg checkpoint"""
         avg_file = os.path.join(self.checkpoint_directory, 'n_best')
         if not os.path.exists(avg_file):
             self.restore_from_best()
@@ -109,8 +109,8 @@ class Checkpoint(tf.train.Checkpoint):
         save_path = self.save(file_prefix=self.checkpoint_prefix)
         self._compare_and_save_best(loss, metrics, save_path)
 
-    def restore_from_best(self):
-        """ restore from the best model """
+    def restore_from_best(self):      
+        """restore from the best model"""
         self.restore(
             tf.train.latest_checkpoint(
                 self.checkpoint_directory,
