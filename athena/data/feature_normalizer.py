@@ -30,7 +30,8 @@ import tqdm
 
 
 class FeatureNormalizer:
-    """ Feature Normalizer """
+    """Feature Normalizer
+    """
 
     def __init__(self, cmvn_file=None):
         super().__init__()
@@ -44,7 +45,8 @@ class FeatureNormalizer:
         return self.apply_cmvn(feat_data, speaker, reverse=reverse)
 
     def apply_cmvn(self, feat_data, speaker, reverse=False):
-        """ transform original feature to normalized feature """
+        """transform original feature to normalized feature
+        """
         if speaker not in self.cmvn_dict:
             return feat_data
         mean = self.cmvn_dict[speaker][0]
@@ -59,7 +61,8 @@ class FeatureNormalizer:
         return feat_data
 
     def compute_cmvn(self, entries, speakers, featurizer, feature_dim, num_cmvn_workers=1):
-        """ Compute cmvn for filtered entries """
+        """compute cmvn for filtered entries
+        """
         start = time.time()
         if num_cmvn_workers == 1:
             initial_mean, initial_var, total_num = self.compute_cmvn_by_chunk_for_all_speaker(
@@ -106,7 +109,8 @@ class FeatureNormalizer:
         logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
 
     def compute_cmvn_by_chunk_for_all_speaker(self, feature_dim, speakers, featurizer, entries):
-        ''' because of memory issue, we used incremental approximation for the calculation of cmvn '''
+        """because of memory issue, we used incremental approximation for the calculation of cmvn
+        """
         initial_mean_dict, initial_var_dict, total_num_dict = {}, {}, {}
         # speakers may be 'global' or a speaker list
         for tar_speaker in speakers:
@@ -139,7 +143,8 @@ class FeatureNormalizer:
         return initial_mean_dict, initial_var_dict, total_num_dict
 
     def compute_cmvn_kaldiio(self, entries, speakers, kaldi_io_feats, feature_dim):
-        """ Compute cmvn for filtered entries using kaldi-format data """
+        """compute cmvn for filtered entries using kaldi-format data
+        """
         start = time.time()
         for tar_speaker in set(speakers.values()):
             logging.info("processing %s" % tar_speaker)
@@ -177,7 +182,8 @@ class FeatureNormalizer:
         logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
 
     def load_cmvn(self):
-        """ load mean and var """
+        """load mean and var
+        """
         if not os.path.exists(self.cmvn_file):
             return
         cmvns = pandas.read_csv(self.cmvn_file, sep="\t", index_col="speaker")
@@ -189,7 +195,11 @@ class FeatureNormalizer:
         logging.info("Successfully load cmvn file {}".format(self.cmvn_file))
 
     def save_cmvn(self, variable_list):
-        """ save cmvn variables determined by variable_list to file """
+        """save cmvn variables determined by variable_list to file
+
+        Args:
+            variable_list (list): e.g. ["speaker", "mean", "var"]
+        """
         if self.cmvn_file is None:
             self.cmvn_file = "~/.athena/cmvn_file"
         cmvn_dir = os.path.dirname(self.cmvn_file)
@@ -206,10 +216,12 @@ class FeatureNormalizer:
 
         
 class WorldFeatureNormalizer(FeatureNormalizer):
-    """ World Feature Normalizer """
+    """World Feature Normalizer
+    """
 
     def compute_world_cmvn(self, enable_load_from_disk, entries_person_wavs, sp_dim, fft_size, fs, speakers):
-        """ compuate cmvn of f0 and sp using pyworld """
+        """compuate cmvn of f0 and sp using pyworld
+        """
         start = time.time()
         cmvns = []
         for speaker in speakers:
@@ -247,7 +259,8 @@ class WorldFeatureNormalizer(FeatureNormalizer):
         logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
 
     def load_cmvn(self):
-        """ load codedsp_mean, codedsp_var, f0_mean, f0_var for vc dataset """
+        """load codedsp_mean, codedsp_var, f0_mean, f0_var for vc dataset
+        """
         if not os.path.exists(self.cmvn_file):
             return
         cmvns = pandas.read_csv(self.cmvn_file, sep="\t", index_col="speaker")

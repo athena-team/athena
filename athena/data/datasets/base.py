@@ -36,7 +36,8 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
 
     if num_threads == 1:
         def _gen_data():
-            """ multi thread loader """
+            """multi thread loader
+            """
             for i in range(num_samples):
                 yield dataset_builder[i]
     else:
@@ -49,7 +50,8 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
             max_index=num_samples
         )
         def _gen_data():
-            """ multi thread loader """
+            """multi thread loader
+            """
             for _ in range(num_samples):
                 yield data_queue.get()
 
@@ -73,7 +75,8 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
 
 
 class BaseDatasetBuilder:
-    """ base dataset """
+    """base dataset builder
+    """
 
     def __init__(self):
         self.entries = []
@@ -87,30 +90,36 @@ class BaseDatasetBuilder:
 
     @property
     def entries_list(self):
-        """ return the entries list """
+        """return the entries list
+        """
         return self.entries
 
     @property
     def sample_type(self):
-        """ example types """
+        """example types
+        """
         raise NotImplementedError
 
     @property
     def sample_shape(self):
-        """ examples shapes """
+        """examples shapes
+        """
         raise NotImplementedError
 
     @property
     def sample_signature(self):
-        """ examples signature """
+        """examples signature
+        """
         raise NotImplementedError
 
     def as_dataset(self, batch_size=16, num_threads=1):
-        """ return tf.data.Dataset object """
+        """return tf.data.Dataset object
+        """
         return data_loader(self, batch_size, num_threads)
 
     def shard(self, num_shards, index):
-        """ creates a Dataset that includes only 1/num_shards of this dataset """
+        """creates a Dataset that includes only 1/num_shards of this dataset
+        """
         if index >= num_shards:
             raise ValueError("the index should smaller the num_shards")
         logging.info("Creates the sub-dataset which is the %d part of %d" % (index, num_shards))
@@ -147,5 +156,6 @@ class BaseDatasetBuilder:
 
     # pylint: disable=unused-argument
     def compute_cmvn_if_necessary(self, is_necessary=True):
-        """ vitural interface """
+        """vitural interface
+        """
         return self

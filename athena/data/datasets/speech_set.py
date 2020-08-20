@@ -25,29 +25,7 @@ from .base import BaseDatasetBuilder
 
 
 class SpeechDatasetBuilder(BaseDatasetBuilder):
-    """ SpeechDatasetBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config:
-        feature_config: the config file for feature extractor, default={'type':'Fbank'}
-        data_csv: the path for original LDC HKUST,
-            default='/tmp-data/dataset/opensource/hkust/train.csv'
-        force_process: force process, if force_process=True, we will re-process the dataset,
-            if False, we will process only if the out_path is empty. default=False
-
-    Interfaces::
-        __len__(self): return the number of data samples
-
-        @property:
-        sample_shape:
-            {"input": tf.TensorShape([None, self.audio_featurizer.dim,
-                                  self.audio_featurizer.num_channels]),
-            "input_length": tf.TensorShape([]),
-            "output_length": tf.TensorShape([]),
-            "output": tf.TensorShape([None, self.audio_featurizer.dim *
-                                  self.audio_featurizer.num_channels]),}
+    """SpeechDatasetBuilder
     """
 
     default_config = {
@@ -76,7 +54,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             self.hparams.override_from_dict(config)
 
     def preprocess_data(self, file_path):
-        """Generate a list of tuples (wav_filename, wav_length_ms, speaker)."""
+        """generate a list of tuples (wav_filename, wav_length_ms, speaker)."""
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.read().splitlines()
@@ -105,6 +83,21 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         return self.preprocess_data(file_path)
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input": input_data,
+                "input_length": input_data.shape[0],
+                "output": output_data,
+                "output_length": output_data.shape[0],
+            }
+        """
         audio_file, _, speaker = self.entries[index]
         feat = self.audio_featurizer(audio_file)
         feat = self.feature_normalizer(feat, speaker)
@@ -126,7 +119,11 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def num_class(self):
-        """ return the max_index of the vocabulary """
+        """:obj:`@property`
+
+        Returns:
+            int: the target dim
+        """
         target_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         return target_dim
 
@@ -142,6 +139,18 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_type(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_type of the dataset::
+
+            {
+                "input": tf.float32,
+                "input_length": tf.int32,
+                "output": tf.float32,
+                "output_length": tf.int32,
+            }
+        """
         return {
             "input": tf.float32,
             "input_length": tf.int32,
@@ -151,6 +160,20 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_shape(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_shape of the dataset::
+
+            {
+                "input": tf.TensorShape(
+                    [None, self.audio_featurizer.dim, self.audio_featurizer.num_channels]
+                ),
+                "input_length": tf.TensorShape([]),
+                "output": tf.TensorShape([None, None]),
+                "output_length": tf.TensorShape([]),
+            }
+        """
         return {
             "input": tf.TensorShape(
                 [None, self.audio_featurizer.dim, self.audio_featurizer.num_channels]
@@ -162,6 +185,20 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_signature(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_signature of the dataset::
+
+            {
+                "input": tf.TensorSpec(
+                    shape=(None, None, None, None), dtype=tf.float32
+                ),
+                "input_length": tf.TensorSpec(shape=([None]), dtype=tf.int32),
+                "output": tf.TensorSpec(shape=(None, None, None), dtype=tf.float32),
+                "output_length": tf.TensorSpec(shape=([None]), dtype=tf.int32),
+            }
+        """
         return (
             {
                 "input": tf.TensorSpec(
@@ -178,11 +215,7 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
         The length of filterd samples will be in [min_length, max_length)
 
-        Args:
-            self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length(ms)
-            max_len: the maximal length(ms)
-        returns:
+        Returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, speaker)
         """
