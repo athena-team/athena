@@ -27,8 +27,7 @@ CandidateHolder = namedtuple(
 
 
 class BeamSearchDecoder:
-    r""" Beam search decoding used in seq2seq decoder layer
-    This layer is used for evaluation
+    """Beam search decoding used in seq2seq decoder layer
     """
 
     def __init__(self, num_class, sos, eos, beam_size):
@@ -51,15 +50,15 @@ class BeamSearchDecoder:
 
     @staticmethod
     def build_decoder(hparams, num_class, sos, eos, decoder_one_step, lm_model=None):
-        """ Allocate the time propagating function of the decoder,
-            initialize the decoder
+        """Allocate the time propagating function of the decoder,
+           initialize the decoder
         Args:
             hparams: the decoding configs are included here
             num_class: the size of the vocab
             sos: the start symbol index
             eos: the end symbol index
             decoder_one_step: the time propagating function of the decoder
-            lm_model: the initialized languange model
+            lm_model: the initialized language model
         Returns:
             beam_search_decoder: the initialized beam search decoder
         """
@@ -97,6 +96,7 @@ class BeamSearchDecoder:
 
     def set_lm_model(self, lm_model):
         """ set the lm_model
+
         Args:
             lm_model: lm_model
         """
@@ -105,6 +105,7 @@ class BeamSearchDecoder:
 
     def set_ctc_scorer(self, ctc_scorer):
         """ set the ctc_scorer
+
         Args:
             ctc_scorer: the ctc scorer
         """
@@ -114,6 +115,7 @@ class BeamSearchDecoder:
     def beam_search_score(self, candidate_holder, encoder_outputs):
         """Call the time propagating function, fetch the acoustic score at the current step
            If needed, call the auxiliary scorer and update cand_states in candidate_holder
+
         Args:
             candidate_holder:  the param cand_seqs and the cand_logits of it is needed
               in the transformer decoder to calculate the output. type: CandidateHolder
@@ -157,6 +159,7 @@ class BeamSearchDecoder:
         max_seq_len):
         """Add the new calculated completed seq with its score to completed seqs
            select top beam_size probable completed seqs with these corresponding scores
+
         Args:
             completed_scores: the scores of completed_seqs
             completed_seqs: historical top beam_size probable completed seqs
@@ -164,6 +167,7 @@ class BeamSearchDecoder:
             new_scores: the current time step scores
             candidate_holder:
             max_seq_len: the maximum acceptable output length
+
         Returns:
             new_completed_scores: new top probable scores
             completed_seqs: new top probable completed seqs
@@ -204,11 +208,13 @@ class BeamSearchDecoder:
         candidate_holder):
         """select top probable candidate seqs from new predictions with its scores
            update candidate_holder based on top probable candidates
+
         Args:
             new_scores: the current time step prediction scores
             new_cand_logits: historical prediction scores
             new_states: updated states
             candidate_holder:
+
         Returns:
             candidate_holder: cand_seqs, cand_logits, cand_states,
               cand_scores, cand_parents will be updated here and sent
@@ -257,6 +263,7 @@ class BeamSearchDecoder:
             cand_states: [history_predictions]
             init_states: state list
             encoder_outputs: (encoder_outputs, memory_mask, ...)
+            
         Returns:
             completed_seqs: the sequence with highest score
         """
