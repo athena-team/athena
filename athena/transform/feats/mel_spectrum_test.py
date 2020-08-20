@@ -27,9 +27,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 class MelSpectrumTest(tf.test.TestCase):
-    """
-    MelSpectrum extraction test.
-    """
+    """MelSpectrum extraction test."""
     def test_mel_spectrum(self):
         # 16kHz test
         wav_path_16k = str(

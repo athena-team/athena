@@ -41,9 +41,12 @@ class AudioFeaturizer:
         """Init config of AudioFeaturizer.
 
         Args:
-            config: 'type': 'ReadWav', 'WriteWav', 'Fbank', 'Spectrum', 'MelSpectrum'
-                            'Framepow', 'Pitch', 'Mfcc', 'Fbank', 'FbankPitch'
-                    Specific parameters of different features can be seen in the docs of Transform class.
+            config: 'type': The name of the feature you want to extract.
+                    {
+                    'ReadWav', 'WriteWav', 'Fbank', 'Spectrum', 'MelSpectrum'
+                    'Framepow', 'Pitch', 'Mfcc', 'Fbank', 'FbankPitch'
+                    }
+            Note: Specific parameters of different features can be seen in the docs of Transform class.
 
         """
 
@@ -81,7 +84,7 @@ class AudioFeaturizer:
     @tf.function
     def __impl(self, audio=None, sr=None, speed=1.0):
         """Call OP of features to extract features.
-        
+
         Args:
             audio: a tensor of audio data or audio file
             sr: a tensor of sample rate
@@ -96,7 +99,7 @@ class AudioFeaturizer:
 
     @property
     def dim(self):
-        """Return the dimension of the feature, if only ReadWav, return 1. Else, 
+        """Return the dimension of the feature, if only ReadWav, return 1. Else,
         see the docs in the feature class.
         """
         return self.feat.dim()
