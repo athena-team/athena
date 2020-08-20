@@ -26,10 +26,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
 class SpectrumTest(tf.test.TestCase):
-    """
-    Pitch extraction test.
-    """
+    """Pitch extraction test."""
     def test_spectrum(self):
+        """Test Pitch using 16kHz && 8kHz wav."""
         wav_path_16k = str(
             Path(os.environ["MAIN_ROOT"]).joinpath("examples/sm1_cln.wav")
         )

@@ -42,7 +42,9 @@ class WriteWav(BaseFrontend):
 
         Args:
             config: contains one optional parameter.
-            'sample_rate': the sample rate of the signal. (default=16000)
+            {
+             'sample_rate': the sample rate of the signal. (default=16000)
+            }
 
         Note: Return an object of class HParams, which is a set of hyperparameters as
               name-value pairs.
