@@ -41,7 +41,8 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
             self.load_csv(self.hparams.data_csv)
 
     def load_csv(self, file_path):
-        """ load csv file """
+        """load csv file
+        """
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding="utf-8") as file:
             lines = file.read().splitlines()
@@ -74,6 +75,21 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
         return self
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input": input_labels,
+                "input_length": input_length,
+                "output": output_labels,
+                "output_length": output_length,
+            }
+        """
         input_labels, input_length, output_labels, output_length = self.entries[index]
 
         return {
@@ -84,12 +100,13 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
         }
 
     def __len__(self):
-        """ return the number of data samples """
+        """return the number of data samples
+        """
         return len(self.entries)
 
     @property
     def num_class(self):
-        """@property number of classes
+        """:obj:`@property`
 
         Returns:
             int: the max_index of the vocabulary
@@ -98,7 +115,7 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def input_vocab_size(self):
-        """@property size of input vocabulary
+        """:obj:`@property`
 
         Returns:
             int: the input vocab size
@@ -107,10 +124,10 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_type(self):
-        """@property sample_type of the dataset
+        """:obj:`@property`
 
         Returns:
-            dict::
+            dict: sample_type of the dataset::
 
             {
                 "input": tf.int32,
@@ -118,7 +135,6 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
                 "output": tf.int32,
                 "output_length": tf.int32,
             }
-
         """
         return {
             "input": tf.int32,
@@ -129,10 +145,11 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_shape(self):
-        """@property sample_shape of the dataset
+        """:obj:`@property`
 
         Returns:
-            dict::
+            dict: sample_shape of the dataset::
+
             {
                 "input": tf.TensorShape([None]),
                 "input_length": tf.TensorShape([]),
@@ -149,10 +166,11 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_signature(self):
-        """@property sample_signature of the dataset
+        """:obj:`@property`
 
         Returns:
-            dict::
+            dict: sample_signature of the dataset::
+
             {
                 "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
                 "input_length": tf.TensorSpec(shape=([None]), dtype=tf.int32),

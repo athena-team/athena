@@ -29,25 +29,7 @@ from .base import BaseDatasetBuilder
 
 
 class SpeechRecognitionDatasetKaldiIOBuilder(BaseDatasetBuilder):
-    """ SpeechRecognitionDatasetKaldiIOBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config::
-        audio_config: the config file for feature extractor, default={'type':'Fbank'}
-        vocab_file: the vocab file, default='data/utils/ch-en.vocab'
-
-    Interfaces::
-        __len__(self): return the number of data samples
-        num_class(self): return the max_index of the vocabulary + 1
-        @property:
-          sample_shape:
-            {"input": tf.TensorShape([None, self.audio_featurizer.dim,
-                                  self.audio_featurizer.num_channels]),
-             "input_length": tf.TensorShape([1]),
-             "output_length": tf.TensorShape([1]),
-             "output": tf.TensorShape([None])}
+    """SpeechRecognitionDatasetKaldiIOBuilder
     """
     default_config = {
         "audio_config": {"type": "Fbank"},
@@ -204,11 +186,7 @@ class SpeechRecognitionDatasetKaldiIOBuilder(BaseDatasetBuilder):
 
         The length of filterd samples will be in [min_length, max_length)
 
-        Args:
-            self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length (ms for csv-format data, and frame amount for scp-format data)
-            max_len: the maximal length (ms for csv-format data, and frame amount for scp-format data)
-        returns:
+        Returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, transcripts, speed, speaker)
         """
@@ -226,11 +204,7 @@ class SpeechRecognitionDatasetKaldiIOBuilder(BaseDatasetBuilder):
 
         The length of filterd samples will be in [min_length, max_length)
 
-        Args:
-            self.hparams.output_length_range = [min_len, max_len]
-            min_len: the minimal length
-            max_len: the maximal length
-        returns:
+        Returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, transcripts, speed, speaker)
         """
