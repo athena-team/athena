@@ -59,7 +59,8 @@ class DataQueue:
         self._stop.set()
 
     def generator_task(self):
-        """Enqueue batch data"""
+        """Enqueue batch data
+        """
         while not self._stop.is_set():
             try:
                 if self.index >= self.max_index:
@@ -87,7 +88,7 @@ class DataQueue:
 def test():
     """
     Test data queue.
-    Excpet return:
+    Expected return:
         epoch: %d, nb_batch: %d: finish.
     """
 
