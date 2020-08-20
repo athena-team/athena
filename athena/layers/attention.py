@@ -71,9 +71,7 @@ class ScaledDotProductAttention(tf.keras.layers.Layer):
 
 
 class MultiHeadAttention(tf.keras.layers.Layer):
-    """ Multi-head attention
-
-    Multi-head attention consists of four parts:
+    """Multi-head attention consists of four parts:
 
     * Linear layers and split into heads. 
     
@@ -456,7 +454,7 @@ class LocationAttention(tf.keras.layers.Layer):
 
 
 class StepwiseMonotonicAttention(LocationAttention):
-    """stepwise monotonic attention
+    """Stepwise monotonic attention
 
     Reference: Robust Sequence-to-Sequence Acoustic Modeling with Stepwise Monotonic Attention for Neural TTS (https://arxiv.org/pdf/1906.00672.pdf)
 
@@ -500,6 +498,7 @@ class StepwiseMonotonicAttention(LocationAttention):
             initialized_weights: initializes to dirac distributions, shape: [batch, max_len]
         Examples:
             An initialized_weights the shape of which is [2, 4]:
+            
             >>> [[1, 0, 0, 0],
             >>> [1, 0, 0, 0]]
         """
@@ -508,9 +507,11 @@ class StepwiseMonotonicAttention(LocationAttention):
 
     def step_monotonic_function(self, sigmoid_probs, prev_weights):
         """hard mode can only be used in the synthesis step
+
         Args:
             sigmoid_probs: sigmoid probabilities, shape: [batch, x_steps]
             prev_weights: previous attention weights, shape: [batch, x_steps]
+
         Returns:
             weights: new attention weights, shape: [batch, x_steps]
         """
