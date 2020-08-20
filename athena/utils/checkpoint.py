@@ -27,17 +27,17 @@ class Checkpoint(tf.train.Checkpoint):
     Args:
         checkpoint_directory: the directory for checkpoint
         summary_directory: the directory for summary used in Tensorboard
-        __init__ provide the optimizer and model
-        __call__ save the model
+        __init__: provide the optimizer and model
+        __call__: save the model
 
     Example:
-        transformer = SpeechTransformer(target_vocab_size=dataset_builder.target_dim)
-        optimizer = tf.keras.optimizers.Adam()
-        ckpt = Checkpoint(checkpoint_directory='./train', summary_directory='./event',
-            transformer=transformer, optimizer=optimizer)
-        solver = BaseSolver(transformer)
-        for epoch in dataset:
-            ckpt()
+        >>>transformer = SpeechTransformer(target_vocab_size=dataset_builder.target_dim)
+        >>>optimizer = tf.keras.optimizers.Adam()
+        >>>ckpt = Checkpoint(checkpoint_directory='./train', summary_directory='./event',
+               transformer=transformer, optimizer=optimizer)
+        >>>solver = BaseSolver(transformer)
+        >>>for epoch in dataset:
+        >>>    ckpt()
     """
 
     def __init__(self, checkpoint_directory=None, model=None, **kwargs):
