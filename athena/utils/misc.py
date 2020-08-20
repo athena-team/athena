@@ -148,14 +148,16 @@ def get_wave_file_length(wave_file):
 def splice_numpy(x, context):
     """
     Splice a tensor along the last dimension with context.
-    e.g.:
-    t = [[[1, 2, 3],
-        [4, 5, 6],
-        [7, 8, 9]]]
-    splice_tensor(t, [0, 1]) =
-      [[[1, 2, 3, 4, 5, 6],
-        [4, 5, 6, 7, 8, 9],
-        [7, 8, 9, 7, 8, 9]]]
+    
+    Example:
+
+    >>> t = [[[1, 2, 3],
+    >>>     [4, 5, 6],
+    >>>     [7, 8, 9]]]
+    >>> splice_tensor(t, [0, 1]) =
+    >>>   [[[1, 2, 3, 4, 5, 6],
+    >>>     [4, 5, 6, 7, 8, 9],
+    >>>     [7, 8, 9, 7, 8, 9]]]
 
     Args:
         tensor: a tf.Tensor with shape (B, T, D) a.k.a. (N, H, W)
