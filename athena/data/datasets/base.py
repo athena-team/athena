@@ -23,7 +23,12 @@ import tensorflow as tf
 from ...utils.data_queue import DataQueue
 
 def data_loader(dataset_builder, batch_size=16, num_threads=1):
-    """ dataloader
+    """data loader
+
+    Args:
+        dataset_builder: dataset builder
+        batch_size (int, optional): Defaults to 16.
+        num_threads (int, optional): number of threads to load data. Defaults to 1.
     """
     num_samples = len(dataset_builder)
     if num_samples == 0:
@@ -105,7 +110,7 @@ class BaseDatasetBuilder:
         return data_loader(self, batch_size, num_threads)
 
     def shard(self, num_shards, index):
-        """ Creates a Dataset that includes only 1/num_shards of this dataset """
+        """ creates a Dataset that includes only 1/num_shards of this dataset """
         if index >= num_shards:
             raise ValueError("the index should smaller the num_shards")
         logging.info("Creates the sub-dataset which is the %d part of %d" % (index, num_shards))
@@ -125,7 +130,7 @@ class BaseDatasetBuilder:
         return entries in sorted file_size order. Otherwise, do batch_wise shuffling.
 
         Args:
-            batch_size: an integer for the batch size. default=64
+            batch_size (int, optional):  an integer for the batch size. Defaults to 64.
         """
         if len(self.entries) == 0:
             return self
