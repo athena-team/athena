@@ -25,7 +25,7 @@ from athena.utils.misc import gated_linear_layer
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    """ positional encoding can be used in transformer """
+    """positional encoding can be used in transformer"""
 
     def __init__(self, d_model, max_position=800, scale=False):
         super().__init__()
@@ -43,8 +43,8 @@ class PositionalEncoding(tf.keras.layers.Layer):
 
 
 class ScaledPositionalEncoding(PositionalEncoding):
-    """ scaled positional encoding,
-        reference: https://arxiv.org/pdf/1809.08895.pdf"""
+    """scaled positional encoding,
+       reference: https://arxiv.org/pdf/1809.08895.pdf"""
     def __init__(self, d_model, max_position=800):
         super().__init__(d_model, max_position, scale=False)
 
@@ -60,7 +60,7 @@ class ScaledPositionalEncoding(PositionalEncoding):
 
 
 class Collapse4D(tf.keras.layers.Layer):
-    """ callapse4d can be used in cnn-lstm for speech processing
+    """collapse4d can be used in cnn-lstm for speech processing
     reshape from [N T D C] -> [N T D*C]
     """
 
@@ -83,10 +83,9 @@ class Gelu(tf.keras.layers.Layer):
 
 
 class TdnnLayer(tf.keras.layers.Layer):
-    """ An implement of Tdnn Layer
+    """An implementation of Tdnn Layer
     Args:
-        context: a int of left and right context, or
-        a list of context indexes, e.g. (-2, 0, 2).
+        context: a int of left and right context, or a list of context indexes, e.g. (-2, 0, 2).
         output_dim: the dim of the linear transform
     """
 
@@ -110,7 +109,7 @@ class TdnnLayer(tf.keras.layers.Layer):
 
 
 class DownSampleBlock(tf.keras.layers.Layer):
-    """ conv2d downsample block for stargan, instance norm is used because batch size is 1
+    """conv2d downsample block for stargan, instance norm is used because batch size is 1
     """
     def __init__(self, filters, kernel_size, strides):
         super(DownSampleBlock, self).__init__()
@@ -132,7 +131,7 @@ class DownSampleBlock(tf.keras.layers.Layer):
 
 
 class UpSampleBlock(tf.keras.layers.Layer):
-    """ conv2d upsample block for stargan, instance norm is used because batch size is 1
+    """conv2d upsample block for stargan, instance norm is used because batch size is 1
     """
     def __init__(self, filters, kernel_size, strides):
         super(UpSampleBlock, self).__init__()
@@ -153,12 +152,12 @@ class UpSampleBlock(tf.keras.layers.Layer):
 
 
 class ZoneOutCell(tf.keras.layers.LSTMCell):
-    '''Wrapper for LSTM cell to create ZoneOut Cell
+    """Wrapper for LSTM cell to create ZoneOut Cell
 
     inspired by:
     https://github.com/teganmaharaj/zoneout/blob/master/zoneout_tensorflow.py
     Published by one of 'https://arxiv.org/pdf/1606.01305.pdf' paper writers.
-    '''
+    """
 
     def __init__(self, zoneout_rate=0., **kwargs):
         super().__init__(**kwargs)
@@ -166,8 +165,8 @@ class ZoneOutCell(tf.keras.layers.LSTMCell):
         self.drop_layer = tf.keras.layers.Dropout(self.zoneout_rate)
 
     def call(self, inputs, states, training: bool = None):
-        '''Runs vanilla LSTM Cell and applies zoneout.
-        '''
+        """Runs vanilla LSTM Cell and applies zoneout.
+        """
         # Apply vanilla LSTM
         outputs, new_states = super().call(inputs, states, training=training)
         if self.zoneout_rate == 0:
