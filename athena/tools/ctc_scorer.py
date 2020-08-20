@@ -40,10 +40,13 @@ class CTCPrefixScorer:
     def initial_state(self, init_cand_states, x):
         """
         Initialize states and Add init_state and init_score to init_cand_states
+
         Args:
             init_cand_states: CandidateHolder.cand_states
             x: log softmax value from ctc_logits, shape: (beam, T, num_classes)
-        Return: init_cand_states
+
+        Return: 
+            init_cand_states
         """
         self.x = x[0].numpy()
         self.input_length = len(self.x)
@@ -66,9 +69,11 @@ class CTCPrefixScorer:
         """
         Call this function to compute the ctc one pass decoding score based on
         the logits of the ctc module, the scoring function shares a common interface
+
         Args:
             candidate_holder: CandidateHolder
             new_scores: the score from other models
+
         Return:
             ctc_score_result: shape: (beam, num_classes)
             cand_states: CandidateHolder.cand_states updated cand_states
@@ -118,18 +123,18 @@ class CTCPrefixScorer:
 
     def cand_score(self, y, cs, r_prev):
         """
-        r: the probability of the output seq containing the predicted label
-             given the current input seqs, shape: [input_length, 2, ctc_beam]
-        r[:, 0]: the prediction of the t-th frame is not blank
-        r[:, 1]: the prediction of the t-th frame is blank
-        log_phi: the probability that the last predicted label is not created
-                  by the t-th frame
-        log_psi: the sum of all log_phi's, the prefix probability, shape:[ctc_beam]
-
         Args:
             y: cand_seq
             cs: top_ctc_candidates
             r_prev: ctc_pre_state
+            r: the probability of the output seq containing the predicted label
+                 given the current input seqs, shape: [input_length, 2, ctc_beam]
+            r[:, 0]: the prediction of the t-th frame is not blank
+            r[:, 1]: the prediction of the t-th frame is blank
+            log_phi: the probability that the last predicted label is not created
+                      by the t-th frame
+            log_psi: the sum of all log_phi's, the prefix probability, shape:[ctc_beam]
+
         Return:
             log_psi: ctc_score
             new_state
