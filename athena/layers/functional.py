@@ -23,7 +23,7 @@ from ..utils.misc import tensor_shape
 
 
 def make_positional_encoding(position, d_model):
-    """ generate a postional encoding list """
+    """generate a postional encoding list"""
 
     def get_angles(pos, i, d_model):
         angle_rates = 1 / np.power(10000, (2 * (i // 2)) / np.float32(d_model))
@@ -39,7 +39,7 @@ def make_positional_encoding(position, d_model):
 
 
 def collapse4d(x, name=None):
-    """ reshape from [N T D C] -> [N T D*C]
+    """reshape from [N T D C] -> [N T D*C]
     using tf.shape(x), which generate a tensor instead of x.shape
     """
     with ops.name_scope(name, "collapse4d") as scope:
@@ -56,14 +56,15 @@ def collapse4d(x, name=None):
 def splice(x, context):
     """
     Splice a tensor along the last dimension with context.
-    e.g.:
-    t = [[[1, 2, 3],
-          [4, 5, 6],
-          [7, 8, 9]]]
-    splice_tensor(t, [0, 1]) =
-        [[[1, 2, 3, 4, 5, 6],
-        [4, 5, 6, 7, 8, 9],
-        [7, 8, 9, 7, 8, 9]]]
+
+    Example:
+    >>> t = [[[1, 2, 3],
+    >>>       [4, 5, 6],
+    >>>       [7, 8, 9]]]
+    >>> splice_tensor(t, [0, 1]) =
+    >>>     [[[1, 2, 3, 4, 5, 6],
+    >>>     [4, 5, 6, 7, 8, 9],
+    >>>     [7, 8, 9, 7, 8, 9]]]
 
     Args:
         tensor: a tf.Tensor with shape (B, T, D) a.k.a. (N, H, W)

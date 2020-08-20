@@ -73,14 +73,22 @@ class ScaledDotProductAttention(tf.keras.layers.Layer):
 class MultiHeadAttention(tf.keras.layers.Layer):
     """ Multi-head attention
 
-    Multi-head attention consists of four parts: * Linear layers and split into
-    heads. * Scaled dot-product attention. * Concatenation of heads. * Final linear layer.
+    Multi-head attention consists of four parts:
+    * Linear layers and split into heads. 
+    
+    * Scaled dot-product attention. 
+    
+    * Concatenation of heads. 
+    
+    * Final linear layer.
+
     Each multi-head attention block gets three inputs; Q (query), K (key), V (value).
     These are put through linear (Dense) layers and split up into multiple heads.
     The scaled_dot_product_attention defined above is applied to each head (broadcasted for
     efficiency). An appropriate mask must be used in the attention step. The attention
     output for each head is then concatenated (using tf.transpose, and tf.reshape) and
     put through a final Dense layer.
+
     Instead of one single attention head, Q, K, and V are split into multiple heads because
     it allows the model to jointly attend to information at different positions from
     different representational spaces. After the split each head has a reduced dimensionality,
@@ -89,6 +97,14 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     """
 
     def __init__(self, d_model, num_heads, unidirectional=False, look_ahead=0):
+        """initialization of multihead attention block
+
+        Args:
+            d_model: dimension of multi-head attention
+            num_heads: number of attention heads
+            unidirectional: whether the self attention is unidirectional. Defaults to False.
+            look_ahead: how many frames to look ahead in unidirectional attention. Defaults to 0.
+        """        
         super().__init__()
         self.num_heads = num_heads
         self.d_model = d_model
@@ -130,7 +146,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
     def call(self, v, k, q, mask):
-        """ call function """
+        """call function"""
         batch_size = tf.shape(q)[0]
 
         q = self.wq(q)  # (batch_size, seq_len, hiddn_dim)
@@ -157,7 +173,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
 
 class BahdanauAttention(tf.keras.Model):
-    """ the Bahdanau Attention """
+    """the Bahdanau Attention"""
 
     def __init__(self, units, input_dim=1024):
         super().__init__()
@@ -177,7 +193,7 @@ class BahdanauAttention(tf.keras.Model):
         )
 
     def call(self, query, values):
-        """ call function """
+        """call function"""
         # hidden shape == (batch_size, hidden size)
         # hidden_with_time_axis shape == (batch_size, 1, hidden_size)
         # we are doing this to perform addition to calculate the score
@@ -199,12 +215,11 @@ class BahdanauAttention(tf.keras.Model):
 
 
 class HanAttention(tf.keras.layers.Layer):
-    """
-    Refer to [Hierarchical Attention Networks for Document Classification]
+    """Refer to [Hierarchical Attention Networks for Document Classification]
     (https://www.cs.cmu.edu/~hovy/papers/16HLT-hierarchical-attention-networks.pdf)
-    wrap `with tf.variable_scope(name, reuse=tf.AUTO_REUSE):`
-    Input shape: (Batch size, steps, features)
-    Output shape: (Batch size, features)
+
+    >>> Input shape: (Batch size, steps, features)
+    >>> Output shape: (Batch size, features)
     """
 
     def __init__(
@@ -234,7 +249,7 @@ class HanAttention(tf.keras.layers.Layer):
         self.use_bias = use_bias
 
     def build(self, input_shape):
-        """ build in keras layer """
+        """build in keras layer"""
         # pylint: disable=attribute-defined-outside-init
         assert len(input_shape) == 3
 
@@ -265,7 +280,7 @@ class HanAttention(tf.keras.layers.Layer):
         self.built = True
 
     def call(self, inputs, training=None, mask=None):
-        """ call function in keras """
+        """call function in keras"""
         batch_size = tf.shape(inputs)[0]
         W_3d = tf.tile(tf.expand_dims(self.W, axis=0), tf.stack([batch_size, 1, 1]))
         # [batch_size, steps, features]
@@ -311,12 +326,11 @@ class HanAttention(tf.keras.layers.Layer):
 
 
 class MatchAttention(tf.keras.layers.Layer):
-    """
-    Refer to [Learning Natural Language Inference with LSTM]
+    """Refer to [Learning Natural Language Inference with LSTM]
     (https://www.aclweb.org/anthology/N16-1170)
-    wrap `with tf.variable_scope(name, reuse=tf.AUTO_REUSE):`
-    Input shape: (Batch size, steps, features)
-    Output shape: (Batch size, steps, features)
+
+    >>> Input shape: (Batch size, steps, features)
+    >>> Output shape: (Batch size, steps, features)
     """
 
     def __init__(self, config, **kwargs):
@@ -457,8 +471,7 @@ class StepwiseMonotonicAttention(LocationAttention):
         self.mode = mode
 
     def build(self, _):
-        """
-        A Modified Energy Function is used and the params are defined here.
+        """A Modified Energy Function is used and the params are defined here.
             Reference: Online and Linear-Time Attention by Enforcing Monotonic Alignments
             (https://arxiv.org/pdf/1704.00784.pdf).
         """
@@ -488,15 +501,14 @@ class StepwiseMonotonicAttention(LocationAttention):
             initialized_weights: initializes to dirac distributions, shape: [batch, max_len]
         Examples:
             An initialized_weights the shape of which is [2, 4]:
-            [[1, 0, 0, 0],
-             [1, 0, 0, 0]]
+            >>> [[1, 0, 0, 0],
+            >>> [1, 0, 0, 0]]
         """
         batch = tf.shape(value_length)[0]
         return tf.one_hot(tf.zeros((batch,), dtype=tf.int32), max_len)
 
     def step_monotonic_function(self, sigmoid_probs, prev_weights):
-        """
-        hard mode can only be used in the synthesis step
+        """hard mode can only be used in the synthesis step
         Args:
             sigmoid_probs: sigmoid probabilities, shape: [batch, x_steps]
             prev_weights: previous attention weights, shape: [batch, x_steps]

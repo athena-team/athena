@@ -43,7 +43,7 @@ class Transformer(tf.keras.layers.Layer):
         custom_encoder: custom encoder (default=None).
         custom_decoder: custom decoder (default=None).
 
-    Examples::
+    Examples:
         >>> transformer_model = Transformer(nhead=16, num_encoder_layers=12)
         >>> src = tf.random.normal((10, 32, 512))
         >>> tgt = tf.random.normal((20, 32, 512))
@@ -159,7 +159,7 @@ class TransformerEncoder(tf.keras.layers.Layer):
         num_layers: the number of sub-encoder-layers in the encoder (required).
         norm: the layer normalization component (optional).
 
-    Examples::
+    Examples:
         >>> encoder_layer = [TransformerEncoderLayer(d_model=512, nhead=8)
         >>>                    for _ in range(num_layers)]
         >>> transformer_encoder = TransformerEncoder(encoder_layer)
@@ -201,7 +201,7 @@ class TransformerDecoder(tf.keras.layers.Layer):
         num_layers: the number of sub-decoder-layers in the decoder (required).
         norm: the layer normalization component (optional).
 
-    Examples::
+    Examples:
         >>> decoder_layer = [TransformerDecoderLayer(d_model=512, nhead=8)
         >>>                     for _ in range(num_layers)]
         >>> transformer_decoder = TransformerDecoder(decoder_layer)
@@ -259,7 +259,7 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         dropout: the dropout value (default=0.1).
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
 
-    Examples::
+    Examples:
         >>> encoder_layer = TransformerEncoderLayer(d_model=512, nhead=8)
         >>> src = tf.random(10, 32, 512)
         >>> out = encoder_layer(src)
@@ -303,10 +303,10 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         self.dropout = layers.Dropout(dropout, input_shape=(d_model,))
 
     def call(self, src, src_mask=None, training=None):
-        """Pass the input through the endocder layer.
+        """Pass the input through the encoder layer.
 
         Args:
-            src: the sequnce to the encoder layer (required).
+            src: the sequence to the encoder layer (required).
             mask: the mask for the src sequence (optional).
 
         Shape:
@@ -339,7 +339,7 @@ class TransformerDecoderLayer(tf.keras.layers.Layer):
         dropout: the dropout value (default=0.1).
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
 
-    Examples::
+    Examples:
         >>> decoder_layer = TransformerDecoderLayer(d_model=512, nhead=8)
         >>> memory = tf.random(10, 32, 512)
         >>> tgt = tf.random(20, 32, 512)
