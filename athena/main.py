@@ -44,7 +44,7 @@ SUPPORTED_MODEL = {
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
     "tacotron2": Tacotron2,
-    "stargan" : StarganModel
+    "stargan" : StarganModel,
     "tts_transformer": TTSTransformer,
     "fastspeech": FastSpeech,
     "speaker_resnet": SpeakerResnet
