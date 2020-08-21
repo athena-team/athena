@@ -21,6 +21,7 @@ import tensorflow as tf
 
 class MetricChecker:
     """Hold and save best metric checkpoint
+    
     Args:
         name: MetricChecker name
         maximum: more greater more better

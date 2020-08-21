@@ -27,7 +27,8 @@ class GriffinLim:
     """python implementation of griffinlim algorithm"""
 
     def __init__(self, data_descriptions):
-        """ Reference to paper "Multiband Excitation Vocoder"""
+        """Reference: to paper "Multiband Excitation Vocoder"
+        """
         assert data_descriptions.audio_featurizer is not None
         assert data_descriptions.audio_featurizer.feat is not None
         assert data_descriptions.hparams.audio_config is not None

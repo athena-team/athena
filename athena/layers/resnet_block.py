@@ -23,7 +23,7 @@ import tensorflow as tf
 
 class ResnetBasicBlock(tf.keras.layers.Layer):
     """Basic block of resnet
-       Reference to paper "Deep residual learning for image recognition"
+    Reference to paper "Deep residual learning for image recognition"
     """
     def __init__(self, num_filter, stride=1):
         super().__init__()
