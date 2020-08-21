@@ -50,8 +50,7 @@ class BeamSearchDecoder:
 
     @staticmethod
     def build_decoder(hparams, num_class, sos, eos, decoder_one_step, lm_model=None):
-        """Allocate the time propagating function of the decoder,
-           initialize the decoder
+        """Allocate the time propagating function of the decoder, initialize the decoder
         Args:
             hparams: the decoding configs are included here
             num_class: the size of the vocab
@@ -114,7 +113,7 @@ class BeamSearchDecoder:
 
     def beam_search_score(self, candidate_holder, encoder_outputs):
         """Call the time propagating function, fetch the acoustic score at the current step
-           If needed, call the auxiliary scorer and update cand_states in candidate_holder
+        If needed, call the auxiliary scorer and update cand_states in candidate_holder
 
         Args:
             candidate_holder:  the param cand_seqs and the cand_logits of it is needed
@@ -158,7 +157,7 @@ class BeamSearchDecoder:
         candidate_holder,
         max_seq_len):
         """Add the new calculated completed seq with its score to completed seqs
-           select top beam_size probable completed seqs with these corresponding scores
+        select top beam_size probable completed seqs with these corresponding scores
 
         Args:
             completed_scores: the scores of completed_seqs
@@ -207,7 +206,7 @@ class BeamSearchDecoder:
         new_states,
         candidate_holder):
         """select top probable candidate seqs from new predictions with its scores
-           update candidate_holder based on top probable candidates
+        update candidate_holder based on top probable candidates
 
         Args:
             new_scores: the current time step prediction scores
@@ -263,7 +262,7 @@ class BeamSearchDecoder:
             cand_states: [history_predictions]
             init_states: state list
             encoder_outputs: (encoder_outputs, memory_mask, ...)
-            
+
         Returns:
             completed_seqs: the sequence with highest score
         """
