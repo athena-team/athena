@@ -51,6 +51,7 @@ class BeamSearchDecoder:
     @staticmethod
     def build_decoder(hparams, num_class, sos, eos, decoder_one_step, lm_model=None):
         """Allocate the time propagating function of the decoder, initialize the decoder
+        
         Args:
             hparams: the decoding configs are included here
             num_class: the size of the vocab
