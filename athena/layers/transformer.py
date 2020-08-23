@@ -95,7 +95,7 @@ class Transformer(tf.keras.layers.Layer):
         self.nhead = nhead
 
     def call(self, src, tgt, src_mask=None, tgt_mask=None, memory_mask=None,
-             return_encoder_output=False, training=None):
+             return_encoder_output=False, return_attention_weights=False, training=None):
         """Take in and process masked source/target sequences.
 
         Args:
@@ -143,7 +143,8 @@ class Transformer(tf.keras.layers.Layer):
 
         memory = self.encoder(src, src_mask=src_mask, training=training)
         output = self.decoder(
-            tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training
+            tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
+            return_attention_weights=return_attention_weights, training=training
         )
         if return_encoder_output:
             return output, memory
@@ -186,6 +187,8 @@ class TransformerEncoder(tf.keras.layers.Layer):
         return output
 
     def set_unidirectional(self, uni=False):
+        """whether to apply trianglar masks to make transformer unidirectional
+        """
         for layer in self.layers:
             layer.set_unidirectional(uni)
 
@@ -211,7 +214,8 @@ class TransformerDecoder(tf.keras.layers.Layer):
         super().__init__()
         self.layers = decoder_layers
 
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, return_attention_weights=False,
+             training=None):
         """Pass the inputs (and mask) through the decoder layer in turn.
 
         Args:
@@ -224,16 +228,19 @@ class TransformerDecoder(tf.keras.layers.Layer):
             see the docs in Transformer class.
         """
         output = tgt
+        attention_weights = []
 
         for i in range(len(self.layers)):
-            output = self.layers[i](
+            output, attention_weight = self.layers[i](
                 output,
                 memory,
                 tgt_mask=tgt_mask,
                 memory_mask=memory_mask,
                 training=training,
             )
-
+            attention_weights.append(attention_weight)
+        if return_attention_weights:
+            return output, attention_weights
         return output
 
 
@@ -260,33 +267,36 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 
     def __init__(
         self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu",
-            unidirectional=False, look_ahead=0
+            unidirectional=False, look_ahead=0, ffn=None
     ):
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
         # Implementation of Feedforward model
         layers = tf.keras.layers
-        self.ffn = tf.keras.Sequential(
-            [
-                layers.Dense(
-                    dim_feedforward,
-                    activation=ACTIVATIONS[activation],
-                    kernel_initializer=tf.compat.v1.truncated_normal_initializer(
-                        stddev=0.02
+        if ffn is None:
+            self.ffn = tf.keras.Sequential(
+                [
+                    layers.Dense(
+                        dim_feedforward,
+                        activation=ACTIVATIONS[activation],
+                        kernel_initializer=tf.compat.v1.truncated_normal_initializer(
+                            stddev=0.02
+                        ),
+                        input_shape=(d_model,),
                     ),
-                    input_shape=(d_model,),
-                ),
-                layers.Dropout(dropout, input_shape=(dim_feedforward,)),
-                layers.Dense(
-                    d_model,
-                    kernel_initializer=tf.compat.v1.truncated_normal_initializer(
-                        stddev=0.02
+                    layers.Dropout(dropout, input_shape=(dim_feedforward,)),
+                    layers.Dense(
+                        d_model,
+                        kernel_initializer=tf.compat.v1.truncated_normal_initializer(
+                            stddev=0.02
+                        ),
+                        input_shape=(dim_feedforward,),
                     ),
-                    input_shape=(dim_feedforward,),
-                ),
-                layers.Dropout(dropout, input_shape=(d_model,)),
-            ]
-        )
+                    layers.Dropout(dropout, input_shape=(d_model,)),
+                ]
+            )
+        else:
+            self.ffn = ffn
 
         self.norm1 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
         self.norm2 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
@@ -309,6 +319,8 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         return out
 
     def set_unidirectional(self, uni=False):
+        """whether to apply trianglar masks to make transformer unidirectional
+        """
         self.self_attn.attention.uni = uni
 
 
@@ -384,7 +396,7 @@ class TransformerDecoderLayer(tf.keras.layers.Layer):
         """
         out = self.attn1(tgt, tgt, tgt, mask=tgt_mask)[0]
         out = self.norm1(tgt + self.dropout1(out, training=training))
-        out2 = self.attn2(memory, memory, out, mask=memory_mask)[0]
+        out2, decoder_weights = self.attn2(memory, memory, out, mask=memory_mask)
         out = self.norm2(out + self.dropout2(out2, training=training))
         out = self.norm3(out + self.ffn(out, training=training))
-        return out
+        return out, decoder_weights

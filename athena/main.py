@@ -16,7 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, wildcard-import, unused-wildcard-import, redefined-outer-name
-""" a sample implementation of LAS for HKUST """
+""" starting point for model training """
 import sys
 import json
 import tensorflow as tf
@@ -29,7 +29,10 @@ SUPPORTED_DATASET_BUILDER = {
     "speech_systhesis_dataset": SpeechSynthesisDatasetBuilder,
     "speech_dataset": SpeechDatasetBuilder,
     "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
+    "speaker_recognition_dataset": SpeakerRecognitionDatasetBuilder,
+    "speaker_verification_dataset": SpeakerVerificationDatasetBuilder,
     "language_dataset": LanguageDatasetBuilder,
+    "voice_conversion_dataset": VoiceConversionDatasetBuilder
 }
 
 SUPPORTED_MODEL = {
@@ -40,7 +43,11 @@ SUPPORTED_MODEL = {
     "mpc": MaskedPredictCoding,
     "rnnlm": RNNLM,
     "translate_transformer": NeuralTranslateTransformer,
-    "tacotron2": Tacotron2
+    "tacotron2": Tacotron2,
+    "stargan" : StarganModel,
+    "tts_transformer": TTSTransformer,
+    "fastspeech": FastSpeech,
+    "speaker_resnet": SpeakerResnet
 }
 
 SUPPORTED_OPTIMIZER = {
@@ -60,10 +67,13 @@ DEFAULT_CONFIGS = {
     "num_classes": None,
     "model_config": None,
     "pretrained_model": None,
+    "teacher_model": None,
     "optimizer": "warmup_adam",
     "optimizer_config": None,
+    "convert_config": None,
     "num_data_threads": 1,
     "dataset_builder": "speech_recognition_dataset",
+    "dev_dataset_builder": None,
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
@@ -112,7 +122,6 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
 
 def train(jsonfile, Solver, rank_size=1, rank=0):
     """ entry point for model training, implements train loop
-
 	:param jsonfile: json file to read configuration from
 	:param Solver: an abstract class that implements high-level logic of train, evaluate, decode, etc
 	:param rank_size: total number of workers, 1 if using single gpu
@@ -123,7 +132,9 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     if p.pretrained_model is not None and epoch == 0:
         p2, pretrained_model, _, _ = build_model_from_jsonfile(p.pretrained_model)
         model.restore_from_pretrained_model(pretrained_model, p2.model)
-
+    if p.teacher_model is not None:
+        p3, teacher_model, _, _ = build_model_from_jsonfile(p.teacher_model)
+        model.set_teacher_model(teacher_model, p3.model)
     if rank == 0:
         set_default_summary_writer(p.summary_dir)
 
@@ -132,11 +143,18 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
     trainset_builder.compute_cmvn_if_necessary(rank == 0)
     trainset_builder.shard(rank_size, rank)
 
+    if p.dev_dataset_builder is not None:
+        devset_builder = p.dev_dataset_builder
+    else:
+        devset_builder = p.dataset_builder
+    devset_builder = SUPPORTED_DATASET_BUILDER[devset_builder](p.devset_config)
+
     # train
     solver = Solver(
         model,
         optimizer,
         sample_signature=trainset_builder.sample_signature,
+        eval_sample_signature=devset_builder.sample_signature,
         config=p.solver_config,
     )
     loss = 0.0
@@ -148,12 +166,10 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
             trainset_builder.batch_wise_shuffle(p.batch_size)
         solver.train(trainset_builder.as_dataset(p.batch_size, p.num_data_threads))
 
-        if p.devset_config is not None:
-            if rank == 0:
-                logging.info(">>>>> start evaluate in epoch %d" % epoch)
-            devset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.devset_config)
-            devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
-            loss, metrics = solver.evaluate(devset, epoch)
+        if rank == 0:
+            logging.info(">>>>> start evaluate in epoch %d" % epoch)
+        devset = devset_builder.as_dataset(p.batch_size, p.num_data_threads)
+        loss, metrics = solver.evaluate(devset, epoch)
 
         if rank == 0:
             checkpointer(loss, metrics)

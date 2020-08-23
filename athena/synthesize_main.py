@@ -16,6 +16,7 @@
 # ==============================================================================
 # Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, redefined-outer-name
+""" entry point for synthesis of TTS models """
 import sys
 import json
 import tensorflow as tf
@@ -32,7 +33,8 @@ def synthesize(jsonfile):
     """ entry point for speech synthesis, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
     avg_num = 1 if 'model_avg_num' not in p.decode_config else p.decode_config['model_avg_num']
-    checkpointer.compute_nbest_avg(avg_num)
+    if avg_num > 0:
+        checkpointer.compute_nbest_avg(avg_num)
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
     solver = SynthesisSolver(model, dataset_builder, config=p.decode_config)

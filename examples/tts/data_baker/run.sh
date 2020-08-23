@@ -24,15 +24,29 @@ source tools/env.sh
 
 stage=0
 stop_stage=100
-horovod_cmd="horovodrun -np 4 -H localhost:4"
-horovod_prefix="horovod_"
+
 dataset_dir=examples/tts/data_baker/data
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
     echo "Creating csv"
-    mkdir -p $dataset_dir
+    mkdir -p $dataset_dir || exit 1
     python examples/tts/data_baker/local/prepare_data.py \
         $dataset_dir || exit 1
 fi
 
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] ; then
+    # Training stage
+    echo "Training"
+    python athena/main.py \
+        examples/tts/data_baker/configs/t2.json
+        > data_baker_train.log 2>&1 || exit 1
+fi
+
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ] ; then
+    # Training stage
+    echo "Synthesizing"
+    python athena/synthesize_main.py  \
+        examples/tts/data_baker/configs/t2.json
+        > data_baker_synthesize.log 2>&1 || exit 1
+fi
