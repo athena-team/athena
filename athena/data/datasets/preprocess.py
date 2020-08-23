@@ -18,8 +18,8 @@
 
 """ preprecessing for speech features """
 import random
-from PIL import Image
 import tensorflow as tf
+from PIL import Image
 from ...utils.hparam import register_and_parse_hparams
 
 class SpecAugment:
@@ -51,7 +51,8 @@ class SpecAugment:
                     f is random from[0, F), f_0 is random from [0, dimension - f)
                 mask_cols: masking operation is executed mask_cols times in each axis
         '''
-        hparams = register_and_parse_hparams(self.default_config, preprocess_config, cls=self.__class__)
+        hparams = register_and_parse_hparams(self.default_config,
+                                             preprocess_config, cls=self.__class__)
         self.time_warping = hparams.time_warping
         self.time_masking = hparams.time_masking
         self.frequency_masking = hparams.frequency_masking
@@ -120,7 +121,8 @@ class SpecAugment:
         t_end = tf.tile(t_end, [1, dim_size]) # (mask_cols, dim_size)
         base_mask = tf.expand_dims(tf.range(dim_size), axis=0)
         base_mask = tf.tile(base_mask, [self.mask_cols, 1])
-        mask = tf.math.logical_xor(t_end <= base_mask, base_mask < t_0) # (time_mask_cols, time_steps)
+        # (time_mask_cols, time_steps)
+        mask = tf.math.logical_xor(t_end <= base_mask, base_mask < t_0)
         final_mask = mask[0]
         for mask_bran in mask:
             final_mask = tf.math.logical_and(final_mask, mask_bran)
