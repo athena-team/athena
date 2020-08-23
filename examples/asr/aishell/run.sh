@@ -26,7 +26,7 @@ stage=0
 stop_stage=100
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
-dataset_dir=/nfs/cold_project/datasets/opensource_data/aishell/data_aishell
+dataset_dir=examples/asr/aishell/data/data_aishell
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
@@ -42,7 +42,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     cat examples/asr/aishell/data/train.csv > examples/asr/aishell/data/all.csv
     tail -n +2 examples/asr/aishell/data/dev.csv >> examples/asr/aishell/data/all.csv
     tail -n +2 examples/asr/aishell/data/test.csv >> examples/asr/aishell/data/all.csv
-    python CUDA_VISIBLE_DEVICES='' athena/cmvn_main.py \
+    CUDA_VISIBLE_DEVICES='' python athena/cmvn_main.py \
         examples/asr/aishell/configs/mpc.json examples/asr/aishell/data/all.csv || exit 1
 fi
 

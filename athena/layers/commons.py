@@ -19,8 +19,9 @@
 
 import tensorflow as tf
 from athena.layers.functional import make_positional_encoding, collapse4d, gelu
-
+import tensorflow_addons as tfa
 from athena.layers.functional import splice
+from athena.utils.misc import gated_linear_layer
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
@@ -38,6 +39,23 @@ class PositionalEncoding(tf.keras.layers.Layer):
         if self.scale:
             x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x += self.pos_encoding[:, :seq_len, :]
+        return x
+
+
+class ScaledPositionalEncoding(PositionalEncoding):
+    """ scaled positional encoding,
+        reference: https://arxiv.org/pdf/1809.08895.pdf"""
+    def __init__(self, d_model, max_position=800):
+        super().__init__(d_model, max_position, scale=False)
+
+    def build(self, _):
+        self.alpha = self.add_weight(
+            name="alpha", initializer=tf.keras.initializers.constant(1)
+        )
+
+    def call(self, x):
+        seq_len = tf.shape(x)[1]
+        x += self.alpha * self.pos_encoding[:, :seq_len, :]
         return x
 
 
@@ -89,6 +107,49 @@ class TdnnLayer(tf.keras.layers.Layer):
         x = splice(x, self.context_list)
         x = self.linear(x, training=training, mask=mask)
         return x
+
+
+class DownSampleBlock(tf.keras.layers.Layer):
+    """ conv2d downsample block for stargan, instance norm is used because batch size is 1
+    """
+    def __init__(self, filters, kernel_size, strides):
+        super(DownSampleBlock, self).__init__()
+
+        self.conv1 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.conv2 = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.norm1 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+        self.norm2 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+
+    def call(self, x):
+        h1 = self.conv1(x)
+        h1_norm = self.norm1(h1)
+        h1_gates = self.conv2(x)
+        h1_gates_norm = self.norm2(h1_gates)
+        h1_glu = gated_linear_layer(inputs=h1_norm, gates=h1_gates_norm)
+        return h1_glu
+
+
+class UpSampleBlock(tf.keras.layers.Layer):
+    """ conv2d upsample block for stargan, instance norm is used because batch size is 1
+    """
+    def __init__(self, filters, kernel_size, strides):
+        super(UpSampleBlock, self).__init__()
+        self.conv1 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.conv2 = tf.keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides,
+                                            padding="same")
+        self.norm1 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+        self.norm2 = tfa.layers.InstanceNormalization(epsilon=1e-8)
+
+    def call(self, x):
+        h1 = self.conv1(x)
+        h1_norm = self.norm1(h1)
+        h1_gates = self.conv2(x)
+        h1_gates_norm = self.norm2(h1_gates)
+        h1_glu = gated_linear_layer(inputs=h1_norm, gates=h1_gates_norm)
+        return h1_glu
 
 
 class ZoneOutCell(tf.keras.layers.LSTMCell):

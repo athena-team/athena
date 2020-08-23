@@ -14,10 +14,10 @@
 # limitations under the License.
 # ==============================================================================
 # pylint: disable=invalid-name
+""" language model scorer used in speech recognition model decoding """
 import tensorflow as tf
 import numpy as np
 import kenlm
-
 
 class NGramScorer(object):
     """
@@ -139,3 +139,4 @@ class RNNScorer(object):
         score = score[:, -1, :]
         score = self.lm_weight * tf.math.log(tf.nn.softmax(score))
         return score, candidate_holder.cand_states
+

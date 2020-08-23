@@ -65,6 +65,36 @@ def generate_square_subsequent_mask(size):
     return mask
 
 
+def create_multihead_mask(x, x_length, y, reverse=False):
+    r""" Generate a square mask for the sequence for mult-head attention.
+        The masked positions are filled with float(1.0).
+        Unmasked positions are filled with float(0.0).
+    """
+    x_mask, y_mask = None, None
+    if x is not None:
+        x_mask = 1.0 - tf.sequence_mask(
+            x_length, tf.shape(x)[1], dtype=tf.float32
+        )
+        x_mask = x_mask[:, tf.newaxis, tf.newaxis, :]
+        if reverse:
+            look_ahead_mask = generate_square_subsequent_mask(tf.shape(x)[1])
+            x_mask = tf.maximum(x_mask, look_ahead_mask)
+        x_mask.set_shape([None, None, None, None])
+    if y is not None:
+        y_mask = tf.cast(tf.math.equal(y, 0), tf.float32)
+        y_mask = y_mask[:, tf.newaxis, tf.newaxis, :]
+        if not reverse:
+            look_ahead_mask = generate_square_subsequent_mask(tf.shape(y)[1])
+            y_mask = tf.maximum(y_mask, look_ahead_mask)
+        y_mask.set_shape([None, None, None, None])
+    return x_mask, y_mask
+
+
+def gated_linear_layer(inputs, gates, name=None):
+    h1_glu = tf.keras.layers.multiply(inputs=[inputs, tf.sigmoid(gates)], name=name)
+    return h1_glu
+
+
 def validate_seqs(seqs, eos):
     """  Discard end symbol and elements after end symbol
     Args:

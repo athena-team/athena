@@ -17,15 +17,19 @@
 # Only support eager mode
 # pylint: disable=no-member, invalid-name, relative-beyond-top-level
 # pylint: disable=too-many-locals, too-many-statements, too-many-arguments, too-many-instance-attributes
-
+""" Implementation of GriffinLim vocoder """
+import os
 import numpy as np
 import librosa
-import os
 from scipy.io.wavfile import write as write_wav
 
 class GriffinLim:
+    """ python implementation of griffinlim algorithm
+    """
 
     def __init__(self, data_descriptions):
+        """ Reference to paper "Multiband Excitation Vocoder"
+        """
         assert data_descriptions.audio_featurizer is not None
         assert data_descriptions.audio_featurizer.feat is not None
         assert data_descriptions.hparams.audio_config is not None
@@ -42,9 +46,8 @@ class GriffinLim:
         self.EPS = 1e-10
 
     def _get_nfft(self, window_length):
-        '''
-        n_fft is an exponential power of 2 closest to and larger than win_length
-        '''
+        """ n_fft is an exponential power of 2 closest to and larger than win_length
+        """
         nfft = 2
         while nfft < window_length:
             nfft *= 2
@@ -98,3 +101,4 @@ class GriffinLim:
                                      win_length=self.window_length,
                                      window=self.window_type)
         return samples
+

@@ -23,9 +23,9 @@ import tensorflow as tf
 
 from .base import BaseModel
 from ..utils.hparam import register_and_parse_hparams
-from ..loss import Tacotron2Loss
+from ..loss import Tacotron2Loss, GuidedAttentionLoss
 from ..layers.commons import ZoneOutCell
-from ..layers.attention import LocationAttention
+from ..layers.attention import LocationAttention, StepwiseMonotonicAttention
 
 class Tacotron2(BaseModel):
     """
@@ -51,6 +51,7 @@ class Tacotron2(BaseModel):
         "att_dim": 128,
         "att_chans": 32,
         "att_filters": 15,
+        "att_scaling": 2.0,
         "guided_attn_weight": 0.0,
         "clip_outputs": False,
         "clip_lower_bound_decay": 0.1,
@@ -67,6 +68,11 @@ class Tacotron2(BaseModel):
         "style_embedding_dim": 512,
         "style_filters": [32, 32, 64, 64, 128, 128],
         "style_multi_attention_heads": 4,
+        "pos_weight": 1.0,
+        "step_monotonic": False,
+        "sma_mode": 'soft',
+        "max_output_length": 15,
+        "end_prob": 0.5
     }
 
     def __init__(self, data_descriptions, config=None):
@@ -82,11 +88,14 @@ class Tacotron2(BaseModel):
         input_features = layers.Input(shape=data_descriptions.sample_shape["input"],
                                       dtype=tf.float32)
         inner = layers.Embedding(self.num_class, self.hparams.eunits)(input_features)
+        attention_loss_function = GuidedAttentionLoss(self.hparams.guided_attn_weight,
+                                                      self.reduction_factor)
         self.loss_function = Tacotron2Loss(self,
+                                           attention_loss_function,
                                            regularization_weight=self.hparams.regularization_weight,
-                                           guided_attn_weight=self.hparams.guided_attn_weight,
                                            l1_loss_weight=self.hparams.l1_loss_weight,
-                                           mask_decoder=self.hparams.mask_decoder)
+                                           mask_decoder=self.hparams.mask_decoder,
+                                           pos_weight=self.hparams.pos_weight)
         self.metric = tf.keras.metrics.Mean(name="AverageLoss")
 
         # encoder definition
@@ -176,9 +185,17 @@ class Tacotron2(BaseModel):
         self.prenet = tf.keras.Model(inputs=input_features_prenet, outputs=inner, name="prenet")
         print(self.prenet.summary())
 
-        self.attn = LocationAttention(self.hparams.att_dim,
-                                      self.hparams.att_chans,
-                                      self.hparams.att_filters)
+        if self.hparams.step_monotonic:
+            self.attn = StepwiseMonotonicAttention(self.hparams.att_dim,
+                                                   self.hparams.att_chans,
+                                                   self.hparams.att_filters,
+                                                   score_bias_init=2.5,
+                                                   mode=self.hparams.sma_mode)
+        else:
+            self.attn = LocationAttention(self.hparams.att_dim,
+                                          self.hparams.att_chans,
+                                          self.hparams.att_filters,
+                                          scaling=self.hparams.att_scaling)
 
         # postnet definition
         input_features_postnet = layers.Input(shape=tf.TensorShape([None, self.feat_dim]),
@@ -274,6 +291,7 @@ class Tacotron2(BaseModel):
         prev_rnn_states, prev_attn_weight, prev_context = \
             self.initialize_states(encoder_output, input_length)
 
+        accum_attn_weight = prev_attn_weight
         outs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
@@ -283,6 +301,7 @@ class Tacotron2(BaseModel):
                                 input_length,
                                 y0[:, 0, :],
                                 prev_rnn_states,
+                                accum_attn_weight,
                                 prev_attn_weight,
                                 prev_context,
                                 training=training)
@@ -290,12 +309,15 @@ class Tacotron2(BaseModel):
         outs = outs.write(0, out)
         logits = logits.write(0, logit)
         attn_weights = attn_weights.write(0, prev_attn_weight)
+        y_steps = tf.shape(y0)[1]
+        accum_attn_weight += prev_attn_weight
         for y_index in tf.range(1, y_steps):
             out, logit, prev_rnn_states, new_weight, prev_context = \
                 self.time_propagate(encoder_output,
                                     input_length,
                                     y0[:, y_index, :],
                                     prev_rnn_states,
+                                    accum_attn_weight,
                                     prev_attn_weight,
                                     prev_context,
                                     training=training)
@@ -303,7 +325,8 @@ class Tacotron2(BaseModel):
             outs = outs.write(y_index, out)
             logits = logits.write(y_index, logit)
             attn_weights = attn_weights.write(y_index, new_weight)
-            prev_attn_weight += new_weight
+            accum_attn_weight += new_weight
+            prev_attn_weight = new_weight
         logits_stack = tf.transpose(logits.stack(), [1, 0, 2]) # [batch, y_steps, reduction_factor]
         logits_stack = self._pad_and_reshape(logits_stack, ori_lens, reverse=True)
         before_outs = tf.transpose(outs.stack(), [1, 0, 2]) # [batch, y_steps, feat_dim]
@@ -352,12 +375,7 @@ class Tacotron2(BaseModel):
                             tf.zeros([batch, self.hparams.dunits]))
                            for _ in range(len(self.decoder_rnns))]
         x_steps = tf.shape(encoder_output)[1]
-        # initialize attention weights
-        prev_attn_weight = tf.sequence_mask(input_length,
-                                            x_steps,
-                                            dtype=tf.float32)
-        input_length = tf.expand_dims(tf.cast(input_length, dtype=tf.float32), axis=1)
-        prev_attn_weight = prev_attn_weight / input_length
+        prev_attn_weight = self.attn.initialize_weights(input_length, x_steps)
         # initialize context
         embedding_dim = 0
         if self.hparams.use_speaker:
@@ -411,8 +429,9 @@ class Tacotron2(BaseModel):
         else:
             raise ValueError("NOT SUPPORTED")
 
-    def time_propagate(self, encoder_output, input_length, prev_y, prev_rnn_states,
-                       prev_attn_weight, prev_context, training=False):
+    def time_propagate(self, encoder_output, input_length, prev_y,
+                       prev_rnn_states, accum_attn_weight, prev_attn_weight, prev_context,
+                       training=False):
         """
         Args:
             encoder_output: encoder output (batch, x_steps, eunits).
@@ -441,9 +460,9 @@ class Tacotron2(BaseModel):
                                            training=training)
             current_rnn_states.append(new_states)
         decode_s = current_rnn_states[-1][0]
-        attn_inputs = (encoder_output, input_length,
-                       decode_s, prev_attn_weight)
-        context, attn_weight = self.attn(attn_inputs)
+        attn_inputs = (encoder_output, input_length)
+        prev_states = (decode_s, accum_attn_weight, prev_attn_weight)
+        context, attn_weight = self.attn(attn_inputs, prev_states, training=training)
         rnn_output = tf.concat([decode_s, context], axis=1)
         out = self.feat_out(rnn_output)
         logit = self.prob_out(rnn_output)
@@ -456,18 +475,18 @@ class Tacotron2(BaseModel):
         metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
-    def synthesize(self, samples, hparams):
+    def synthesize(self, samples):
         """
         Synthesize acoustic features from the input texts
         Args:
             samples: the data source to be synthesized
-            hparams: synthesis configs are included here
         Returns:
             after_outs: the corresponding synthesized acoustic features
             attn_weights_stack: the corresponding attention weights
         """
         x0 = samples["input"]
         input_length = samples["input_length"]
+        batch = tf.shape(x0)[0]
         encoder_output = self.encoder(x0, training=False) # shape: [batch, x_steps, eunits]
 
         if self.hparams.use_speaker:
@@ -480,18 +499,20 @@ class Tacotron2(BaseModel):
                 speaker_embedding = self.speaker_embedding(samples['speaker'])
             encoder_output = self.concat_speaker_embedding(encoder_output, speaker_embedding)
 
-        y0 = self.initialize_input_y(samples['output'])
         prev_rnn_states, prev_attn_weight, prev_context = \
             self.initialize_states(encoder_output, input_length)
+        accum_attn_weight = prev_attn_weight
         outs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
+        initial_y = tf.zeros([batch, self.feat_dim * self.reduction_factor])
         out, logit, prev_rnn_states, prev_attn_weight, prev_context = \
             self.time_propagate(encoder_output,
                                 input_length,
-                                y0[:, 0, :],
+                                initial_y,
                                 prev_rnn_states,
+                                accum_attn_weight,
                                 prev_attn_weight,
                                 prev_context,
                                 training=False)
@@ -500,14 +521,16 @@ class Tacotron2(BaseModel):
         logits = logits.write(0, logit)
         attn_weights = attn_weights.write(0, prev_attn_weight)
         y_index = 0
-        while True:
-            y_index += self.reduction_factor
-
+        accum_attn_weight += prev_attn_weight
+        max_output_len = self.hparams.max_output_length * input_length[0] // self.reduction_factor
+        for _ in tf.range(max_output_len):
+            y_index += 1
             out, logit, prev_rnn_states, new_weight, prev_context = \
                 self.time_propagate(encoder_output,
                                     input_length,
                                     out,
                                     prev_rnn_states,
+                                    accum_attn_weight,
                                     prev_attn_weight,
                                     prev_context,
                                     training=False)
@@ -515,16 +538,38 @@ class Tacotron2(BaseModel):
             outs = outs.write(y_index, out)
             logits = logits.write(y_index, logit)
             attn_weights = attn_weights.write(y_index, new_weight)
-            prev_attn_weight += new_weight
-
-            prob = tf.nn.sigmoid(logit)[0][0]
-            if prob >= hparams.end_prob or y_index >= hparams.max_output_length * input_length[0]:
+            prev_attn_weight = new_weight
+            accum_attn_weight += new_weight
+            probs = tf.nn.sigmoid(logit)
+            time_to_end = probs > self.hparams.end_prob
+            time_to_end = tf.reduce_any(time_to_end)
+            if time_to_end:
                 break
 
-        before_outs = tf.transpose(outs.stack(), [1, 0, 2]) # [batch, y_steps, feat_dim]
-        # attn_weights_stack: [batch, y_steps, x_steps]
+        logits_stack = tf.transpose(logits.stack(), [1, 0, 2]) # [batch, y_steps, reduction_factor]
+        # before_outs: [batch, y_steps, feat_dim*reduction_factor]
+        before_outs = tf.transpose(outs.stack(), [1, 0, 2])
         attn_weights_stack = tf.transpose(attn_weights.stack(), [1, 0, 2])
+        after_outs = self._synthesize_post_net(before_outs, logits_stack)
+        return after_outs, attn_weights_stack
+
+    def _synthesize_post_net(self, before_outs, logits_stack):
+        if self.hparams.clip_outputs:
+            maximum = - self.hparams.clip_max_value - self.hparams.clip_lower_bound_decay
+            maximum = tf.maximum(before_outs, maximum)
+            before_outs = tf.minimum(maximum, self.hparams.clip_max_value)
+        output_lens = tf.shape(before_outs)[1] * self.reduction_factor
+        padded_logits = self._pad_and_reshape(logits_stack, output_lens, reverse=True)
+        # paddings should be discarded or the end of the wav may contains noises
+        end_prob_num = padded_logits[:, -self.reduction_factor:, :] > self.hparams.end_prob
+        end_prob_num = tf.cast(end_prob_num, dtype=tf.int32)
+        end_prob_num = tf.reduce_sum(end_prob_num)
+        real_lens = output_lens - end_prob_num + 1
+        before_outs = self._pad_and_reshape(before_outs, real_lens, reverse=True)
         # after_outs: [batch, y_steps, feat_dim]
         after_outs = before_outs + self.postnet(before_outs, training=False)
-
-        return after_outs, attn_weights_stack
+        if self.hparams.clip_outputs:
+            maximum = - self.hparams.clip_max_value - self.hparams.clip_lower_bound_decay
+            maximum = tf.maximum(after_outs, maximum)
+            after_outs = tf.minimum(maximum, self.hparams.clip_max_value)
+        return after_outs
