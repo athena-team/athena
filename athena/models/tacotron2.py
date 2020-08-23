@@ -60,6 +60,14 @@ class Tacotron2(BaseModel):
         "l1_loss_weight": 0.0,
         "batch_norm_position": "after",
         "mask_decoder": False,
+        "use_speaker": True,
+        "speaker_embedding_dim": 512,
+        "use_pretrained_speaker_model": False,
+        "num_frame_for_embedding": 200,
+        "use_gst": True,
+        "style_embedding_dim": 512,
+        "style_filters": [32, 32, 64, 64, 128, 128],
+        "style_multi_attention_heads": 4,
         "pos_weight": 1.0,
         "step_monotonic": False,
         "sma_mode": 'soft',
@@ -121,6 +129,40 @@ class Tacotron2(BaseModel):
 
         self.encoder = tf.keras.Model(inputs=input_features, outputs=inner, name="enc")
         print(self.encoder.summary())
+
+        if self.hparams.use_speaker:
+            if self.hparams.use_pretrained_speaker_model:
+                pass # self.speaker_embedding will be initialed in restore_from_pretrained_model
+            else:
+                self.speaker_embedding = layers.Embedding(len(data_descriptions.speakers), \
+                                                            self.hparams.speaker_embedding_dim)
+
+        if self.hparams.use_gst:
+            # initialize random gst tokens
+            random_initializer = tf.random_normal_initializer(stddev=0.5, seed=1)
+            self.gst_tokens = tf.Variable(random_initializer(shape=[10, 128], dtype=tf.float32))
+            ref_features = layers.Input(shape=data_descriptions.sample_shape["output"],
+	                                    dtype=tf.float32)
+            ref_outputs = tf.expand_dims(ref_features, axis=-1)
+            # CNN stack
+            for i, channel in enumerate(self.hparams.style_filters):
+                ref_outputs = tf.keras.layers.Conv2D(
+		            filters=channel, kernel_size=3, activation='relu', strides=2, padding='same')(ref_outputs)
+            ref_outputs = collapse4d(ref_outputs)
+            # RNN
+            RNN = tf.keras.layers.RNN(cell=tf.keras.layers.GRUCell(self.hparams.style_embedding_dim),
+                                      return_sequences=True, return_state=True)
+            encoder_outputs, encoder_state = RNN(ref_outputs)
+            reference_state = tf.keras.layers.Dense(int(self.hparams.style_embedding_dim /
+                                                        self.hparams.style_multi_attention_heads),
+                                                    activation=tf.nn.tanh)(encoder_outputs[:, -1, :])
+
+            self.reference_encoder = tf.keras.Model(inputs=ref_features, outputs=reference_state, name="ref_enc")
+            print(self.reference_encoder.summary())
+
+            self.style_attn = MultiHeadAttention(self.hparams.style_embedding_dim,
+                                                 int(self.hparams.style_embedding_dim
+                                                     / self.hparams.style_multi_attention_heads))
 
         # rnn definitions in decoder
         self.decoder_rnns = []
@@ -214,6 +256,32 @@ class Tacotron2(BaseModel):
         x0 = samples["input"]
         input_length = samples["input_length"]
         encoder_output = self.encoder(x0, training=training) # shape: [batch, x_steps, eunits]
+
+        if self.hparams.use_speaker:
+            if self.hparams.use_pretrained_speaker_model:
+                if hasattr(self, 'speaker_embedding'):
+                    speaker_feature = samples["output"]
+                    cut_speaker_feature = self.cut_acoustic_feature(speaker_feature, \
+                                                                    self.hparams.num_frame_for_embedding)
+                    speaker_embedding = self.speaker_embedding(cut_speaker_feature)
+                else: # for the first time of evaluate_step(not initialize the speaker_embedding model yet)
+                    batch = tf.shape(encoder_output)[0]
+                    fake_embedding = tf.zeros([batch,self.hparams.speaker_embedding_dim], dtype=tf.float32)
+                    speaker_embedding = fake_embedding
+            else:
+                speaker_embedding = self.speaker_embedding(samples['speaker'])
+            encoder_output = self.concat_speaker_embedding(encoder_output, speaker_embedding)
+
+        if self.hparams.use_gst:
+            reference_state = self.reference_encoder(samples["output"])
+            style_embeddings = self.style_attn(tf.tile(tf.expand_dims(self.gst_tokens, axis=0),
+                                                       [tf.shape(encoder_output)[0], 1, 1]),
+                                               tf.tanh(tf.tile(tf.expand_dims(self.gst_tokens, axis=0),
+                                                               [tf.shape(encoder_output)[0], 1, 1])),
+                                               tf.expand_dims(reference_state, axis=1), mask=None)[0]
+            style_embeddings = tf.tile(style_embeddings, [1, tf.shape(encoder_output)[1], 1])
+            encoder_output = tf.concat([encoder_output, style_embeddings], axis=-1)
+
         y0 = samples['output']
         ori_lens = tf.shape(samples['output'])[1]
         if self.reduction_factor > 1:
@@ -309,9 +377,57 @@ class Tacotron2(BaseModel):
         x_steps = tf.shape(encoder_output)[1]
         prev_attn_weight = self.attn.initialize_weights(input_length, x_steps)
         # initialize context
-        prev_context = tf.zeros([batch, self.hparams.eunits])
+        embedding_dim = 0
+        if self.hparams.use_speaker:
+            embedding_dim += self.hparams.speaker_embedding_dim
+        if self.hparams.use_gst:
+            embedding_dim += self.hparams.style_embedding_dim
+        prev_context = tf.zeros([batch, self.hparams.eunits + embedding_dim])
 
         return prev_rnn_states, prev_attn_weight, prev_context
+
+    def concat_speaker_embedding(self, encoder_output, speaker_embedding):
+        """
+        :param encoder_output:  encoder output (batch, x_steps, eunits)
+        :param speaker_embedding:  speaker embedding (batch, embedding_dim)
+        :return: the concat result of encoder_output and speaker_embedding (batch, x_steps, eunits+embedding_dim)
+        """
+        speaker_embedding = tf.nn.l2_normalize(speaker_embedding, axis=-1)
+        enc_len = tf.shape(encoder_output)[1]
+        speaker_embedding = tf.expand_dims(speaker_embedding, 1)
+        speaker_embedding = tf.tile(speaker_embedding, [1, enc_len, 1])
+        concat_output = tf.concat([encoder_output, speaker_embedding], axis=2)
+        return concat_output
+
+    def cut_acoustic_feature(self, feature, len):
+        """
+        :param feature: acoustic feature (batch, len, dim)
+        :param len: the wanted len of return acoustic feature
+        :return: fixed-len acoustic feature
+        """
+        if feature.shape[1] < len:
+            batch = tf.shape(feature)[0]
+            dim = tf.shape(feature)[-1]
+            padding_len = len - feature.shape[1]
+            padding_f = tf.zeros([batch, padding_len, dim])
+            return tf.concat([feature, padding_f], axis=1)
+        else:
+            return feature[:,:len,:]
+
+    def restore_from_pretrained_model(self, pretrained_model, model_type):
+        """
+        :param pretrained_model: a initialed model
+        :param model_type: model type
+        :return: a wanted model
+        """
+        if model_type == "":
+            return
+        if model_type == "SpeakerNet":
+            self.speaker_embedding = pretrained_model # a pretrained model for extract speaker embedding
+        elif model_type == "SpeechTacotron2":
+            pass
+        else:
+            raise ValueError("NOT SUPPORTED")
 
     def time_propagate(self, encoder_output, input_length, prev_y,
                        prev_rnn_states, accum_attn_weight, prev_attn_weight, prev_context,
@@ -372,6 +488,17 @@ class Tacotron2(BaseModel):
         input_length = samples["input_length"]
         batch = tf.shape(x0)[0]
         encoder_output = self.encoder(x0, training=False) # shape: [batch, x_steps, eunits]
+
+        if self.hparams.use_speaker:
+            if self.hparams.use_pretrained_speaker_model: # hasattr(self, 'speaker_embedding') must be True here
+                speaker_feature = samples["output"]
+                cut_speaker_feature = self.cut_acoustic_feature(speaker_feature, \
+                                                                self.hparams.num_frame_for_embedding)
+                speaker_embedding = self.speaker_embedding(cut_speaker_feature)
+            else:
+                speaker_embedding = self.speaker_embedding(samples['speaker'])
+            encoder_output = self.concat_speaker_embedding(encoder_output, speaker_embedding)
+
         prev_rnn_states, prev_attn_weight, prev_context = \
             self.initialize_states(encoder_output, input_length)
         accum_attn_weight = prev_attn_weight
