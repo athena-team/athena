@@ -58,17 +58,18 @@ class BaseSolver(tf.keras.Model):
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
     @staticmethod
-    def initialize_devices(visible_gpu_idx=None):
+    def initialize_devices(solver_gpus=None):
         """ initialize hvd devices, should be called firstly """
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
         # means we're running in GPU mode
         if len(gpus) != 0:
-            if len(visible_gpu_idx) == 0:
-                visible_gpu_idx.append(0)
-            assert len(gpus) >= len(visible_gpu_idx)
-            for idx in visible_gpu_idx:
+            # If the list of solver gpus is empty, the first gpu will be used.
+            if len(solver_gpus) == 0:
+                solver_gpus.append(0)
+            assert len(gpus) >= len(solver_gpus)
+            for idx in solver_gpus:
                 tf.config.experimental.set_visible_devices(gpus[idx], "GPU")
 
     @staticmethod
@@ -139,18 +140,19 @@ class HorovodSolver(BaseSolver):
     """ A multi-processer solver based on Horovod """
 
     @staticmethod
-    def initialize_devices(visible_gpu_idx=None):
+    def initialize_devices(solver_gpus=None):
         """ initialize hvd devices, should be called firstly """
         hvd.init()
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
         if len(gpus) != 0:
-            if len(visible_gpu_idx) > 0:
-                if len(visible_gpu_idx) < hvd.size():
+            if len(solver_gpus) > 0:
+                if len(solver_gpus) < hvd.size():
                     raise ValueError("If the list of solver gpus is not empty, its size should " +
                                      "not be smaller than that of horovod configuration")
-                tf.config.experimental.set_visible_devices(gpus[visible_gpu_idx[hvd.rank()]], "GPU")
+                tf.config.experimental.set_visible_devices(gpus[solver_gpus[hvd.rank()]], "GPU")
+            # If the list of solver gpus is empty, the first hvd.size() gpus will be used.
             else:
                 tf.config.experimental.set_visible_devices(gpus[hvd.rank()], "GPU")
 

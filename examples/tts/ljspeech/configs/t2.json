@@ -56,7 +56,7 @@
     "end_prob": 0.5
   },
 
-  "decode_config":{
+  "inference_config":{
     "model_avg_num": 0,
     "gl_iters": 64,
     "output_directory": "test_t2_wav",
