@@ -25,7 +25,8 @@ from .base import BaseModel
 from ..utils.hparam import register_and_parse_hparams
 from ..loss import Tacotron2Loss, GuidedAttentionLoss
 from ..layers.commons import ZoneOutCell
-from ..layers.attention import LocationAttention, StepwiseMonotonicAttention
+from ..layers.attention import LocationAttention, StepwiseMonotonicAttention, MultiHeadAttention
+from ..layers.functional import collapse4d
 
 class Tacotron2(BaseModel):
     """
