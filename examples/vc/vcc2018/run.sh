@@ -26,8 +26,8 @@ stage=2
 stop_stage=1000
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
-dataset_dir=/nfs/project/xiaochunxin/xm/athena-gitpull/athena/examples/vc/vcc2018/data
-data_disk_dir=/nfs/project/xiaochunxin/xm/athena-gitpull/athena/examples/vc/vcc2018/data_numpy
+dataset_dir=examples/vc/vcc2018/data
+data_disk_dir=examples/vc/vcc2018/data_numpy
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     # prepare data disk
