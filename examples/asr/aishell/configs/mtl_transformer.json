@@ -32,7 +32,7 @@
     "mtl_weight":0.5
   },
 
-  "decode_config":{
+  "inference_config":{
     "beam_search":true,
     "beam_size":4,
     "ctc_weight":0.3,
