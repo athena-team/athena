@@ -5,7 +5,8 @@
   "ckpt":"examples/tts/ljspeech/ckpts/t2/",
   "summary_dir":"examples/tts/ljspeech/ckpts/t2/event",
 
-  "solver_gpu":[1],
+  "solver_type":"tts",
+  "solver_gpu":[],
   "solver_config":{
     "clip_norm":1,
     "log_interval":10,
@@ -55,7 +56,7 @@
     "end_prob": 0.5
   },
 
-  "decode_config":{
+  "inference_config":{
     "model_avg_num": 0,
     "gl_iters": 64,
     "output_directory": "test_t2_wav",

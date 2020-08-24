@@ -35,6 +35,7 @@ from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
 from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
+
 try:
     from pydecoders import WFSTDecoder
 except ImportError:
@@ -60,15 +61,18 @@ class BaseSolver(tf.keras.Model):
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
 
     @staticmethod
-    def initialize_devices(visible_gpu_idx=None):
+    def initialize_devices(solver_gpus=None):
         """ initialize hvd devices, should be called firstly """
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
         # means we're running in GPU mode
         if len(gpus) != 0:
-            assert len(gpus) >= len(visible_gpu_idx)
-            for idx in visible_gpu_idx:
+            # If the list of solver gpus is empty, the first gpu will be used.
+            if len(solver_gpus) == 0:
+                solver_gpus.append(0)
+            assert len(gpus) >= len(solver_gpus)
+            for idx in solver_gpus:
                 tf.config.experimental.set_visible_devices(gpus[idx], "GPU")
 
     @staticmethod
@@ -139,16 +143,21 @@ class HorovodSolver(BaseSolver):
     """ A multi-processer solver based on Horovod """
 
     @staticmethod
-    def initialize_devices(visible_gpu_idx=None):
+    def initialize_devices(solver_gpus=None):
         """ initialize hvd devices, should be called firstly """
-        if visible_gpu_idx is not None:
-            warnings.warn("we can not set the visible gpu idx like this")
         hvd.init()
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        if gpus:
-            tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], "GPU")
+        if len(gpus) != 0:
+            if len(solver_gpus) > 0:
+                if len(solver_gpus) < hvd.size():
+                    raise ValueError("If the list of solver gpus is not empty, its size should " +
+                                     "not be smaller than that of horovod configuration")
+                tf.config.experimental.set_visible_devices(gpus[solver_gpus[hvd.rank()]], "GPU")
+            # If the list of solver gpus is empty, the first hvd.size() gpus will be used.
+            else:
+                tf.config.experimental.set_visible_devices(gpus[hvd.rank()], "GPU")
 
     def train_step(self, samples):
         """ train the model 1 step """
@@ -213,6 +222,7 @@ class DecoderSolver(BaseSolver):
     """ DecoderSolver
     """
     default_config = {
+        "inference_type": "asr",
         "decoder_type": "wfst_decoder",
         "model_avg_num": 1,
         "beam_size": 4,
@@ -229,10 +239,15 @@ class DecoderSolver(BaseSolver):
     }
 
     # pylint: disable=super-init-not-called
-    def __init__(self, model, config=None, lm_model=None):
+    def __init__(self, model, data_descriptions=None, config=None):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        lm_model = None
+        if self.hparams.lm_type == "rnn":
+            from athena.main import build_model_from_jsonfile
+            _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(self.hparams.lm_path)
+            lm_checkpointer.restore_from_best()
         if self.hparams.decoder_type == "beam_search_decoder":
             self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
                                                            self.model.num_class,
@@ -247,7 +262,7 @@ class DecoderSolver(BaseSolver):
         else:
             raise ValueError("This decoder type is not supported")
 
-    def decode(self, dataset, rank_size=1):
+    def inference(self, dataset, rank_size=1):
         """ decode the model """
         if dataset is None:
             return
@@ -277,6 +292,7 @@ class SynthesisSolver(BaseSolver):
     """ SynthesisSolver
     """
     default_config = {
+        "inference_type": "tts",
         "model_avg_num": 1,
         "gl_iters": 64,
         "synthesize_from_true_fbank": True,
@@ -292,7 +308,7 @@ class SynthesisSolver(BaseSolver):
         self.vocoder = GriffinLim(data_descriptions)
         self.sample_signature = data_descriptions.sample_signature
 
-    def synthesize(self, dataset):
+    def inference(self, dataset, rank_size=1):
         """ synthesize using vocoder on dataset """
         if dataset is None:
             return

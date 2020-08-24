@@ -61,6 +61,7 @@ DEFAULT_CONFIGS = {
     "sorta_epoch": 1,
     "ckpt": None,
     "summary_dir": None,
+    "solver_type": "asr",
     "solver_gpu": [0],
     "solver_config": None,
     "model": "speech_transformer",
@@ -77,7 +78,7 @@ DEFAULT_CONFIGS = {
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
-    "decode_config": None
+    "inference_config": None
 }
 
 def parse_config(config):
