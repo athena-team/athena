@@ -75,7 +75,7 @@ DEFAULT_CONFIGS = {
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
-    "decode_config": None
+    "inference_config": None
 }
 
 def parse_config(config):

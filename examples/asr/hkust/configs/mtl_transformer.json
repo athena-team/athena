@@ -32,7 +32,7 @@
     "mtl_weight":0.5
   },
 
-  "decode_config":{
+  "inference_config":{
     "decoder_type":"wfst_decoder",
     "beam_size":10,
     "ctc_weight":0.5,
