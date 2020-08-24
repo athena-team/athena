@@ -18,7 +18,6 @@
 # pylint: disable=invalid-name, no-member
 r""" entry point for multi-gpu/ multi-machine training """
 import sys
-import json
 import tensorflow as tf
 import horovod.tensorflow as hvd
 from absl import logging
@@ -34,11 +33,7 @@ if __name__ == "__main__":
     tf.random.set_seed(1)
 
     json_file = sys.argv[1]
-    config = None
-    with open(json_file) as f:
-        config = json.load(f)
-    p = parse_config(config)
-    HorovodSolver.initialize_devices(p.solver_gpu)
+    HorovodSolver.initialize_devices()
     #multi-servers training should use hvd.rank()
     train(json_file, HorovodSolver, hvd.size(), hvd.rank())
 
