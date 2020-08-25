@@ -61,11 +61,11 @@ class Tacotron2(BaseModel):
         "l1_loss_weight": 0.0,
         "batch_norm_position": "after",
         "mask_decoder": False,
-        "use_speaker": True,
+        "use_speaker": False,
         "speaker_embedding_dim": 512,
         "use_pretrained_speaker_model": False,
         "num_frame_for_embedding": 200,
-        "use_gst": True,
+        "use_gst": False,
         "style_embedding_dim": 512,
         "style_filters": [32, 32, 64, 64, 128, 128],
         "style_multi_attention_heads": 4,
@@ -287,32 +287,17 @@ class Tacotron2(BaseModel):
         ori_lens = tf.shape(samples['output'])[1]
         if self.reduction_factor > 1:
             y0 = self._pad_and_reshape(samples['output'], ori_lens)
-        y_steps = tf.shape(y0)[1]
         y0 = self.initialize_input_y(y0)
         prev_rnn_states, prev_attn_weight, prev_context = \
             self.initialize_states(encoder_output, input_length)
-
+        context_dim = prev_context.shape[-1]
         accum_attn_weight = prev_attn_weight
         outs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
-        out, logit, prev_rnn_states, prev_attn_weight, prev_context = \
-            self.time_propagate(encoder_output,
-                                input_length,
-                                y0[:, 0, :],
-                                prev_rnn_states,
-                                accum_attn_weight,
-                                prev_attn_weight,
-                                prev_context,
-                                training=training)
-
-        outs = outs.write(0, out)
-        logits = logits.write(0, logit)
-        attn_weights = attn_weights.write(0, prev_attn_weight)
         y_steps = tf.shape(y0)[1]
-        accum_attn_weight += prev_attn_weight
-        for y_index in tf.range(1, y_steps):
+        for y_index in tf.range(y_steps):
             out, logit, prev_rnn_states, new_weight, prev_context = \
                 self.time_propagate(encoder_output,
                                     input_length,
@@ -323,6 +308,8 @@ class Tacotron2(BaseModel):
                                     prev_context,
                                     training=training)
 
+            new_weight = tf.ensure_shape(new_weight, [None, None])
+            prev_context = tf.ensure_shape(prev_context, [None, context_dim])
             outs = outs.write(y_index, out)
             logits = logits.write(y_index, logit)
             attn_weights = attn_weights.write(y_index, new_weight)
@@ -372,8 +359,8 @@ class Tacotron2(BaseModel):
         """
         # initialize memory states of rnn
         batch = tf.shape(encoder_output)[0]
-        prev_rnn_states = [(tf.zeros([batch, self.hparams.dunits]),
-                            tf.zeros([batch, self.hparams.dunits]))
+        prev_rnn_states = [[tf.zeros([batch, self.hparams.dunits]),
+                            tf.zeros([batch, self.hparams.dunits])]
                            for _ in range(len(self.decoder_rnns))]
         x_steps = tf.shape(encoder_output)[1]
         prev_attn_weight = self.attn.initialize_weights(input_length, x_steps)
@@ -502,30 +489,15 @@ class Tacotron2(BaseModel):
 
         prev_rnn_states, prev_attn_weight, prev_context = \
             self.initialize_states(encoder_output, input_length)
+        context_dim = prev_context.shape[-1]
         accum_attn_weight = prev_attn_weight
         outs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
 
-        initial_y = tf.zeros([batch, self.feat_dim * self.reduction_factor])
-        out, logit, prev_rnn_states, prev_attn_weight, prev_context = \
-            self.time_propagate(encoder_output,
-                                input_length,
-                                initial_y,
-                                prev_rnn_states,
-                                accum_attn_weight,
-                                prev_attn_weight,
-                                prev_context,
-                                training=False)
-
-        outs = outs.write(0, out)
-        logits = logits.write(0, logit)
-        attn_weights = attn_weights.write(0, prev_attn_weight)
-        y_index = 0
-        accum_attn_weight += prev_attn_weight
+        out = tf.zeros([batch, self.feat_dim * self.reduction_factor])
         max_output_len = self.hparams.max_output_length * input_length[0] // self.reduction_factor
-        for _ in tf.range(max_output_len):
-            y_index += 1
+        for y_index in tf.range(max_output_len):
             out, logit, prev_rnn_states, new_weight, prev_context = \
                 self.time_propagate(encoder_output,
                                     input_length,
@@ -536,6 +508,8 @@ class Tacotron2(BaseModel):
                                     prev_context,
                                     training=False)
 
+            new_weight = tf.ensure_shape(new_weight, [None, None])
+            prev_context = tf.ensure_shape(prev_context, [None, context_dim])
             outs = outs.write(y_index, out)
             logits = logits.write(y_index, logit)
             attn_weights = attn_weights.write(y_index, new_weight)
