@@ -59,7 +59,7 @@
   },
 
 
-  "dataset_builder": "speech_systhesis_dataset",
+  "dataset_builder": "speech_synthesis_dataset",
   "num_data_threads": 1,
   "trainset_config":{
     "data_csv": "examples/tts/data_baker/data/train.csv",
