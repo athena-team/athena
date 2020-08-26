@@ -69,7 +69,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     tools/kenlm/build/bin/lmplz -o 5 < examples/asr/hkust/data/text.seg \
         > examples/asr/hkust/data/5gram.arpa || exit 1
 
-    python athena/decode_main.py \
+    python athena/inference.py \
         examples/asr/hkust/configs/mtl_transformer_sp.json || exit 1
 fi
 

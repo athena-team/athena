@@ -71,6 +71,6 @@ fi
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # decoding stage
     echo "Running decode ..."
-    python athena/decode_main.py \
+    python athena/inference.py \
         ${workplace_dir}/configs/mtl_transformer_sp.json || exit 1
 fi
