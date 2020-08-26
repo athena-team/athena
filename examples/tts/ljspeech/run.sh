@@ -44,9 +44,9 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] ; then
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ] ; then
-    # Synthesizing stage
-   echo "Synthesizing"
-    python athena/synthesize_main.py  \
+    # Inferencing stage
+    echo "Inferencing"
+    python athena/inference.py  \
         examples/tts/ljspeech/configs/t2.json
         > LJSpeech_synthesizing.log 2>&1 || exit 1
 fi
