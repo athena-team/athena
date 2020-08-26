@@ -313,12 +313,13 @@ class SynthesisSolver(BaseSolver):
         if dataset is None:
             return
         total_elapsed = 0
+        total_seconds = 0
         synthesize_step = tf.function(self.model.synthesize, input_signature=self.sample_signature)
         for i, samples in enumerate(dataset):
-            start = time.time()
             samples = self.model.prepare_samples(samples)
             speaker = samples['speaker']
             speaker = self.speakers_ids_dict[int(speaker[0])]
+            start = time.time()
             outputs = synthesize_step(samples)
             end = time.time() - start
             total_elapsed += end
@@ -328,8 +329,10 @@ class SynthesisSolver(BaseSolver):
                                                           speaker, reverse=True)
                 self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
             features = self.feature_normalizer(features[0], speaker, reverse=True)
-            self.vocoder(features.numpy(), self.hparams, name=i)
-        logging.info("model computation elapsed: %s" % total_elapsed)
+            seconds = self.vocoder(features.numpy(), self.hparams, name=i)
+            total_seconds += seconds
+        logging.info("model computation elapsed: %s\ttotal seconds: %s\tRTF: %.4f"
+                     % (total_elapsed, total_seconds, float(total_elapsed / total_seconds)))
 
 
 class GanSolver(BaseSolver):
