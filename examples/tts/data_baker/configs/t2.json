@@ -71,24 +71,24 @@
   },
 
 
-  "dataset_builder": "speech_systhesis_dataset",
+  "dataset_builder": "speech_synthesis_dataset",
   "num_data_threads": 1,
   "trainset_config":{
     "data_csv": "examples/tts/data_baker/data/train.csv",
-    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 24000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
     "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"},
     "num_cmvn_workers":2,
     "cmvn_file": "examples/tts/data_baker/data/cmvn"
   },
   "devset_config":{
     "data_csv": "examples/tts/data_baker/data/dev.csv",
-    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 24000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
     "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"},
     "cmvn_file": "examples/tts/data_baker/data/cmvn"
   },
   "testset_config":{
     "data_csv": "examples/tts/data_baker/data/test.csv",
-    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 24000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
     "cmvn_file": "examples/tts/data_baker/data/cmvn",
     "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"}
   }
