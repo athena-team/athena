@@ -284,7 +284,8 @@ class LengthRegulator(tf.keras.layers.Layer):
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_sequences: durations of each frame, shape: [batch, x_steps]
             alpha: Alpha value to control speed of speech.
-        Returns:
+        Returns::
+
             expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         if alpha != 1.0:
@@ -330,7 +331,8 @@ class LengthRegulator(tf.keras.layers.Layer):
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_indexes: durations of each frame, shape: [batch, y_steps]
             output_length: shape: [batch]
-        Returns:
+        Returns::
+
             expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         duration_indexes = tf.expand_dims(duration_indexes, axis=-1) # [batch, y_steps, 1]
@@ -368,7 +370,8 @@ class DurationCalculator(tf.keras.layers.Layer):
         """
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
+
             durations: Batch of durations shape: [batch, max_input_length).
 
         """
@@ -405,7 +408,8 @@ class DurationCalculator(tf.keras.layers.Layer):
 
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
+
             after_outs: the outputs from the teacher model
             attn_weights: the attention weights from the teacher model
         """
@@ -420,7 +424,8 @@ class DurationCalculator(tf.keras.layers.Layer):
 
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
+
             after_outs: the outputs from the teacher model
             attn_weights: the attention weights from the teacher model
         """

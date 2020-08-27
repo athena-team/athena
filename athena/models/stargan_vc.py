@@ -253,7 +253,8 @@ class StarganModel(BaseModel):
         Args:
             src_coded_sp: the data source to be converted
             tar_speaker：the convert target speaker
-        Returns:
+        Returns::
+
             tar_coded_sp: the converted acoustic features
         """
         tar_coded_sp = self.generator(src_coded_sp, tar_speaker)
