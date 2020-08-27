@@ -42,6 +42,9 @@ class WriteWav(BaseFrontend):
 
         Args:
             config: contains one optional parameter.
+
+            dict: config::
+
             {
              'sample_rate': the sample rate of the signal. (default=16000)
             }

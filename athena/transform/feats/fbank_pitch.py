@@ -45,6 +45,9 @@ class FbankPitch(BaseFrontend):
 
         Args:
             config: contains twenty-nine optional parameters.
+
+            dict: config::
+
             {
              'preEph_coeff': Coefficient for use in frame-signal preemphasis.
                             (float, default = 0.97),
