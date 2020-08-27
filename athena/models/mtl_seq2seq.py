@@ -123,7 +123,8 @@ class MtlTransformerCtc(BaseModel):
             samples: the data source to be decoded
             hparams: decoding configs are included here
             decoder: it contains the main decoding operations
-        Returns:
+        Returns::
+
             predictions: the corresponding decoding results
         """
         encoder_output, input_mask = self.model.decode(samples, hparams, decoder, return_encoder=True)
