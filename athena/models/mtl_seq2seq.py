@@ -108,8 +108,9 @@ class MtlTransformerCtc(BaseModel):
     def restore_from_pretrained_model(self, pretrained_model, model_type=""):
         """ A more general-purpose interface for pretrained model restoration
 
-	    :param pretrained_model: checkpoint path of mpc model
-	    :param model_type: the type of pretrained model to restore
+	    Args:
+	        pretrained_model: checkpoint path of mpc model
+	        model_type: the type of pretrained model to restore
 	    """
         self.model.restore_from_pretrained_model(pretrained_model, model_type)
 
@@ -117,6 +118,7 @@ class MtlTransformerCtc(BaseModel):
         """
         Initialization of the model for decoding,
         decoder is called here to create predictions
+
         Args:
             samples: the data source to be decoded
             hparams: decoding configs are included here

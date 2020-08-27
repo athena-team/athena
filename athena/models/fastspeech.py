@@ -278,6 +278,7 @@ class LengthRegulator(tf.keras.layers.Layer):
 
     def inference(self, phoneme_sequences, duration_sequences, alpha=1.0):
         """Calculate replicated sequences based on duration sequences
+
         Args:
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_sequences: durations of each frame, shape: [batch, x_steps]
