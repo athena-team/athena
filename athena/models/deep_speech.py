@@ -15,7 +15,7 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=no-member, invalid-name, relative-beyond-top-level
 # pylint: disable=too-many-locals, too-many-statements, too-many-arguments, too-many-instance-attributes
-""" a implementation of deep speech 2 model can be used as a sample for ctc model """
+""" an implementation of deep speech 2 model can be used as a sample for ctc model """
 
 import tensorflow as tf
 from absl import logging
