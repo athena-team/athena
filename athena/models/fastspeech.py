@@ -219,7 +219,8 @@ class FastSpeech(BaseModel):
                 shape: [batch, x_steps]
             output_length: the real output length
             training: if it is in the training stage
-        Returns:
+        Returns::
+
             before_outs: the outputs before postnet calculation
             after_outs: the outputs after postnet calculation
         """
