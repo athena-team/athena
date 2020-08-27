@@ -362,6 +362,7 @@ class Tacotron2(BaseModel):
     def synthesize(self, samples):
         """
         Synthesize acoustic features from the input texts
+
         Args:
             samples: the data source to be synthesized
         Returns:
@@ -427,6 +428,13 @@ class Tacotron2(BaseModel):
         return after_outs, attn_weights_stack
 
     def _synthesize_post_net(self, before_outs, logits_stack):
+        """
+        Args:
+            before_outs: the outputs before postnet
+            logits_stack: the logits of all steps
+        Returns:
+            after_outs: the corresponding synthesized acoustic features
+        """
         if self.hparams.clip_outputs:
             maximum = - self.hparams.clip_max_value - self.hparams.clip_lower_bound_decay
             maximum = tf.maximum(before_outs, maximum)
