@@ -220,8 +220,8 @@ class FastSpeech(BaseModel):
             output_length: the real output length
             training: if it is in the training stage
         Returns:
-            Tensor: the outputs before postnet calculation
-            Tensor: the outputs after postnet calculation
+            before_outs: the outputs before postnet calculation
+            after_outs: the outputs after postnet calculation
         """
         # when using real durations, duration_indexes would be None
         if training is True:
@@ -284,7 +284,7 @@ class LengthRegulator(tf.keras.layers.Layer):
             duration_sequences: durations of each frame, shape: [batch, x_steps]
             alpha: Alpha value to control speed of speech.
         Returns:
-            Tensor: replicated sequences based on durations, shape: [batch, y_steps, d_model]
+            expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         if alpha != 1.0:
             duration_sequences = tf.cast(
@@ -330,7 +330,7 @@ class LengthRegulator(tf.keras.layers.Layer):
             duration_indexes: durations of each frame, shape: [batch, y_steps]
             output_length: shape: [batch]
         Returns:
-            Tensor: replicated sequences based on durations, shape: [batch, y_steps, d_model]
+            expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         duration_indexes = tf.expand_dims(duration_indexes, axis=-1) # [batch, y_steps, 1]
         batch = tf.shape(duration_indexes)[0]
@@ -368,7 +368,7 @@ class DurationCalculator(tf.keras.layers.Layer):
         Args:
             samples: samples from dataset
         Returns:
-            Tensor: Batch of durations shape: [batch, max_input_length).
+            durations: Batch of durations shape: [batch, max_input_length).
 
         """
         y_steps = tf.reduce_max(samples['output_length'])
@@ -405,8 +405,8 @@ class DurationCalculator(tf.keras.layers.Layer):
         Args:
             samples: samples from dataset
         Returns:
-            Tensor: the outputs from the teacher model
-            Tensor: the attention weights from the teacher model
+            after_outs: the outputs from the teacher model
+            attn_weights: the attention weights from the teacher model
         """
         # attn_weights shape: [batch, y_steps, x_steps]
         _, after_outs, _, attn_weights = self.teacher_model(samples, training=False)
@@ -420,8 +420,8 @@ class DurationCalculator(tf.keras.layers.Layer):
         Args:
             samples: samples from dataset
         Returns:
-            Tensor: the outputs from the teacher model
-            Tensor: the attention weights from the teacher model
+            after_outs: the outputs from the teacher model
+            attn_weights: the attention weights from the teacher model
         """
         _, after_outs, _, attn_weights = self.teacher_model(samples, training=False)
         # attn_weights shape: [layers, batch, heads, y_steps, x_steps]
