@@ -45,6 +45,9 @@ class Pitch(BaseFrontend):
 
         Args:
             config: contains nineteen optional parameters.
+
+            dict: config::
+
             {
              'delta_pitch': Smallest relative change in pitch that our algorithm
                             measures (float, default = 0.005)

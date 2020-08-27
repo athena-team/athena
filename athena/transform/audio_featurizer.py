@@ -42,6 +42,9 @@ class AudioFeaturizer:
 
         Args:
             config: 'type': The name of the feature you want to extract.
+
+                    dict: config::
+
                     {
                     'ReadWav', 'WriteWav', 'Fbank', 'Spectrum', 'MelSpectrum'
                     'Framepow', 'Pitch', 'Mfcc', 'Fbank', 'FbankPitch'
