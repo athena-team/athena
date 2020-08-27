@@ -44,6 +44,9 @@ class Framepow(BaseFrontend):
 
         Args:
             config: contains four optional parameters.
+
+            dict: config::
+
             {
              'window_length': Window length in seconds. (float, default = 0.025)
              'frame_length': Hop length in seconds. (float, default = 0.010)
