@@ -16,27 +16,31 @@
 # ==============================================================================
 # Only support eager mode
 # pylint: disable=too-few-public-methods, no-member, too-many-arguments, unused-argument
-""" learning rate """
+"""base class for learning rate """
 import tensorflow as tf
 from ..utils.hparam import register_and_parse_hparams
 
 
 class WarmUpLearningSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
-    """ WarmUp Learning rate schedule for Adam
+    """WarmUp Learning rate schedule for Adam
 
-    Used as :
-        optimizer = tf.keras.optimizers.Adam(learning_rate = WarmUpLearningSchedule(512),
-            beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-    Args :
-        model_dim is the something related to total model parameters
-        warmup_steps is the highest learning rate iters
-    Returns:
-        return the learning rate
+    Example:
+        
+        >>> optimizer = tf.keras.optimizers.Adam(learning_rate = WarmUpLearningSchedule(512),
+        >>>        beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    
     Idea from the paper: Attention Is All You Need
     """
 
     def __init__(self, model_dim=512, warmup_steps=4000, k=1.0,
         decay_steps=99999999, decay_rate=1.0):
+        """parameters for warmup learning rate schedule
+
+        Args:
+            model_dim (int, optional): usually dim of self-attention vector of transformer model. Defaults to 512.
+            warmup_steps (int, optional): learning rate increases slowly till warmup_steps. Defaults to 4000.
+            decay_steps (int, optional): learning rate decay starts after decay_steps. Defaults to 99999999.
+        """        
         super().__init__()
 
         self.model_dim = tf.cast(model_dim, tf.float32)
@@ -55,7 +59,7 @@ class WarmUpLearningSchedule(tf.keras.optimizers.schedules.LearningRateSchedule)
 
 
 class WarmUpAdam(tf.keras.optimizers.Adam):
-    """WarmUpAdam Implementation """
+    """WarmUpAdam Implementation"""
     default_config = {
         "d_model": 512,
         "warmup_steps": 8000,
@@ -83,13 +87,15 @@ class WarmUpAdam(tf.keras.optimizers.Adam):
 
 
 class ExponentialDecayLearningRateSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
-    """ ExponentialDecayLearningRateSchedule
+    """ExponentialDecayLearningRateSchedule
 
-    Used as :
-        optimizer = tf.keras.optimizers.Adam(
-        learning_rate = ExponentialDecayLearningRate(0.01, 100))
-    Args :
+    Example:
+
+        >>> optimizer = tf.keras.optimizers.Adam(learning_rate = ExponentialDecayLearningRate(0.01, 100))
+
+    Args:
         initial_lr, decay_steps
+    
     Returns:
         initial_lr * (0.5 ** (step // decay_steps))
     """
@@ -112,7 +118,7 @@ class ExponentialDecayLearningRateSchedule(tf.keras.optimizers.schedules.Learnin
 
 
 class ExponentialDecayAdam(tf.keras.optimizers.Adam):
-    """WarmUpAdam Implementation """
+    """WarmUpAdam Implementation"""
     default_config = {
         "initial_lr": 0.005,
         "decay_steps": 10000,

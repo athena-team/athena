@@ -17,13 +17,13 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=no-member, invalid-name, relative-beyond-top-level
 # pylint: disable=too-many-locals, too-many-statements, too-many-arguments, too-many-instance-attributes
-""" an implementation of resnet block """
+"""an implementation of resnet block"""
 
 import tensorflow as tf
 
 class ResnetBasicBlock(tf.keras.layers.Layer):
-    """ Basic block of resnet
-        Reference to paper "Deep residual learning for image recognition"
+    """Basic block of resnet
+    Reference to paper "Deep residual learning for image recognition"
     """
     def __init__(self, num_filter, stride=1):
         super().__init__()
@@ -45,7 +45,7 @@ class ResnetBasicBlock(tf.keras.layers.Layer):
         )
 
     def call(self, inputs):
-        """ call model """
+        """call model"""
         output = self.conv1(inputs)
         output = self.bn1(output)
         output = self.relu(output)
@@ -59,7 +59,7 @@ class ResnetBasicBlock(tf.keras.layers.Layer):
         return output
 
     def make_downsample_layer(self, num_filter, stride):
-        """ perform downsampling using conv layer with stride != 1 """
+        """perform downsampling using conv layer with stride != 1"""
         if stride != 1:
             downsample = tf.keras.Sequential()
             downsample.add(tf.keras.layers.Conv2D(filters=num_filter,

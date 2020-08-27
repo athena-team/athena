@@ -28,33 +28,7 @@ import random
 
 
 class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
-    """ VoiceConversionDatasetBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config:
-        audio_config: the config file for feature extractor, default={'type':'World'}
-
-    Interfaces::
-        __len__(self): return the number of data samples
-
-        @property:
-        sample_shape:
-            {"src_coded_sp": tf.TensorShape(
-                [sp_dim, None, None]
-            ),
-            "tar_coded_sp": tf.TensorShape(
-                [sp_dim, None, None]
-            ),
-            "src_speaker": tf.TensorShape([None, spk_num]),
-            "tar_speaker": tf.TensorShape([None, spk_num]),
-            "src_f0": tf.TensorShape([None]),       
-            "src_ap": tf.TensorShape([None, inc]),  
-            "src_id": tf.TensorShape([]),
-            "tar_id": tf.TensorShape([]),
-            "src_wav_filename": tf.TensorShape([]),
-            "input_length": tf.TensorShape([])}
+    """VoiceConversionDatasetBuilder
     """
     default_config = {
         "cmvn_file": None,
@@ -99,8 +73,9 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         self.speakers_ids_dict = dict(zip(speakers_ids, self.speakers))
 
     def preprocess_data(self, file_path):
-        """Generate a list of tuples (src_wav_filename, src_speaker,
-                                      tar_wav_filename, tar_speaker)."""
+        """generate a list of tuples
+           (src_wav_filename, src_speaker, tar_wav_filename, tar_speaker).
+        """
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.read().splitlines()
@@ -135,11 +110,14 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
             self.hparams.override_from_dict(config)
 
     def world_feature_extract(self, wav):
-        """ World Vocoder parameterizes speech into three components:
-                Pitch (fundamental frequency, F0) contour
-                Harmonic spectral envelope(sp)
-                Aperiodic spectral envelope (relative to the harmonic spectral envelope, ap)
-            Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
+        """extract world feature
+
+        World Vocoder parameterizes speech into three components::
+
+            Pitch (fundamental frequency, F0) contour
+            Harmonic spectral envelope(sp)
+            Aperiodic spectral envelope (relative to the harmonic spectral envelope, ap)
+        Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
         """
         f0, timeaxis = pyworld.harvest(wav, self.fs)
         sp = pyworld.cheaptrick(wav, f0, timeaxis, self.fs, fft_size=self.fft_size)
@@ -152,7 +130,8 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         return f0, sp, ap, coded_sp
 
     def load_from_disk(self, src_wav_filename, tar_wav_filename):
-        """ Calculting world features on-the-fly takes too much time, this is another option to load vc-related features from disk 
+        """Calculting world features on-the-fly takes too much time,
+           this is another option to load vc-related features from disk
         """
         src = np.load(src_wav_filename)
         tar = np.load(tar_wav_filename)
@@ -166,6 +145,27 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         return src_f0, src_coded_sp, src_ap, tar_coded_sp
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "src_coded_sp": src_coded_sp,  # sp_features x T
+                "src_speaker": src_one_hot,
+                "src_f0": src_f0,  # T
+                "src_ap": src_ap,  # sp_features*fftsize//2+1
+                "tar_coded_sp": tar_coded_sp,  # sp_features x T
+                "tar_speaker": tar_one_hot,
+                "src_id": self.speakers_dict[src_speaker],
+                "tar_id": self.speakers_dict[tar_speaker],
+                "src_wav_filename": src_wav_filename,
+                "input_length": src_coded_sp.shape[1],
+            }
+        """
         src_wav_filename, src_speaker, tar_wav_filename, tar_speaker = \
             self.entries[index]
         if self.hparams.enable_load_from_disk:
@@ -209,6 +209,24 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_type(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_type of the dataset::
+
+            {
+                "src_coded_sp": tf.float32,
+                "tar_coded_sp": tf.float32,
+                "src_speaker": tf.float32,
+                "tar_speaker": tf.float32,
+                "src_f0": tf.float32,
+                "src_ap": tf.float32,
+                "src_id": tf.int32,
+                "tar_id": tf.int32,
+                "src_wav_filename": tf.string,
+                "input_length": tf.int32,
+            }
+        """
         return {
             "src_coded_sp": tf.float32,
             "tar_coded_sp": tf.float32,
@@ -224,6 +242,28 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_shape(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_shape of the dataset::
+
+            {
+                "src_coded_sp": tf.TensorShape(
+                    [sp_dim, None, None]
+                ),
+                "tar_coded_sp": tf.TensorShape(
+                    [sp_dim, None, None]
+                ),
+                "src_speaker": tf.TensorShape([None, spk_num]),
+                "tar_speaker": tf.TensorShape([None, spk_num]),
+                "src_f0": tf.TensorShape([None]),       # T
+                "src_ap": tf.TensorShape([None, inc]),  # T*fftsize//2+1
+                "src_id": tf.TensorShape([]),
+                "tar_id": tf.TensorShape([]),
+                "src_wav_filename": tf.TensorShape([]),
+                "input_length": tf.TensorShape([]),
+            }
+        """
         sp_dim = self.sp_dim
         spk_num = self.spk_num
         inc = self.fft_size / 2 + 1
@@ -246,6 +286,26 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_signature(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_signature of the dataset::
+
+            {
+                "src_coded_sp": tf.TensorSpec(
+                    shape=(None, sp_dim, None, None), dtype=tf.float32),
+                "tar_coded_sp": tf.TensorSpec(
+                    shape=(None, sp_dim, None, None), dtype=tf.float32),
+                "src_speaker": tf.TensorSpec(shape=(None, None, spk_num), dtype=tf.float32),
+                "tar_speaker": tf.TensorSpec(shape=(None, None, spk_num), dtype=tf.float32),
+                "src_f0": tf.TensorSpec(shape=(None, None), dtype=tf.float32),       # T
+                "src_ap": tf.TensorSpec(shape=(None, None, inc), dtype=tf.float32),  # T*fftsize//2+1
+                "src_id": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "tar_id": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "src_wav_filename": tf.TensorSpec(shape=(None), dtype=tf.string),
+                "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+            }
+        """
         sp_dim = self.sp_dim
         spk_num = self.spk_num
         inc = self.fft_size / 2 + 1
@@ -271,11 +331,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
 
         The length of filterd samples will be in [min_length, max_length)
 
-        Args:
-            self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length(ms)
-            max_len: the maximal length(ms)
-        returns:
+        Returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, speaker)
         """
@@ -288,7 +344,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         self.entries = filter_entries
 
     def compute_cmvn_if_necessary(self, is_necessary=True):
-        """ compute cmvn file
+        """compute cmvn file
         """
         if not is_necessary:
             return self

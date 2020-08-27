@@ -28,6 +28,7 @@ from ..loss import MPCLoss
 
 class MaskedPredictCoding(BaseModel):
     """ implementation for MPC pretrain model
+
     Args:
         num_filters: a int type number, i.e the number of filters in cnn
         d_model: a int type number, i.e dimension of model
@@ -120,6 +121,7 @@ class MaskedPredictCoding(BaseModel):
 
     def call(self, samples, training: bool = None):
         """ used for training
+
         Args:
             samples is a dict, including keys: 'input', 'input_length', 'output_length', 'output'
                 input: acoustic features, Tensor, shape is (batch, time_len, dim, 1), i.e f-bank
@@ -134,10 +136,11 @@ class MaskedPredictCoding(BaseModel):
 
     def get_loss(self, logits, samples, training=None):
         """get MPC loss
+
         Args:
-            logitsdd: MPC output
+            logits: MPC output
         Return:
-            MPC L1 loss
+            MPC L1 loss and metrics
         """
         logit_length = self.compute_logit_length(samples)
         loss = self.loss_function(logits, samples, logit_length)
@@ -154,6 +157,7 @@ class MaskedPredictCoding(BaseModel):
 
     def generate_mpc_mask(self, input_data):
         """ generate mask for pretraining
+
         Args:
             acoustic features: i.e F-bank
         Return:

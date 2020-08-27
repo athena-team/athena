@@ -27,25 +27,7 @@ from .base import BaseDatasetBuilder
 
 
 class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
-    """ SpeechRecognitionDatasetBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config::
-        audio_config: the config file for feature extractor, default={'type':'Fbank'}
-        vocab_file: the vocab file, default='data/utils/ch-en.vocab'
-
-    Interfaces::
-        __len__(self): return the number of data samples
-        num_class(self): return the max_index of the vocabulary + 1
-        @property:
-          sample_shape:
-            {"input": tf.TensorShape([None, self.audio_featurizer.dim,
-                                  self.audio_featurizer.num_channels]),
-             "input_length": tf.TensorShape([1]),
-             "output_length": tf.TensorShape([1]),
-             "output": tf.TensorShape([None])}
+    """SpeechRecognitionDatasetBuilder
     """
     default_config = {
         "audio_config": {"type": "Fbank"},
@@ -78,7 +60,8 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
             self.hparams.override_from_dict(config)
 
     def preprocess_data(self, file_path):
-        """ Generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker)."""
+        """generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker).
+        """
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding="utf-8") as file:
             lines = file.read().splitlines()
@@ -131,6 +114,21 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         return self.preprocess_data(file_path)
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input": feat,
+                "input_length": feat_length,
+                "output_length": label_length,
+                "output": label,
+            }
+        """
         audio_data, _, transcripts, speed, speaker = self.entries[index]
         feat = self.audio_featurizer(audio_data, speed=speed)
         feat = self.feature_normalizer(feat, speaker)
@@ -146,26 +144,48 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         }
 
     def __len__(self):
-        """ return the number of data samples """
+        """return the number of data samples
+        """
         return len(self.entries)
 
     @property
     def num_class(self):
-        """ return the max_index of the vocabulary + 1"""
+        """:obj:`@property`
+
+        Returns:
+            int: the max_index of the vocabulary + 1
+        """
         return len(self.text_featurizer)
 
     @property
     def speaker_list(self):
-        """ return the speaker list """
+        """:obj:`@property`
+
+        Returns:
+            list: the speaker list
+        """
         return self.speakers
 
     @property
     def audio_featurizer_func(self):
-        """ return the audio_featurizer function """
+        """return the audio_featurizer function
+        """
         return self.audio_featurizer
 
     @property
     def sample_type(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_type of the dataset::
+
+            {
+                "input": tf.float32,
+                "input_length": tf.int32,
+                "output_length": tf.int32,
+                "output": tf.int32,
+            }
+        """
         return {
             "input": tf.float32,
             "input_length": tf.int32,
@@ -175,6 +195,18 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_shape(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_shape of the dataset::
+
+            {
+                "input": tf.TensorShape([None, dim, nc]),
+                "input_length": tf.TensorShape([]),
+                "output_length": tf.TensorShape([]),
+                "output": tf.TensorShape([None]),
+            }
+        """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return {
@@ -186,6 +218,18 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_signature(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_signature of the dataset::
+
+            {
+                "input": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+            }
+        """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return (
@@ -217,11 +261,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
 
         The length of filterd samples will be in [min_length, max_length)
 
-        Args:
-            self.hparams.input_length_range = [min_len, max_len]
-            min_len: the minimal length(ms)
-            max_len: the maximal length(ms)
-        returns:
+        Returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, transcripts, speed, speaker)
         """
@@ -239,11 +279,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
 
         The length of filterd samples will be in [min_length, max_length)
 
-        Args:
-            self.hparams.output_length_range = [min_len, max_len]
-            min_len: the minimal length
-            max_len: the maximal length
-        returns:
+        Returns:
             entries: a filtered list of tuples
             (wav_filename, wav_len, transcripts, speed, speaker)
         """
@@ -257,7 +293,7 @@ class SpeechRecognitionDatasetBuilder(BaseDatasetBuilder):
         return self
 
     def compute_cmvn_if_necessary(self, is_necessary=True):
-        """ compute cmvn file
+        """compute cmvn file
         """
         if not is_necessary:
             return self
