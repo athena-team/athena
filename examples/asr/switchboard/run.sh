@@ -120,7 +120,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # decoding stage
     echo "Running decode ..."
-    python athena/decode_main.py \
+    python athena/inference.py \
         examples/asr/switchboard/configs/mtl_transformer_sp.json > ${decode_log} || exit 1
 fi
 

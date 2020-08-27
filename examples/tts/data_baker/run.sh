@@ -44,9 +44,9 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] ; then
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ] ; then
-    # Training stage
-    echo "Synthesizing"
-    python athena/synthesize_main.py  \
+    # Inferencing stage
+    echo "Inferencing"
+    python athena/inference.py  \
         examples/tts/data_baker/configs/t2.json
         > data_baker_synthesize.log 2>&1 || exit 1
 fi
