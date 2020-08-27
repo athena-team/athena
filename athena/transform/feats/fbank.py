@@ -59,14 +59,17 @@ class Fbank(BaseFrontend):
 
         Args:
             config: contains thirteen optional parameters.
+
+            dict: config::
+
             {
-             'window_length': Window length in seconds. (float, default = 0.025),
-             'frame_length': Hop length in seconds. (float, default = 0.010),
+             'window_length': Window length in seconds. (float, default = 0.025)
+             'frame_length': Hop length in seconds. (float, default = 0.010)
              'snip_edges': If 1, the last frame (shorter than window_length) will be
                           cutoff. If 2, 1 // 2 frame_length data will be padded
-                          to data. (int, default = 1),
+                          to data. (int, default = 1)
              'preEph_coeff': Coefficient for use in frame-signal preemphasis.
-                            (float, default = 0.97),
+                            (float, default = 0.97)
              'window_type': Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
                             (string, default = "povey")
              'remove_dc_offset': Subtract mean from waveform on each frame.

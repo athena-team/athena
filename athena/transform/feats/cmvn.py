@@ -50,6 +50,9 @@ class CMVN(BaseFrontend):
 
         Args:
             config: contains four optional parameters.
+
+            dict: config::
+
             {
               'type': Type of Opration. (string, default = 'CMVN')
               'global_mean': Global mean of features. (float, default = 0.0)
