@@ -160,11 +160,17 @@ class SpeechTransformer(BaseModel):
         return logit_length
 
     def time_propagate(self, history_logits, history_predictions, step, enc_outputs):
-        """ TODO: doctring
-        last_predictions: the predictions of last time_step, [beam_size]
-        history_predictions: the predictions of history from 0 to time_step,
-            [beam_size, time_steps]
-        states: (step)
+        """
+        Args:
+            history_logits: the logits of history from 0 to time_step, type: TensorArray
+            history_predictions: the predictions of history from 0 to time_step,
+                type: TensorArray
+            step: current step
+            enc_outputs: encoder outputs and its corresponding memory mask, type: tuple
+        Returns:
+            logits: new logits
+            history_logits: the logits array with new logits
+            step: next step
         """
         # merge
         (encoder_output, memory_mask) = enc_outputs
@@ -186,6 +192,7 @@ class SpeechTransformer(BaseModel):
 
     def decode(self, samples, hparams, decoder, return_encoder=False):
         """ beam search decoding
+
         Args:
             samples: the data source to be decoded
             hparams: decoding configs are included here
@@ -360,9 +367,14 @@ class SpeechTransformer2(SpeechTransformer):
 
     def mix_target_sequence(self, gold_token, predicted_token, training, top_k=5):
         """ to mix gold token and prediction
-        param gold_token: true labels
-        param predicted_token: predictions by first pass
-        return: mix of the gold_token and predicted_token
+
+        Args:
+            gold_token: true labels
+            predicted_token: predictions by first pass
+            training: if it is in the training stage
+            top_k: the number of predicted indexes selected for next step calculation
+        Returns:
+            final_input: mix of the gold_token and predicted_token
         """
         mix_result = tf.TensorArray(
             tf.float32, size=1, dynamic_size=True, clear_after_read=False
