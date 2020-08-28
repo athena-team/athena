@@ -33,7 +33,7 @@
   },
 
   "inference_config":{
-    "beam_search":true,
+    "decoder_type":"beam_search_decoder",
     "beam_size":4,
     "ctc_weight":0.3,
     "lm_weight":0.1,
