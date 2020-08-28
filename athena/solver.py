@@ -258,7 +258,8 @@ class DecoderSolver(BaseSolver):
         elif self.hparams.decoder_type == "wfst_decoder":
             self.decoder = WFSTDecoder(self.hparams.wfst_graph, acoustic_scale=self.hparams.acoustic_scale,
                                        max_active=self.hparams.max_active, min_active=self.hparams.min_active,
-                                       beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len)
+                                       beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len,
+                                       sos=self.model.sos, eos=self.model.eos)
         else:
             raise ValueError("This decoder type is not supported")
 
