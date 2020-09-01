@@ -20,4 +20,5 @@ Model|WER | Num parameters
 [VGG + BLSTM + CTC-CRF](https://arxiv.org/pdf/1911.08747.pdf)|6.34 | -
 [Transformer (ESPNET)](https://arxiv.org/abs/1909.06317)|6.7 | 28.38M
 Transformer (Ours without pre-training) | 6.82 | 57.88M
+Transformer (Ours without pre-training with WFST and no ctc prefix decoding) | 7.94 | 57.88M
 Transformer (Ours with self pre-training) | 6.6 | 57.88M
