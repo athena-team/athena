@@ -120,7 +120,7 @@ class FastSpeech(BaseModel):
         # for the y_net
         input_features = layers.Input(shape=tf.TensorShape([None, self.hparams.d_model]),
                                       dtype=tf.float32)
-        inner = ScaledPositionalEncoding(self.hparams.d_model)(input_features)
+        inner = ScaledPositionalEncoding(self.hparams.d_model, max_position=3200)(input_features)
         inner = layers.Dropout(self.hparams.rate)(inner)  # self.hparams.rate
         self.y_net = tf.keras.Model(inputs=input_features, outputs=inner, name="y_net")
         print(self.y_net.summary())
@@ -364,17 +364,22 @@ class DurationCalculator(tf.keras.layers.Layer):
         """
         y_steps = tf.reduce_max(samples['output_length'])
         x_steps = tf.reduce_max(samples['input_length'])
-        if self.teacher_model is None:
-            raise ValueError("teacher model should not be None")
-        if self.teacher_type == 'tts_transformer':
+        teacher_outs = None
+        if self.teacher_type is None:
+            duration_index = samples['duration']
+            weights_argmax = duration_index[:, :y_steps] # [batch, y_steps]
+            if tf.shape(weights_argmax)[1] < y_steps:
+                padding = tf.zeros([tf.shape(weights_argmax)[0], y_steps - tf.shape(weights_argmax)[1]],
+                                   dtype=tf.int32)
+                weights_argmax = tf.concat([weights_argmax, padding], axis=1)
+        elif self.teacher_type == 'tts_transformer':
             teacher_outs, attn_weights = self._calculate_transformer_attentions(samples)
+            weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
         elif self.teacher_type == 'tacotron2':
             teacher_outs, attn_weights = self._calculate_t2_attentions(samples)
+            weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
         else:
             raise ValueError("teacher type not supported")
-
-        # weights_argmax, shape: [batch, y_steps]
-        weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
         output_mask = tf.sequence_mask(samples['output_length'], y_steps)
         output_mask = tf.cast(tf.logical_not(output_mask), dtype=tf.int32) * -10000
         weights_argmax += output_mask

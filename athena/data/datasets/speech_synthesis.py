@@ -56,11 +56,23 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
 
     def __init__(self, config=None):
         super().__init__(config=config)
+        assert self.audio_featurizer.feat is not None
+        assert self.hparams.audio_config is not None
+        params_func = self.audio_featurizer.feat.params
+        params = params_func(self.hparams.audio_config)
+        self.frame_length = params.frame_length
         self.speakers_dict = {}
         self.speakers_ids_dict = {}
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
         if self.hparams.data_csv is not None:
             self.preprocess_data(self.hparams.data_csv)
+
+    def load_duration(self, duration):
+        duration = tf.convert_to_tensor([float(d) for d in duration])
+        duration = duration / self.frame_length
+        duration = tf.cast(tf.clip_by_value(tf.math.round(duration), 0.0,
+                                            tf.cast(10000, dtype=tf.float32)), dtype=tf.int32)
+        return duration
 
     def preprocess_data(self, file_path):
         """ Generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker)."""
@@ -69,23 +81,19 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
             lines = file.read().splitlines()
         headers = lines[0]
         lines = lines[1:]
-        lines = [line.split("\t") for line in lines]
-        self.entries = [tuple(line) for line in lines]
-
-        # handling speakers
+        self.entries = []
         self.speakers = []
-        if "speaker" not in headers.split("\t"):
-            entries = self.entries
-            self.entries = []
-            for wav_filename, wav_len, transcripts in entries:
-                self.entries.append(
-                    tuple([wav_filename, wav_len, transcripts, "global"])
-                )
-            self.speakers.append("global")
-        else:
-            for _, _, _, speaker in self.entries:
-                if speaker not in self.speakers:
-                    self.speakers.append(speaker)
+        for line in lines:
+            entry = line.split("\t")
+            duration = [] if "duration" not in headers.split("\t") else entry[3].split(' ')
+            if len(duration) != 0:
+                duration = self.load_duration(duration)
+            speaker = "global" if "speaker" not in headers.split("\t") else entry[-1]
+            self.entries.append(
+                tuple([entry[0], entry[1], entry[2], duration, speaker])
+            )
+            if speaker not in self.speakers:
+                self.speakers.append(speaker)
 
         speakers_ids = list(range(len(self.speakers)))
         self.speakers_dict = dict(zip(self.speakers, speakers_ids))
@@ -94,7 +102,7 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         # handling special case for text_featurizer
         self.entries.sort(key=lambda item: len(item[2]))
         if self.text_featurizer.model_type == "text":
-            _, _, all_transcripts, _ = zip(*self.entries)
+            _, _, all_transcripts, _, _ = zip(*self.entries)
             self.text_featurizer.load_model(all_transcripts)
 
         # apply some filter
@@ -111,7 +119,7 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         return self
 
     def __getitem__(self, index):
-        audio_data, _, transcripts, speaker = self.entries[index]
+        audio_data, _, transcripts, durations, speaker = self.entries[index]
         audio_feat = self.audio_featurizer(audio_data)
         audio_feat = self.feature_normalizer(audio_feat, speaker)
         audio_feat_length = audio_feat.shape[0]
@@ -120,12 +128,17 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         text = self.text_featurizer.encode(transcripts)
         text.append(self.text_featurizer.model.eos_index)
         text_length = len(text)
+
+        duration_index = []
+        for index, duration in enumerate(durations):
+            duration_index.extend(list([index]) * int(duration))
         return {
             "input": text,
             "input_length": text_length,
             "output_length": audio_feat_length,
             "output": audio_feat,
-            "speaker": self.speakers_dict[speaker]
+            "speaker": self.speakers_dict[speaker],
+            "duration": duration_index
         }
 
     @property
@@ -145,7 +158,8 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
             "input_length": tf.int32,
             "output_length": tf.int32,
             "output": tf.float32,
-            "speaker": tf.int32
+            "speaker": tf.int32,
+            "duration": tf.int32
         }
 
     @property
@@ -156,7 +170,8 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
             "input_length": tf.TensorShape([]),
             "output_length": tf.TensorShape([]),
             "output": tf.TensorShape([None, feature_dim]),
-            "speaker": tf.TensorShape([])
+            "speaker": tf.TensorShape([]),
+            "duration": tf.TensorShape([None])
         }
 
     @property
@@ -168,6 +183,7 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
                 "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "output": tf.TensorSpec(shape=(None, None, feature_dim), dtype=tf.float32),
-                "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32)
+                "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "duration": tf.TensorSpec(shape=(None, None), dtype=tf.int32)
             },
         )
