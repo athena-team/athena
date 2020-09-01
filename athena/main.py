@@ -26,7 +26,7 @@ from athena import *
 SUPPORTED_DATASET_BUILDER = {
     "speech_recognition_dataset": SpeechRecognitionDatasetBuilder,
     "speech_recognition_dataset_kaldiio": SpeechRecognitionDatasetKaldiIOBuilder,
-    "speech_systhesis_dataset": SpeechSynthesisDatasetBuilder,
+    "speech_synthesis_dataset": SpeechSynthesisDatasetBuilder,
     "speech_dataset": SpeechDatasetBuilder,
     "speech_dataset_kaldiio": SpeechDatasetKaldiIOBuilder,
     "speaker_recognition_dataset": SpeakerRecognitionDatasetBuilder,
@@ -61,6 +61,7 @@ DEFAULT_CONFIGS = {
     "sorta_epoch": 1,
     "ckpt": None,
     "summary_dir": None,
+    "solver_type": "asr",
     "solver_gpu": [0],
     "solver_config": None,
     "model": "speech_transformer",
@@ -77,7 +78,7 @@ DEFAULT_CONFIGS = {
     "trainset_config": None,
     "devset_config": None,
     "testset_config": None,
-    "decode_config": None
+    "inference_config": None
 }
 
 def parse_config(config):

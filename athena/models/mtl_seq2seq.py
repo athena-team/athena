@@ -150,7 +150,7 @@ class MtlTransformerCtc(BaseModel):
             decoder.decode((encoder_output, input_mask), initial_packed_states, self.model.inference_one_step)
             words_prediction_id = decoder.get_best_path()
             words_prediction = ''.join([self.words[int(idx)] for idx in words_prediction_id])
-            predictions = [self.vocab[prediction] for prediction in words_prediction]
+            predictions = [self.vocab[prediction] - 1 for prediction in words_prediction]
             predictions = tf.constant([predictions])
             predictions = tf.cast(predictions, tf.int64)
         return predictions
