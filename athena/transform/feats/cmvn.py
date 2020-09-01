@@ -49,19 +49,16 @@ class CMVN(BaseFrontend):
         """ Set params.
 
         Args:
-            config: contains four optional parameters.
+            config: contains the following four optional parameters:
 
-            dict: config::
+            'type': Type of Opration. (string, default = 'CMVN')
+            'global_mean': Global mean of features. (float, default = 0.0)
+            'global_variance': Global variance of features. (float, default = 1.0)
+            'local_cmvn': If ture, local cmvn will be done on features. (bool, default = False)
 
-            {
-              'type': Type of Opration. (string, default = 'CMVN')
-              'global_mean': Global mean of features. (float, default = 0.0)
-              'global_variance': Global variance of features. (float, default = 1.0)
-              'local_cmvn': If ture, local cmvn will be done on features. (bool, default = False)
-            }
-
-        Note: Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         hparams = HParams(cls=cls)

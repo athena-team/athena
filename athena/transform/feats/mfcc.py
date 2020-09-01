@@ -48,42 +48,39 @@ class Mfcc(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains fifteen optional parameters.
+            config: contains the following fifteen optional parameters:
 
-            dict: config::
-
-            {
-             'window_length': Window length in seconds. (float, default = 0.025),
-             'frame_length': Hop length in seconds. (float, default = 0.010),
-             'snip_edges': If 1, the last frame (shorter than window_length) will be
+            'window_length': Window length in seconds. (float, default = 0.025),
+            'frame_length': Hop length in seconds. (float, default = 0.010),
+            'snip_edges': If 1, the last frame (shorter than window_length) will be
                           cutoff. If 2, 1 // 2 frame_length data will be padded
                           to data. (int, default = 1),
-             'preEph_coeff': Coefficient for use in frame-signal preemphasis.
+            'preEph_coeff': Coefficient for use in frame-signal preemphasis.
                             (float, default = 0.97),
-             'window_type': Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
+            'window_type': Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
                             (string, default = "povey")
-             'remove_dc_offset': Subtract mean from waveform on each frame.
+            'remove_dc_offset': Subtract mean from waveform on each frame.
                                 (bool, default = true)
-             'is_fbank': If true, compute power spetrum without frame energy.
+            'is_fbank': If true, compute power spetrum without frame energy.
                           If false, using the frame energy instead of the
                           square of the constant component of the signal.
                           (bool, default = true)
-             'coefficient_count': Number of cepstra in MFCC computation. (int, default = 13)
-             'output_type': If 1, return power spectrum. If 2, return log-power
+            'coefficient_count': Number of cepstra in MFCC computation. (int, default = 13)
+            'output_type': If 1, return power spectrum. If 2, return log-power
                             spectrum. (int, default = 1)
-             'upper_frequency_limit': High cutoff frequency for mel bins (if <= 0, offset
+            'upper_frequency_limit': High cutoff frequency for mel bins (if <= 0, offset
                                       from Nyquist) (float, default = 0)
-             'lower_frequency_limit': Low cutoff frequency for mel bins. (float, default = 20)
-             'filterbank_channel_count': Number of triangular mel-frequency bins.
+            'lower_frequency_limit': Low cutoff frequency for mel bins. (float, default = 20)
+            'filterbank_channel_count': Number of triangular mel-frequency bins.
                                         (float, default = 23)
-             'dither': Dithering constant (0.0 means no dither).
+            'dither': Dithering constant (0.0 means no dither).
                       (float, default = 1) [add robust to training]
-             'cepstral_lifter': Constant that controls scaling of MFCCs. (float, default = 22)
-             'use_energy': Use energy (not C0) in MFCC computation. (bool, default = True)
-            }
+            'cepstral_lifter': Constant that controls scaling of MFCCs. (float, default = 22)
+            'use_energy': Use energy (not C0) in MFCC computation. (bool, default = True)
 
-        Note: Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         upper_frequency_limit = 0.0

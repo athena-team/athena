@@ -44,83 +44,80 @@ class FbankPitch(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains twenty-nine optional parameters.
+            config: contains the following twenty-nine optional parameters:
 
-            dict: config::
-
-            {
-             'preEph_coeff': Coefficient for use in frame-signal preemphasis.
+            'preEph_coeff': Coefficient for use in frame-signal preemphasis.
                             (float, default = 0.97),
-             'window_type': Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
+            'window_type': Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
                             (string, default = "povey")
-             'remove_dc_offset': Subtract mean from waveform on each frame.
+            'remove_dc_offset': Subtract mean from waveform on each frame.
                                 (bool, default = true)
-             'is_fbank': If true, compute power spetrum without frame energy.
+            'is_fbank': If true, compute power spetrum without frame energy.
                           If false, using the frame energy instead of the
                           square of the constant component of the signal.
                           (bool, default = true)
-             'is_log10': If true, using log10 to fbank. If false, using loge.
+            'is_log10': If true, using log10 to fbank. If false, using loge.
                         (bool, default = false)
-             'output_type': If 1, return power spectrum. If 2, return log-power
+            'output_type': If 1, return power spectrum. If 2, return log-power
                             spectrum. (int, default = 1)
-             'upper_frequency_limit': High cutoff frequency for mel bins (if <= 0, offset
+            'upper_frequency_limit': High cutoff frequency for mel bins (if <= 0, offset
                                       from Nyquist) (float, default = 0)
-             'lower_frequency_limit': Low cutoff frequency for mel bins (float, default = 20)
-             'filterbank_channel_count': Number of triangular mel-frequency bins.
+            'lower_frequency_limit': Low cutoff frequency for mel bins (float, default = 20)
+            'filterbank_channel_count': Number of triangular mel-frequency bins.
                                         (float, default = 23)
-             'dither': Dithering constant (0.0 means no dither).
+            'dither': Dithering constant (0.0 means no dither).
                       (float, default = 1) [add robust to training]
-             'delta_pitch': Smallest relative change in pitch that our algorithm
+            'delta_pitch': Smallest relative change in pitch that our algorithm
                             measures (float, default = 0.005)
-             'window_length': Frame length in seconds (float, default = 0.025)
-             'frame_length': Frame shift in seconds (float, default = 0.010)
-             'frames-per-chunk': Only relevant for offline pitch extraction (e.g.
+            'window_length': Frame length in seconds (float, default = 0.025)
+            'frame_length': Frame shift in seconds (float, default = 0.010)
+            'frames-per-chunk': Only relevant for offline pitch extraction (e.g.
                                 compute-kaldi-pitch-feats), you can set it to a small
                                 nonzero value, such as 10, for better feature
                                 compatibility with online decoding (affects energy
                                 normalization in the algorithm) (int, default = 0)
-             'lowpass-cutoff': cutoff frequency for LowPass filter (Hz). (float, default = 1000)
-             'lowpass-filter-width': Integer that determines filter width of lowpass filter,
+            'lowpass-cutoff': cutoff frequency for LowPass filter (Hz). (float, default = 1000)
+            'lowpass-filter-width': Integer that determines filter width of lowpass filter,
                                     more gives sharper filter (int, default = 1)
-             'max-f0': max. F0 to search for (Hz) (float, default = 400)
-             'max-frames-latency': Maximum number of frames of latency that we allow pitch
+            'max-f0': max. F0 to search for (Hz) (float, default = 400)
+            'max-frames-latency': Maximum number of frames of latency that we allow pitch
                                    tracking to introduce into the feature processing
                                    (affects output only if --frames-per-chunk > 0 and
                                    --simulate-first-pass-online=true (int, default = 0)
-             'min-f0': min. F0 to search for (Hz) (float, default = 50)
-             'nccf-ballast': Increasing this factor reduces NCCF for quiet frames.
+            'min-f0': min. F0 to search for (Hz) (float, default = 50)
+            'nccf-ballast': Increasing this factor reduces NCCF for quiet frames.
                             (float, default = 7000)
-             'nccf-ballast-online': This is useful mainly for debug; it affects how the NCCF
+            'nccf-ballast-online': This is useful mainly for debug; it affects how the NCCF
                                     ballast is computed. (bool, default = false)
-             'penalty-factor': cost factor for FO change. (float, default = 0.1)
-             'preemphasis-coefficient': Coefficient for use in signal preemphasis (deprecated).
+            'penalty-factor': cost factor for FO change. (float, default = 0.1)
+            'preemphasis-coefficient': Coefficient for use in signal preemphasis (deprecated).
                                        (float, default = 0)
-             'recompute-frame': Only relevant for online pitch extraction, or for
+            'recompute-frame': Only relevant for online pitch extraction, or for
                                 compatibility with online pitch extraction.  A
                                 non-critical parameter; the frame at which we recompute
                                 some of the forward pointers, after revising our
                                 estimate of the signal energy.  Relevant
                                 if--frames-per-chunk > 0. (int, default = 500)
-             'resample-frequency': Frequency that we down-sample the signal to.  Must be
+            'resample-frequency': Frequency that we down-sample the signal to.  Must be
                                    more than twice lowpass-cutoff (float, default = 4000)
-             'simulate-first-pass-online': If true, compute-kaldi-pitch-feats will output features
+            'simulate-first-pass-online': If true, compute-kaldi-pitch-feats will output features
                                         that correspond to what an online decoder would see in
                                         the first pass of decoding-- not the final version of
                                         the features, which is the default.  Relevant if
                                         --frames-per-chunk > 0 (bool, default = false)
-             'snip-edges': If this is set to false, the incomplete frames near the
+            'snip-edges': If this is set to false, the incomplete frames near the
                             ending edge won't be snipped, so that the number of
                             frames is the file size divided by the frame-shift.
                             This makes different types of features give the same
                             number of frames. (bool, default = true)
-             'soft-min-f0': Minimum f0, applied in soft way, must not exceed min-f0.
+            'soft-min-f0': Minimum f0, applied in soft way, must not exceed min-f0.
                             (float, default = 10)
-             'upsample-filter-width': Integer that determines filter width when upsampling
+            'upsample-filter-width': Integer that determines filter width when upsampling
                                     NCCF. (int, default = 5)
-            }
 
-        Note: Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         hparams = HParams(cls=cls)
