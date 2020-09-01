@@ -28,11 +28,6 @@ from ...utils.data_queue import DataQueue
 
 def data_loader(dataset_builder, batch_size=16, num_threads=1):
     """data loader
-
-    Args:
-        dataset_builder: dataset builder
-        batch_size (int, optional): Defaults to 16.
-        num_threads (int, optional): number of threads to load data. Defaults to 1.
     """
     num_samples = len(dataset_builder)
     if num_samples == 0:
@@ -81,6 +76,7 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
 class BaseDatasetBuilder:
     """base dataset builder
     """
+    default_config = {}
 
     def __init__(self, config=None):
         # hparams
@@ -103,12 +99,6 @@ class BaseDatasetBuilder:
 
     def __len__(self):
         return len(self.entries)
-
-    @property
-    def entries_list(self):
-        """return the entries list
-        """
-        return self.entries
 
     @property
     def sample_type(self):
@@ -194,4 +184,15 @@ class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
     def compute_cmvn_if_necessary(self, is_necessary=True):
         """vitural interface
         """
+        if not is_necessary:
+            return self
+        if os.path.exists(self.hparams.cmvn_file):
+            return self
+        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
+        with tf.device("/cpu:0"):
+            self.feature_normalizer.compute_cmvn(
+                self.entries, self.speakers, self.audio_featurizer, feature_dim,
+                self.hparams.num_cmvn_workers
+            )
+        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
         return self
