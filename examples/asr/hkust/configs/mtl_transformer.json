@@ -38,13 +38,7 @@
     "ctc_weight":0.5,
     "lm_type":"ngram",
     "lm_weight":0.3,
-    "lm_path":"examples/asr/hkust/data/5gram.arpa",
-    "wfst_graph":"examples/asr/hkust/build_graph/hkust_use_hkustlm5/LG.fst",
-    "acoustic_scale":10.0,
-    "max_active":80,
-    "min_active":0,
-    "wfst_beam":30.0,
-    "max_seq_len":100
+    "lm_path":"examples/asr/hkust/data/5gram.arpa"
   },
 
   "optimizer":"warmup_adam",
@@ -61,8 +55,7 @@
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/hkust/data/cmvn",
     "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
-    "input_length_range":[10, 8000],
-    "words":"examples/asr/hkust/build_graph/hkust_use_hkustlm5/words.txt"
+    "input_length_range":[10, 8000]
   },
   "devset_config":{
     "data_csv": "examples/asr/hkust/data/dev.csv",
