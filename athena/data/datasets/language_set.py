@@ -16,10 +16,9 @@
 # pylint: disable=no-member, invalid-name
 """ audio dataset """
 from absl import logging
-import tqdm
 import tensorflow as tf
+import tqdm
 from ..text_featurizer import TextFeaturizer
-from ...utils.hparam import register_and_parse_hparams
 from .base import BaseDatasetBuilder
 
 class LanguageDatasetBuilder(BaseDatasetBuilder):
@@ -33,16 +32,14 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
         "data_csv": None
     }
     def __init__(self, config=None):
-        super().__init__()
-        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        super().__init__(config=config)
         self.input_text_featurizer = TextFeaturizer(self.hparams.input_text_config)
         self.output_text_featurizer = TextFeaturizer(self.hparams.output_text_config)
         if self.hparams.data_csv is not None:
-            self.load_csv(self.hparams.data_csv)
+            self.preprocess_data(self.hparams.data_csv)
 
-    def load_csv(self, file_path):
-        """load csv file
-        """
+    def preprocess_data(self, file_path):
+        """ load csv file """
         logging.info("Loading data from {}".format(file_path))
         with open(file_path, "r", encoding="utf-8") as file:
             lines = file.read().splitlines()
@@ -98,11 +95,6 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
             "output": output_labels,
             "output_length": output_length,
         }
-
-    def __len__(self):
-        """return the number of data samples
-        """
-        return len(self.entries)
 
     @property
     def num_class(self):

@@ -5,7 +5,7 @@
   "ckpt":"examples/asr/switchboard/ckpts/mtl_transformer_ctc_sp_spec_spm/",
   "summary_dir":"examples/asr/switchboard/ckpts/mtl_transformer_ctc_sp_spec_spm/event",
 
-  "solver_gpu":[0],
+  "solver_gpu":[],
   "solver_config":{
     "clip_norm":100,
     "log_interval":10,
@@ -32,8 +32,8 @@
     "mtl_weight":0.5
   },
 
-  "decode_config":{
-    "beam_search":true,
+  "inference_config":{
+    "decoder_type":"beam_search_decoder",
     "beam_size":10,
     "ctc_weight":0.5,
     "model_avg_num":10,

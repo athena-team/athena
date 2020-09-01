@@ -15,13 +15,10 @@
 # ==============================================================================
 # pylint: disable=no-member, invalid-name
 """ audio dataset """
-import os
+
 from absl import logging
 import tensorflow as tf
-from athena.transform import AudioFeaturizer
-from ...utils.hparam import register_and_parse_hparams
-from ..feature_normalizer import FeatureNormalizer
-from .base import BaseDatasetBuilder
+from .base import SpeechBaseDatasetBuilder
 
 
 class SpeechDatasetBuilder(BaseDatasetBuilder):
@@ -30,28 +27,16 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
 
     default_config = {
         "audio_config": {"type": "Fbank"},
+        "num_cmvn_workers": 1,
         "cmvn_file": None,
         "input_length_range": [20, 50000],
         "data_csv": None,
-        "num_cmvn_workers": 1
     }
 
     def __init__(self, config=None):
-        super().__init__()
-        # hparams
-        self.hparams = register_and_parse_hparams(
-            self.default_config, config, cls=self.__class__)
-        logging.info("hparams: {}".format(self.hparams))
-
-        self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
-        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
+        super().__init__(config=config)
         if self.hparams.data_csv is not None:
-            self.load_csv(self.hparams.data_csv)
-
-    def reload_config(self, config):
-        """ reload the config """
-        if config is not None:
-            self.hparams.override_from_dict(config)
+            self.preprocess_data(self.hparams.data_csv)
 
     def preprocess_data(self, file_path):
         """generate a list of tuples (wav_filename, wav_length_ms, speaker)."""
@@ -75,12 +60,10 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             if speaker not in self.speakers:
                 self.speakers.append(speaker)
 
-        self.filter_sample_by_input_length()
+        self.entries = list(filter(lambda x: int(x[1]) in
+                            range(self.hparams.input_length_range[0],
+                            self.hparams.input_length_range[1]), self.entries))
         return self
-
-    def load_csv(self, file_path):
-        """ load csv file """
-        return self.preprocess_data(file_path)
 
     def __getitem__(self, index):
         """get a sample
@@ -113,10 +96,6 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             "output_length": output_data.shape[0],
         }
 
-    def __len__(self):
-        """ return the number of data samples """
-        return len(self.entries)
-
     @property
     def num_class(self):
         """:obj:`@property`
@@ -126,16 +105,6 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
         """
         target_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
         return target_dim
-
-    @property
-    def speaker_list(self):
-        """ return the speaker list """
-        return self.speakers
-
-    @property
-    def audio_featurizer_func(self):
-        """ return the audio_featurizer function """
-        return self.audio_featurizer
 
     @property
     def sample_type(self):
@@ -210,34 +179,3 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
             },
         )
 
-    def filter_sample_by_input_length(self):
-        """filter samples by input length
-
-        The length of filterd samples will be in [min_length, max_length)
-
-        Returns:
-            entries: a filtered list of tuples
-            (wav_filename, wav_len, speaker)
-        """
-        min_len = self.hparams.input_length_range[0]
-        max_len = self.hparams.input_length_range[1]
-        filter_entries = []
-        for wav_filename, wav_len, speaker in self.entries:
-            if int(wav_len) in range(min_len, max_len):
-                filter_entries.append(tuple([wav_filename, wav_len, speaker]))
-        self.entries = filter_entries
-
-    def compute_cmvn_if_necessary(self, is_necessary=True):
-        """ compute cmvn file
-        """
-        if not is_necessary:
-            return self
-        if os.path.exists(self.hparams.cmvn_file):
-            return self
-        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
-        with tf.device("/cpu:0"):
-            self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim, self.hparams.num_cmvn_workers
-            )
-        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
-        return self

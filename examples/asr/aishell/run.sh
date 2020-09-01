@@ -27,6 +27,8 @@ stop_stage=100
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
 dataset_dir=examples/asr/aishell/data/data_aishell
+use_wfst=false
+
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
@@ -77,11 +79,22 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         examples/asr/aishell/configs/rnnlm.json || exit 1
 fi
 
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    # decoding stage
-    echo "Running decode ..."
-    python athena/decode_main.py \
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ "$use_wfst" = false ]; then
+    # beam search decoding
+    echo "Running decode with beam search..."
+    python athena/inference.py \
         examples/asr/aishell/configs/mtl_transformer_sp.json > decode.log || exit 1
+elif [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ "$use_wfst" = true ]; then
+    # wfst decoding
+    echo "Running decode with WFST..."
+    echo "For now we will simply download LG.fst and words.txt from athena-decoder project"
+    echo "Feel free to checkout graph creation manual at https://github.com/athena-team/athena-decoder#build-graph"
+    wget "https://github.com/athena-team/athena-decoder/tree/master/examples/aishell/graph/LG.fst"
+    mv LG.fst examples/asr/aishell/data
+    wget "https://github.com/athena-team/athena-decoder/tree/master/examples/aishell/graph/words.txt"
+    mv words.txt examples/asr/aishell/data
+    python athena/inference.py \
+        examples/asr/aishell/configs/mtl_transformer_sp_wfst.json > decode.log || exit 1
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then

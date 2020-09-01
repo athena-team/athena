@@ -17,10 +17,14 @@
 
 import math
 import random
+import os
 from absl import logging
 import tensorflow as tf
-
+from athena.transform import AudioFeaturizer
+from ..feature_normalizer import FeatureNormalizer
+from ...utils.hparam import register_and_parse_hparams
 from ...utils.data_queue import DataQueue
+
 
 def data_loader(dataset_builder, batch_size=16, num_threads=1):
     """data loader
@@ -78,9 +82,21 @@ class BaseDatasetBuilder:
     """base dataset builder
     """
 
-    def __init__(self):
+    def __init__(self, config=None):
+        # hparams
+        self.hparams = register_and_parse_hparams(
+            self.default_config, config, cls=self.__class__)
+        logging.info("hparams: {}".format(self.hparams))
         self.entries = []
-        self.speakers = []
+
+    def reload_config(self, config):
+        """ reload the config """
+        if config is not None:
+            self.hparams.override_from_dict(config)
+
+    def preprocess_data(self, file_path):
+        """ loading data """
+        raise NotImplementedError
 
     def __getitem__(self, index):
         raise NotImplementedError
@@ -145,7 +161,7 @@ class BaseDatasetBuilder:
             return self
         logging.info("perform batch_wise_shuffle with batch_size %d" % batch_size)
         max_buckets = int(math.floor(len(self.entries) / batch_size))
-        total_buckets = [i for i in range(max_buckets)]
+        total_buckets = list(range(max_buckets))
         random.shuffle(total_buckets)
         shuffled_entries = []
         for i in total_buckets:
@@ -154,7 +170,27 @@ class BaseDatasetBuilder:
         self.entries = shuffled_entries
         return self
 
-    # pylint: disable=unused-argument
+
+class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
+    """ speech base dataset """
+    default_config = {
+        "audio_config": {"type": "Fbank"},
+        "num_cmvn_workers": 1,
+        "cmvn_file": None,
+        "data_csv": None
+    }
+
+    def __init__(self, config=None):
+        super().__init__(config=config)
+        self.speakers = []
+        self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
+        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
+
+    @property
+    def num_class(self):
+        """ return the number of classes """
+        raise NotImplementedError
+
     def compute_cmvn_if_necessary(self, is_necessary=True):
         """vitural interface
         """
