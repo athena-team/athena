@@ -44,6 +44,7 @@ class ReadWav(BaseFrontend):
 
         Args:
             config: contains the following two optional parameters
+
            'type': 'ReadWav'.
            'audio_channels': index of the desired channel. (default=1)
 
