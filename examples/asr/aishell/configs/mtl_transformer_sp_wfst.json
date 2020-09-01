@@ -33,12 +33,18 @@
   },
 
   "inference_config":{
-    "decoder_type":"beam_search_decoder",
+    "decoder_type":"wfst_decoder",
     "beam_size":10,
     "ctc_weight":0.5,
     "lm_weight":0.7,
     "lm_type": "rnn",
-    "lm_path":"examples/asr/aishell/configs/rnnlm.json"
+    "lm_path":"examples/asr/aishell/configs/rnnlm.json",
+    "wfst_graph":"examples/asr/aishell/data/LG.fst",
+    "acoustic_scale":6.0,
+    "max_active":100,
+    "min_active":0,
+    "wfst_beam":100.0,
+    "max_seq_len":100
   },
 
   "optimizer":"warmup_adam",
@@ -58,7 +64,8 @@
     "cmvn_file":"examples/asr/aishell/data/cmvn",
     "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
     "input_length_range":[10, 8000],
-    "speed_permutation": [0.9, 1.0, 1.1]
+    "speed_permutation": [0.9, 1.0, 1.1],
+    "words":"examples/asr/aishell/data/words.txt"
   },
   "devset_config":{
     "data_csv": "examples/asr/aishell/data/dev.csv",

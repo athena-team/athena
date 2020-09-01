@@ -167,7 +167,8 @@ class SpeechTransformer(BaseModel):
                 type: TensorArray
             step: current step
             enc_outputs: encoder outputs and its corresponding memory mask, type: tuple
-        Returns:
+        Returns::
+
             logits: new logits
             history_logits: the logits array with new logits
             step: next step
@@ -199,7 +200,8 @@ class SpeechTransformer(BaseModel):
             decoder: it contains the main decoding operations
             return_encoder: if it is True,
                 encoder_output and input_mask will be returned
-        Returns:
+        Returns::
+
             predictions: the corresponding decoding results
                 shape: [batch_size, seq_length]
                 it will be returned only if return_encoder is False
@@ -305,7 +307,8 @@ class SpeechTransformer(BaseModel):
           enc_outputs: outputs and mask of encoder
           cur_input: input sequence for transformer, type: list
           inner_packed_states_array: inner states need to be record, type: tuple
-        Returns:
+        Returns::
+
           scores: log scores for all labels
           inner_packed_states_array: inner states for next iterator
         """
@@ -373,7 +376,8 @@ class SpeechTransformer2(SpeechTransformer):
             predicted_token: predictions by first pass
             training: if it is in the training stage
             top_k: the number of predicted indexes selected for next step calculation
-        Returns:
+        Returns::
+
             final_input: mix of the gold_token and predicted_token
         """
         mix_result = tf.TensorArray(

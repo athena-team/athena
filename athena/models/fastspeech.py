@@ -120,7 +120,7 @@ class FastSpeech(BaseModel):
         # for the y_net
         input_features = layers.Input(shape=tf.TensorShape([None, self.hparams.d_model]),
                                       dtype=tf.float32)
-        inner = ScaledPositionalEncoding(self.hparams.d_model)(input_features)
+        inner = ScaledPositionalEncoding(self.hparams.d_model, max_position=3200)(input_features)
         inner = layers.Dropout(self.hparams.rate)(inner)  # self.hparams.rate
         self.y_net = tf.keras.Model(inputs=input_features, outputs=inner, name="y_net")
         print(self.y_net.summary())
@@ -174,7 +174,7 @@ class FastSpeech(BaseModel):
 
     def set_teacher_model(self, teacher_model, teacher_type):
         """set teacher model and initialize duration_calculator before training
-
+        
         Args:
             teacher_model: the loaded teacher model
             teacher_type: the model type, e.g., tacotron2, tts_transformer
@@ -185,7 +185,7 @@ class FastSpeech(BaseModel):
 
     def restore_from_pretrained_model(self, pretrained_model, model_type=""):
         """restore from pretrained model
-
+        
         Args:
             pretrained_model: the loaded pretrained model
             model_type: the model type, e.g: tts_transformer
@@ -219,7 +219,8 @@ class FastSpeech(BaseModel):
                 shape: [batch, x_steps]
             output_length: the real output length
             training: if it is in the training stage
-        Returns:
+        Returns::
+
             before_outs: the outputs before postnet calculation
             after_outs: the outputs after postnet calculation
         """
@@ -266,7 +267,7 @@ class FastSpeech(BaseModel):
             0.0, tf.cast(self.hparams.clip_max, dtype=tf.float32)), dtype=tf.int32)
         _, after_outs = self._feedforward_decoder(encoder_output, None, duration_sequences, None,
                                                   training=False)
-        return after_outs
+        return after_outs, None
 
 
 class LengthRegulator(tf.keras.layers.Layer):
@@ -283,7 +284,8 @@ class LengthRegulator(tf.keras.layers.Layer):
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_sequences: durations of each frame, shape: [batch, x_steps]
             alpha: Alpha value to control speed of speech.
-        Returns:
+        Returns::
+
             expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         if alpha != 1.0:
@@ -329,7 +331,8 @@ class LengthRegulator(tf.keras.layers.Layer):
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_indexes: durations of each frame, shape: [batch, y_steps]
             output_length: shape: [batch]
-        Returns:
+        Returns::
+
             expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         duration_indexes = tf.expand_dims(duration_indexes, axis=-1) # [batch, y_steps, 1]
@@ -362,28 +365,32 @@ class DurationCalculator(tf.keras.layers.Layer):
         self.teacher_model = teacher_model
         self.teacher_type = teacher_type
 
-
     def call(self, samples):
         """
         Args:
             samples: samples from dataset
-        Returns:
-            durations: Batch of durations shape: [batch, max_input_length).
+        Returns::
 
+            durations: Batch of durations shape: [batch, max_input_length).
         """
         y_steps = tf.reduce_max(samples['output_length'])
         x_steps = tf.reduce_max(samples['input_length'])
-        if self.teacher_model is None:
-            raise ValueError("teacher model should not be None")
-        if self.teacher_type == 'tts_transformer':
+        teacher_outs = None
+        if self.teacher_type is None:
+            duration_index = samples['duration']
+            weights_argmax = duration_index[:, :y_steps] # [batch, y_steps]
+            if tf.shape(weights_argmax)[1] < y_steps:
+                padding = tf.zeros([tf.shape(weights_argmax)[0], y_steps - tf.shape(weights_argmax)[1]],
+                                   dtype=tf.int32)
+                weights_argmax = tf.concat([weights_argmax, padding], axis=1)
+        elif self.teacher_type == 'tts_transformer':
             teacher_outs, attn_weights = self._calculate_transformer_attentions(samples)
+            weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
         elif self.teacher_type == 'tacotron2':
             teacher_outs, attn_weights = self._calculate_t2_attentions(samples)
+            weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
         else:
             raise ValueError("teacher type not supported")
-
-        # weights_argmax, shape: [batch, y_steps]
-        weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
         output_mask = tf.sequence_mask(samples['output_length'], y_steps)
         output_mask = tf.cast(tf.logical_not(output_mask), dtype=tf.int32) * -10000
         weights_argmax += output_mask
@@ -401,10 +408,10 @@ class DurationCalculator(tf.keras.layers.Layer):
 
     def _calculate_t2_attentions(self, samples):
         """Calculate outputs and attention weights based on tacotron2
-
+        
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
             after_outs: the outputs from the teacher model
             attn_weights: the attention weights from the teacher model
         """
@@ -419,7 +426,7 @@ class DurationCalculator(tf.keras.layers.Layer):
 
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
             after_outs: the outputs from the teacher model
             attn_weights: the attention weights from the teacher model
         """
