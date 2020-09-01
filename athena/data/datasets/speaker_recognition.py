@@ -16,19 +16,16 @@
 # pylint: disable=no-member, invalid-name
 """ speaker dataset """
 
-import os
 from absl import logging
 import tensorflow as tf
-from athena.transform import AudioFeaturizer
-from ...utils.hparam import register_and_parse_hparams
-from ..feature_normalizer import FeatureNormalizer
-from .base import BaseDatasetBuilder
+from .base import SpeechBaseDatasetBuilder
 
-class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
+class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
     """SpeakerRecognitionDatasetBuilder
     """
     default_config = {
         "audio_config": {"type": "Fbank"},
+        "num_cmvn_workers": 1,
         "cmvn_file": None,
         "cut_frame": None,
         "input_length_range": [20, 50000],
@@ -36,33 +33,16 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
     }
 
     def __init__(self, config=None):
-        super().__init__()
-        # hparams
-        self.hparams = register_and_parse_hparams(
-            self.default_config, config, cls=self.__class__)
-        logging.info("hparams: {}".format(self.hparams))
-
-        self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
-        self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
-
-        self.entries = []
-        self.speakers = []
-
+        super().__init__(config=config)
         if self.hparams.data_csv is not None:
-            self.load_csv(self.hparams.data_csv)
+            self.preprocess_data(self.hparams.data_csv)
 
-    def reload_config(self, config):
-        """reload the config
+    def preprocess_data(self, file_path):
+        """ Generate a list of tuples
+            (wav_filename, wav_length_ms, speaker_id, speaker_name).
         """
-        if config is not None:
-            self.hparams.override_from_dict(config)
-
-    def preprocess_data(self, data_csv_path):
-        """generate a list of tuples
-           (wav_filename, wav_length_ms, speaker_id, speaker_name).
-        """
-        logging.info("Loading data csv {}".format(data_csv_path))
-        with open(data_csv_path, "r", encoding='utf-8') as data_csv:
+        logging.info("Loading data csv {}".format(file_path))
+        with open(file_path, "r", encoding='utf-8') as data_csv:
             lines = data_csv.read().splitlines()[1:]
         lines = [line.split("\t", 3) for line in lines]
         lines.sort(key=lambda item: int(item[1]))
@@ -70,7 +50,9 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
         self.speakers = list(set(line[-1] for line in lines))
 
         # apply input length filter
-        self.filter_sample_by_input_length()
+        self.entries = list(filter(lambda x: int(x[1]) in
+                            range(self.hparams.input_length_range[0],
+                            self.hparams.input_length_range[1]), self.entries))
         return self
 
     def cut_features(self, feature):
@@ -83,11 +65,6 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
             return feature
         start_frames = tf.random.uniform([], 0, max_start_frames, tf.int32)
         return feature[start_frames:start_frames + length, :, :]
-
-    def load_csv(self, data_csv_path):
-        """load csv file
-        """
-        return self.preprocess_data(data_csv_path)
 
     def __getitem__(self, index):
         """get a sample
@@ -119,18 +96,9 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
             "output": spkid
         }
 
-    def __len__(self):
-        """return the number of data samples
-        """
-        return len(self.entries)
-
     @property
     def num_class(self):
-        """:obj:`@property`
-
-        Returns:
-            int: the number of speakers
-        """
+        ''' return the number of speakers '''
         return len(self.speakers)
 
     @property
@@ -202,39 +170,6 @@ class SpeakerRecognitionDatasetBuilder(BaseDatasetBuilder):
             },
         )
 
-    def filter_sample_by_input_length(self):
-        """filter samples by input length
-
-        The length of filterd samples will be in [min_length, max_length)
-
-        Returns:
-            entries: a filtered list of tuples
-            (wav_filename, wav_len, transcripts, speed, speaker)
-        """
-        min_len = self.hparams.input_length_range[0]
-        max_len = self.hparams.input_length_range[1]
-        filter_entries = []
-        for items in self.entries:
-            if int(items[1]) in range(min_len, max_len):
-                filter_entries.append(items)
-        self.entries = filter_entries
-        return self
-
-    def compute_cmvn_if_necessary(self, is_necessary=True):
-        """compute cmvn file
-        """
-        if not is_necessary:
-            return self
-        if os.path.exists(self.hparams.cmvn_file):
-            return self
-        feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
-        with tf.device("/cpu:0"):
-            self.feature_normalizer.compute_cmvn(
-                self.entries, self.speakers, self.audio_featurizer, feature_dim
-            )
-        self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
-        return self
-
 
 class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
     """SpeakerVerificationDatasetBuilder
@@ -243,12 +178,12 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
     def __init__(self, config=None):
         super().__init__(config=config)
 
-    def preprocess_data(self, data_csv_path):
-        """generate a list of tuples
-           (wav_filename_a, speaker_a, wav_filename_b, speaker_b, label).
+    def preprocess_data(self, file_path):
+        """ Generate a list of tuples
+            (wav_filename_a, speaker_a, wav_filename_b, speaker_b, label).
         """
-        logging.info("Loading data csv {}".format(data_csv_path))
-        with open(data_csv_path, "r", encoding='utf-8') as data_csv:
+        logging.info("Loading data csv {}".format(file_path))
+        with open(file_path, "r", encoding='utf-8') as data_csv:
             lines = data_csv.read().splitlines()[1:]
         lines = [line.split("\t", 4) for line in lines]
         self.entries = [tuple(line) for line in lines]

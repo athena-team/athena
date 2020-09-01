@@ -17,8 +17,8 @@
 """ speaker dataset """
 
 import time
-import tqdm
 from absl import logging
+import tqdm
 from athena import SpeakerRecognitionDatasetBuilder
 
 def test():
@@ -34,7 +34,7 @@ def test():
             "cmvn_file":"examples/speaker_identification/voxceleb/data/vox1_iden_cmvn_speaker"
         }
     )
-    dataset_builder.compute_cmvn_if_necessary(False)
+    dataset_builder.compute_cmvn_if_necessary(True)
     dataset = dataset_builder.as_dataset(16, 1)
     start = time.time()
     for _ in tqdm.tqdm(dataset, total=len(dataset_builder)//16):
