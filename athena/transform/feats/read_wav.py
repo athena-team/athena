@@ -43,7 +43,7 @@ class ReadWav(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains the following two optional parameters
+           config: contains the following two optional parameters
 
            'type': 'ReadWav'.
            'audio_channels': index of the desired channel. (default=1)
