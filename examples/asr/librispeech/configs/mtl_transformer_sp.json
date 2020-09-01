@@ -5,7 +5,7 @@
   "ckpt":"examples/asr/librispeech/ckpts/mtl_transformer_sp",
   "summary_dir":"examples/asr/librispeech/ckpts/mtl_transformer_sp/event",
 
-  "solver_gpu":[0],
+  "solver_gpu":[],
   "solver_config":{
     "clip_norm":5,
     "log_interval":10,
