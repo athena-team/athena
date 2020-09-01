@@ -43,22 +43,19 @@ class Framepow(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains four optional parameters.
+            config: contains the following four optional parameters:
 
-            dict: config::
-
-            {
-             'window_length': Window length in seconds. (float, default = 0.025)
-             'frame_length': Hop length in seconds. (float, default = 0.010)
-             'snip_edges': If 1, the last frame (shorter than window_length) will be
+            'window_length': Window length in seconds. (float, default = 0.025)
+            'frame_length': Hop length in seconds. (float, default = 0.010)
+            'snip_edges': If 1, the last frame (shorter than window_length) will be
                           cutoff. If 2, 1 // 2 frame_length data will be padded
                           to data. (int, default = 1)
-             'remove_dc_offset': Subtract mean from waveform on each frame.
+            'remove_dc_offset': Subtract mean from waveform on each frame.
                                 (bool, default = true)
-            }
 
-        Note: Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         window_length = 0.025

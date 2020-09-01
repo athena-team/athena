@@ -41,16 +41,13 @@ class WriteWav(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains one optional parameter.
+            config: contains the following one optional parameter:
 
-            dict: config::
+            'sample_rate': the sample rate of the signal. (default=16000)
 
-            {
-             'sample_rate': the sample rate of the signal. (default=16000)
-            }
-
-        Note: Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         sample_rate = 16000

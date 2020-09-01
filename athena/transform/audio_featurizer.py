@@ -41,15 +41,12 @@ class AudioFeaturizer:
         """Init config of AudioFeaturizer.
 
         Args:
-            config: 'type': The name of the feature you want to extract.
-
-                    dict: config::
-
-                    {
+            config: 'type': The name of the feature you want to extract. That is,
                     'ReadWav', 'WriteWav', 'Fbank', 'Spectrum', 'MelSpectrum'
                     'Framepow', 'Pitch', 'Mfcc', 'Fbank', 'FbankPitch'
-                    }
-            Note: Specific parameters of different features can be seen in the docs of Transform class.
+
+            Note:
+                Specific parameters of different features can be seen in the docs of Transform class.
 
         """
 

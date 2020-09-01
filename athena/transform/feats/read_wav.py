@@ -43,17 +43,14 @@ class ReadWav(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains two optional parameters.
+            config: contains the following two optional parameters:
 
-            dict: config::
+           'type': 'ReadWav'.
+           'audio_channels': index of the desired channel. (default=1)
 
-            {
-            'type': 'ReadWav'.
-            'audio_channels': index of the desired channel. (default=1)
-            }
-
-        Note: Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
         audio_channels = 1
 

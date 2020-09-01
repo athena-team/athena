@@ -55,7 +55,7 @@ class MelSpectrum(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains the following twelve optional parameters, which includes the following.
+            config: contains the following twelve optional parameters:
 
             'window_length': Window length in seconds. (float, default = 0.025),
             'frame_length': Hop length in seconds. (float, default = 0.010),
@@ -85,7 +85,7 @@ class MelSpectrum(BaseFrontend):
 
         Note:
             Return an object of class HParams, which is a set of hyperparameters as
-              name-value pairs.
+            name-value pairs.
         """
 
         hparams = HParams(cls=cls)
