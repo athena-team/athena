@@ -1,4 +1,5 @@
-# Copyright (C) 2017 Beijing Didi Infinity Technology and Development Co.,Ltd.
+# coding=utf-8
+# Copyright (C) 2020 ATHENA AUTHORS; Ne Luo
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
