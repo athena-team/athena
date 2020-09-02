@@ -23,7 +23,7 @@ from athena.transform.feats.fbank import Fbank
 from athena.transform.feats.cmvn import CMVN
 
 class FbankPitch(BaseFrontend):
-    """Compute Fbank && Pitch features respectively，and concate them.
+    """Compute Fbank && Pitch features respectively, and concatenate them.
 
      Shape:
         - output: :math:`(T, F)`.
