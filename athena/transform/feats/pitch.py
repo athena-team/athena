@@ -93,7 +93,6 @@ class Pitch(BaseFrontend):
                             (float, default = 10)
             'upsample-filter-width': Integer that determines filter width when upsampling
                                     NCCF. (int, default = 5)
-            }
 
         Note:
             Return an object of class HParams, which is a set of hyperparameters as
