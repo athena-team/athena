@@ -23,7 +23,7 @@ fi
 source tools/env.sh
 
 stage=0
-stop_stage=0
+stop_stage=4
 horovod_cmd=""
 horovod_prefix=""
 #horovod_cmd="horovodrun -np 4 -H localhost:4"
@@ -62,5 +62,31 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # decoding stage
     echo "Decoding"
     python athena/inference.py \
-        examples/asr/timit/configs/mtl_transformer_sp.json || exit 1
+        examples/asr/timit/configs/mtl_transformer_sp.json > decode.log || exit 1
+fi
+
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    # scoring stage
+    echo "Sclite scoring"
+    if ! [ -x "$(command -v sclite)" ]; then
+        echo "sclite is not installed !!"
+        exit 1
+    else
+        log=decode.log
+        score_dir=score
+        mkdir -p $score_dir/score_ori $score_dir/score_map
+
+        python examples/asr/timit/local/process_decode_result.py $log \
+            examples/asr/timit/local/phones.60-48-39.map examples/asr/timit/data/vocab 48
+
+        for file in $log.result $log.result.map $log.label $log.label.map; do
+            awk '{print $0 "("NR".wav)"}' $file > $file.key
+            mv $file.key $file
+        done
+
+        sclite -i wsj -r $log.label -h $log.result -e utf-8 -o all -O $score_dir/score_ori \
+            > $score_dir/score_ori/sclite.compute.log
+        sclite -i wsj -r $log.label.map -h $log.result.map -e utf-8 -o all -O $score_dir/score_map \
+            > $score_dir/score_map/sclite.compute.log
+    fi
 fi
