@@ -14,7 +14,7 @@ Transform supports speech feature extract.
 from athena.transform import AudioFeaturizer
 ```
 
-### 2. Init a feature extract object
+### 2. Init a feature extract object and extract features
 
 #### ReadWav
 
@@ -159,17 +159,7 @@ config = {'type': 'CMVN',
 cmvn_features = AudioFeaturizer(config)
 ```
 
-### 3. Feature extract
-
-```python
-feat =  feature_ext(audio)
-'''
-audio : Audio file or audio data.
-feat : A tensor containing speech feature.
-'''
-```
-
-### 4. Get feature dim and the number of channels
+### 3. Get feature dim and the number of channels
 
 ```python
 dim = feature_ext.dim
@@ -179,9 +169,9 @@ num_channels = feature_ext.num_channels
 # the shape of the output features: [None, dim, num_channels]
 ```
 
-### 5. Example
+### 4. Example
 
-#### 5.1 Extract speech feature filterbank from audio file:
+#### 4.1 Extract speech feature filterbank from audio file:
 
 ```python
 import tensorflow as tf
@@ -210,7 +200,7 @@ Dim is  40
 Fbank shape is  (346, 40, 3) # [T, D, C]
 ```
 
-#### 5.2 CMVN usage:
+#### 4.2 CMVN usage:
 
 ```python
 import tensorflow as tf
