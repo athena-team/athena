@@ -28,7 +28,7 @@ class ReadWav(BaseFrontend):
     Args:
         config: a dictionary contains optional parameters of read wav.
 
-    Examples::
+    Examples:
         >>> config = {'audio_channels': 1}
         >>> read_wav_op = ReadWav.params(config).instantiate()
         >>> audio_data, sample_rate = read_wav_op('test.wav')
@@ -43,7 +43,7 @@ class ReadWav(BaseFrontend):
         """Set params.
 
         Args:
-            config: contains the following two optional parameters:
+           config: contains the following two optional parameters
 
            'type': 'ReadWav'.
            'audio_channels': index of the desired channel. (default=1)
@@ -72,6 +72,7 @@ class ReadWav(BaseFrontend):
 
         Shape:
             Note: Return audio data and sample rate.
+
             - audio_data: :math:`(L)` with tf.float32 dtype
             - sample_rate: tf.int32
         """
