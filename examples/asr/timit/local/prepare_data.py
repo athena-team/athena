@@ -164,7 +164,7 @@ def processor(dataset_dir, subset, output_dir, force_process):
         subset,
         output_dir,
         trans_type="phn",
-        phone_map_amount=None
+        phone_map_amount="48"
     )
     logging.info("Finished processing TIMIT subset {}".format(subset))
     return subset_csv
