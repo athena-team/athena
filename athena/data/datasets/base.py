@@ -152,6 +152,11 @@ class BaseDatasetBuilder:
         self.entries = shuffled_entries
         return self
 
+    def compute_cmvn_if_necessary(self, is_necessary=True):
+        """ compute cmvn file
+        """
+        return self
+
 
 class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
     """ speech base dataset """
