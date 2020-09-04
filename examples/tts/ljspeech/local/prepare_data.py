@@ -24,6 +24,7 @@ detailed information can be seen on https://keithito.com/LJ-Speech-Dataset
 import os
 import re
 import sys
+import tarfile
 import inflect
 import codecs
 import pandas
@@ -36,6 +37,7 @@ from athena import get_wave_file_length
 
 
 GFILE = tf.compat.v1.gfile
+URL = "https://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2"
 
 #------------normalize_numbers--------------#
 _INFLECT = inflect.engine()
@@ -172,6 +174,38 @@ def preprocess(text):
     text = collapse_whitespace(text)
     return text
 
+def download_and_extract(directory, url):
+    """Download and extract the given split of dataset.
+    Args:
+        directory: the directory where to extract the tarball.
+        url: the url to download the data file.
+    """
+    if not GFILE.Exists(directory):
+        GFILE.MakeDirs(directory)
+
+    _, tar_filepath = tempfile.mkstemp(suffix=".tar.bz2")
+
+    try:
+        logging.info("Downloading %s to %s" % (url, tar_filepath))
+
+        def _progress(count, block_size, total_size):
+            sys.stdout.write(
+                "\r>> Downloading {} {:.1f}%".format(
+                    tar_filepath, 100.0 * count * block_size / total_size
+                )
+            )
+            sys.stdout.flush()
+
+        urllib.request.urlretrieve(url, tar_filepath, _progress)
+        statinfo = os.stat(tar_filepath)
+        logging.info(
+            "Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size)
+        )
+        with tarfile.open(tar_filepath, "r") as tar:
+            tar.extractall(directory)
+    finally:
+        GFILE.Remove(tar_filepath)
+
 #----------------create total.csv-----------------
 def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
     """Convert rar to WAV and split the transcript.
@@ -256,6 +290,12 @@ def split_train_dev_test(total_csv, output_dir):
 
 def processor(dircetory):
     """ download and process """
+    # download the dataset
+    LJSpeech = os.path.join(dircetory, "LJSpeech-1.1.tar.bz2")
+    if os.path.exists(LJSpeech):
+        logging.info("{} already exist".format(LJSpeech))
+    else:
+        download_and_extract(dircetory, URL)
     # get total_csv
     logging.info("Processing the LJspeech total.csv in {}".format(dircetory))
     total_csv_path = os.path.join(dircetory, "total.csv")
