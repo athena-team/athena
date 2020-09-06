@@ -1,5 +1,5 @@
 # Examples for ASR Tasks
-Please refer to [the results table](https://github.com/athena-team/athena#results) for supported tasks/examples. To run an ASR example, execute the following commands from your Athena root directory:
+Please refer to [the results table](https://github.com/athena-team/athena#7-results) for supported tasks/examples. To run an ASR example, execute the following commands from your Athena root directory:
 ```bash
 source env.sh
 bash examples/asr/$dataset_name/run.sh
