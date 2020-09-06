@@ -36,5 +36,10 @@
     "data_csv":"examples/translate/spa-eng-example/data/train.csv",
     "input_text_config":{"type":"text"},
     "output_text_config":{"type":"text"}
+  },
+  "devset_config":{
+    "data_csv":"examples/translate/spa-eng-example/data/train.csv",
+    "input_text_config":{"type":"text"},
+    "output_text_config":{"type":"text"}
   }
 }
