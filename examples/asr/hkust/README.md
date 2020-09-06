@@ -8,9 +8,12 @@ For pre-training, we used Masked Predictive Coding objective (https://arxiv.org/
 #### Fine-tuning
 
 The network structure we used is Transformer and the loss function we used is CTC-Attention multi-task loss.
+
 Parameters for Transformer are: d_model=512, num_heads=8, num_encoder_layers=12, num_decoder_layers=6, dff=1280
+
 For training, we restore from pre-trained MPC model and train MTL model for 50 epochs.
 Parameters for the optimizer are: d_model=512, warmup_steps=25000, warmup_k=1.0
+
 For decoding we averaged 10 checkpoints that performed best on dev set and conducted CTC-Attention joint decoding with beam size 10, CTC weight 0.5 and LM weight 0.3.
 
 #### Comparsion with published baseline
