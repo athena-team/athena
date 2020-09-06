@@ -25,9 +25,7 @@ from athena.transform.feats.read_wav import ReadWav
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 class ReadWavTest(tf.test.TestCase):
-    """
-    ReadWav OP test.
-    """
+    """ReadWav OP test."""
     def test_read_wav(self):
         wav_path = str(Path(os.environ['MAIN_ROOT']).joinpath('examples/sm1_cln.wav'))
 

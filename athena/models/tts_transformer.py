@@ -158,12 +158,14 @@ class TTSTransformer(Tacotron2):
     def time_propagate(self, encoder_output, memory_mask, outs, step):
         """
         Synthesize one step frames
+
         Args:
             encoder_output: the encoder output, shape: [batch, x_steps, eunits]
             memory_mask: the encoder output mask, shape: [batch, 1, 1, x_steps]
             outs (TensorArray): previous outputs
             step: the current step number
-        Returns:
+        Returns::
+
             out: new frame outpus, shape: [batch, feat_dim * reduction_factor]
             logit: new stop token prediction logit, shape: [batch, reduction_factor]
             attention_weights (list): the corresponding attention weights,
@@ -191,9 +193,11 @@ class TTSTransformer(Tacotron2):
     def synthesize(self, samples):
         """
         Synthesize acoustic features from the input texts
+
         Args:
             samples: the data source to be synthesized
-        Returns:
+        Returns::
+
             after_outs: the corresponding synthesized acoustic features
             attn_weights_stack: the corresponding attention weights
         """

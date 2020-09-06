@@ -27,8 +27,7 @@ from athena.transform.feats.write_wav import WriteWav
 
 
 class WriteWavTest(tf.test.TestCase):
-    """
-    WriteWav OP test.
+    """WriteWav OP test.
     """
     def test_write_wav(self):
         wav_path = str(Path(os.environ["MAIN_ROOT"]).joinpath("examples/sm1_cln.wav"))

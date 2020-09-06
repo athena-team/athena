@@ -20,26 +20,34 @@ from athena.transform import feats
 
 
 class AudioFeaturizer:
-    """
-        Interface of audio Features extractions.
+    """Interface of audio features extractions. The kernels of features are based on
+    Kaldi (Povey D, Ghoshal A, Boulianne G, et al. The Kaldi speech recognition toolkit[C]//IEEE
+    2011 workshop on automatic speech recognition and understanding. IEEE Signal Processing Society,
+    2011 (CONF). ) and Librosa.
+
+    Now Transform supports the following 7 features: Spectrum, MelSpectrum, Framepow,
+    Pitch, Mfcc, Fbank, FbankPitch.
+
+    Args:
+        config: a dictionary contains parameters of feature extraction.
+
+    Examples::
+        >>> fbank_op = AudioFeaturizer(config={'type':'Fbank', 'filterbank_channel_count':40,
+        >>> 'lower_frequency_limit': 60, 'upper_frequency_limit':7600})
+        >>> fbank_out = fbank_op('test.wav')
     """
     #pylint: disable=dangerous-default-value
     def __init__(self, config={"type": "Fbank"}):
-        """init
-        :param name Feature name, eg fbank, mfcc, plp ...
-        :param config
-        'type': 'ReadWav', 'Fbank', 'Spectrum'
-        The config for fbank
-          'sample_rate' 16000
-          'window_length' 0.025
-          'frame_length' 0.010
-          'upper_frequency_limit' 20
-          'filterbank_channel_count' 40
-        The config for Spectrum
-          'sample_rate' 16000
-          'window_length' 0.025
-          'frame_length' 0.010
-          'output_type' 1
+        """Init config of AudioFeaturizer.
+
+        Args:
+            config: 'type': The name of the feature you want to extract. That is,
+                    'ReadWav', 'WriteWav', 'Fbank', 'Spectrum', 'MelSpectrum'
+                    'Framepow', 'Pitch', 'Mfcc', 'Fbank', 'FbankPitch'
+
+            Note:
+                Specific parameters of different features can be seen in the docs of Transform class.
+
         """
 
         assert "type" in config
@@ -52,10 +60,18 @@ class AudioFeaturizer:
 
     #pylint:disable=invalid-name
     def __call__(self, audio=None, sr=None, speed=1.0):
-        """extract feature from audo data
-        :param audio data or audio file
-        :sr sample rate
-        :return feature
+        """Extract feature from audio data.
+
+        Args:
+            audio: filename of wav or audio data.
+            sr: the sample rate of the signal we working with. (default=None)
+            speed: adjust audio speed. (default=1.0)
+
+        Shape:
+            - audio: string or array with :math:`(1, L)`.
+            - sr: int
+            - speed: float
+            - output: see the docs in the feature class.
         """
 
         if audio is not None and not tf.is_tensor(audio):
@@ -67,10 +83,11 @@ class AudioFeaturizer:
 
     @tf.function
     def __impl(self, audio=None, sr=None, speed=1.0):
-        """
-        :param audio data or audio file, a tensor
-        :sr sample rate, a tensor
-        :return feature
+        """Call OP of features to extract features.
+
+        Args:
+            audio: a tensor of audio data or audio file
+            sr: a tensor of sample rate
         """
         if self.name == "ReadWav" or self.name == "CMVN":
             return self.feat(audio, speed)
@@ -82,9 +99,9 @@ class AudioFeaturizer:
 
     @property
     def dim(self):
-        """return the dimension of the feature
-    if only ReadWav, return 1
-    """
+        """Return the dimension of the feature, if only ReadWav, return 1. Else,
+        see the docs in the feature class.
+        """
         return self.feat.dim()
 
     @property

@@ -21,9 +21,7 @@ from athena.transform.feats.cmvn import CMVN
 
 
 class CMVNTest(tf.test.TestCase):
-    """
-    CMVN test.
-    """
+    """CMVN test."""
     def test_cmvn(self):
         dim = 40
         cmvn = CMVN.params(

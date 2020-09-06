@@ -237,8 +237,10 @@ class StarganModel(BaseModel):
 
     def restore_from_pretrained_model(self, pretrained_model, model_type=""):
         """ A more general-purpose interface for pretrained model restoration
-        :param pretrained_model: checkpoint path of mpc model
-        :param model_type: the type of pretrained model to restore
+
+        Args:
+            pretrained_model: checkpoint path of mpc model
+            model_type: the type of pretrained model to restore
         """
         self.generator = pretrained_model.generator
         self.discriminator = pretrained_model.discriminator
@@ -247,10 +249,12 @@ class StarganModel(BaseModel):
     def convert(self, src_coded_sp, tar_speaker):
         """
         Convert acoustic features
+
         Args:
             src_coded_sp: the data source to be converted
             tar_speaker：the convert target speaker
-        Returns:
+        Returns::
+
             tar_coded_sp: the converted acoustic features
         """
         tar_coded_sp = self.generator(src_coded_sp, tar_speaker)

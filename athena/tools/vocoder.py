@@ -24,11 +24,10 @@ import librosa
 from scipy.io.wavfile import write as write_wav
 
 class GriffinLim:
-    """ python implementation of griffinlim algorithm
-    """
+    """python implementation of griffinlim algorithm"""
 
     def __init__(self, data_descriptions):
-        """ Reference to paper "Multiband Excitation Vocoder"
+        """Reference: to paper "Multiband Excitation Vocoder"
         """
         assert data_descriptions.audio_featurizer is not None
         assert data_descriptions.audio_featurizer.feat is not None
@@ -46,8 +45,7 @@ class GriffinLim:
         self.EPS = 1e-10
 
     def _get_nfft(self, window_length):
-        """ n_fft is an exponential power of 2 closest to and larger than win_length
-        """
+        """n_fft is an exponential power of 2 closest to and larger than win_length"""
         nfft = 2
         while nfft < window_length:
             nfft *= 2
@@ -66,8 +64,10 @@ class GriffinLim:
 
     def _logmel_to_linear(self, feats):
         """Convert FBANK to linear spectrogram.
+
         Args:
             feats: FBANK feats, shape: [length, channels]
+
         Returns:
             linear_feats: Linear spectrogram
         """
@@ -88,7 +88,8 @@ class GriffinLim:
 
         Args:
             linear_feats: linear spectrogram
-            gl_iters:
+            gl_iters: num of gl iterations
+
         Returns:
             waveform: Reconstructed waveform (N,).
 

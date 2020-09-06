@@ -27,7 +27,7 @@ from ...utils.data_queue import DataQueue
 
 
 def data_loader(dataset_builder, batch_size=16, num_threads=1):
-    """ dataloader
+    """data loader
     """
     num_samples = len(dataset_builder)
     if num_samples == 0:
@@ -35,7 +35,8 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
 
     if num_threads == 1:
         def _gen_data():
-            """ multi thread loader """
+            """multi thread loader
+            """
             for i in range(num_samples):
                 yield dataset_builder[i]
     else:
@@ -48,7 +49,8 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
             max_index=num_samples
         )
         def _gen_data():
-            """ multi thread loader """
+            """multi thread loader
+            """
             for _ in range(num_samples):
                 yield data_queue.get()
 
@@ -72,7 +74,8 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
 
 
 class BaseDatasetBuilder:
-    """ base dataset """
+    """base dataset builder
+    """
     default_config = {}
 
     def __init__(self, config=None):
@@ -99,25 +102,30 @@ class BaseDatasetBuilder:
 
     @property
     def sample_type(self):
-        """ example types """
+        """example types
+        """
         raise NotImplementedError
 
     @property
     def sample_shape(self):
-        """ examples shapes """
+        """examples shapes
+        """
         raise NotImplementedError
 
     @property
     def sample_signature(self):
-        """ examples signature """
+        """examples signature
+        """
         raise NotImplementedError
 
     def as_dataset(self, batch_size=16, num_threads=1):
-        """ return tf.data.Dataset object """
+        """return tf.data.Dataset object
+        """
         return data_loader(self, batch_size, num_threads)
 
     def shard(self, num_shards, index):
-        """ Creates a Dataset that includes only 1/num_shards of this dataset """
+        """creates a Dataset that includes only 1/num_shards of this dataset
+        """
         if index >= num_shards:
             raise ValueError("the index should smaller the num_shards")
         logging.info("Creates the sub-dataset which is the %d part of %d" % (index, num_shards))
@@ -137,7 +145,7 @@ class BaseDatasetBuilder:
         return entries in sorted file_size order. Otherwise, do batch_wise shuffling.
 
         Args:
-            batch_size: an integer for the batch size. default=64
+            batch_size (int, optional):  an integer for the batch size. Defaults to 64.
         """
         if len(self.entries) == 0:
             return self
@@ -179,7 +187,7 @@ class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
         raise NotImplementedError
 
     def compute_cmvn_if_necessary(self, is_necessary=True):
-        """ compute cmvn file
+        """vitural interface
         """
         if not is_necessary:
             return self

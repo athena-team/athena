@@ -20,27 +20,8 @@ from absl import logging
 import tensorflow as tf
 from .base import SpeechBaseDatasetBuilder
 
-
 class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
-    """ SpeakerRecognitionDatasetBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config:
-       audio_config: the config file for feature extractor, default={'type':'Fbank'}
-
-    Interfaces::
-        __len__(self): return the number of data samples
-
-        @property:
-        num_class(self): return the max_index of the vocabulary
-        sample_shape:
-            {"speech": tf.TensorShape([None, self.audio_featurizer.dim,
-                                    self.audio_featurizer.num_channels]),
-            "speech_length": tf.TensorShape([1]),
-            "output_length": tf.TensorShape([1]),
-            "output": tf.TensorShape([None])}
+    """SpeakerRecognitionDatasetBuilder
     """
     default_config = {
         "audio_config": {"type": "Fbank"},
@@ -75,7 +56,7 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         return self
 
     def cut_features(self, feature):
-        """ Cut acoustic featuers
+        """cut acoustic featuers
         """
         length = self.hparams.cut_frame
         # randomly select a start frame
@@ -86,6 +67,21 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         return feature[start_frames:start_frames + length, :, :]
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input": feat,
+                "input_length": feat_length,
+                "output_length": 1,
+                "output": spkid
+            }
+        """
         audio_data, _, spkid, spkname = self.entries[index]
         feat = self.audio_featurizer(audio_data)
         feat = self.feature_normalizer(feat, spkname)
@@ -107,6 +103,18 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
 
     @property
     def sample_type(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_type of the dataset::
+
+            {
+                "input": tf.float32,
+                "input_length": tf.int32,
+                "output_length": tf.int32,
+                "output": tf.int32
+            }
+        """
         return {
             "input": tf.float32,
             "input_length": tf.int32,
@@ -116,6 +124,18 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
 
     @property
     def sample_shape(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_shape of the dataset::
+
+            {
+                "input": tf.TensorShape([None, dim, nc]),
+                "input_length": tf.TensorShape([]),
+                "output_length": tf.TensorShape([]),
+                "output": tf.TensorShape([None])
+            }
+        """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return {
@@ -127,6 +147,18 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
 
     @property
     def sample_signature(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_signature of the dataset::
+
+            {
+                "input": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+            }
+        """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return (
@@ -140,25 +172,7 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
 
 
 class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
-    """ SpeakerVerificationDatasetBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config:
-       audio_config: the config file for feature extractor, default={'type':'Fbank'}
-
-    Interfaces::
-        __len__(self): return the number of data samples
-
-        @property:
-        num_class(self): return the max_index of the vocabulary
-        sample_shape:
-            {"speech": tf.TensorShape([None, self.audio_featurizer.dim,
-                                    self.audio_featurizer.num_channels]),
-            "speech_length": tf.TensorShape([1]),
-            "output_length": tf.TensorShape([1]),
-            "output": tf.TensorShape([None])}
+    """SpeakerVerificationDatasetBuilder
     """
 
     def __init__(self, config=None):
@@ -176,6 +190,20 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
         return self
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input_a": feat_a,
+                "input_b": feat_b,
+                "output": [label]
+            }
+        """
         audio_data_a, speaker_a, audio_data_b, speaker_b, label = self.entries[index]
         feat_a = self.audio_featurizer(audio_data_a)
         feat_a = self.feature_normalizer(feat_a, speaker_a)
@@ -189,6 +217,17 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
 
     @property
     def sample_type(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_type of the dataset::
+
+            {
+                "input_a": tf.float32,
+                "input_b": tf.float32,
+                "output": tf.int32
+            }
+        """
         return {
             "input_a": tf.float32,
             "input_b": tf.float32,
@@ -197,6 +236,17 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
 
     @property
     def sample_shape(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_shape of the dataset::
+
+            {
+                "input_a": tf.TensorShape([None, dim, nc]),
+                "input_b": tf.TensorShape([None, dim, nc]),
+                "output": tf.TensorShape([None])
+            }
+        """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return {
@@ -207,6 +257,17 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
 
     @property
     def sample_signature(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_signature of the dataset::
+
+            {
+                "input_a": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input_b":tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+            }
+        """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return (

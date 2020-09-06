@@ -25,9 +25,18 @@ from athena.transform.feats.cmvn import CMVN
 
 
 class Mfcc(BaseFrontend):
-    """
-    Compute mfcc features of every frame in speech, return a float tensor
-    with size (num_channels, num_frames, num_frequencies).
+    """Compute MFCC features of every frame in speech.
+
+    Args:
+         config: contains fifteen optional parameters.
+
+    Shape:
+        - output: :math:`(C, T, F)`.
+
+    Examples::
+        >>> config = {'cepstral_lifter': 22.0, 'coefficient_count': 13}
+        >>> mfcc_op = Mfcc.params(config).instantiate()
+        >>> mfcc_out = mfcc_op('test.wav', 16000)
     """
     def __init__(self, config: dict):
         super().__init__(config)
@@ -36,40 +45,42 @@ class Mfcc(BaseFrontend):
 
     @classmethod
     def params(cls, config=None):
-        """
-        Set params.
-        :param config: contains fourteen optional parameters.
-            --window_length				: Window length in seconds. (float, default = 0.025)
-            --frame_length				: Hop length in seconds. (float, default = 0.010)
-            --snip_edges				: If 1, the last frame (shorter than window_length) will
-                                          be cutoff. If 2, 1 // 2 frame_length data will be padded
-                                          to data. (int, default = 1)
-            ---raw_energy				: If 1, compute frame energy before preemphasis and
-                                          windowing. If 2, compute frame energy after
-                                          preemphasis and windowing. (int, default = 1)
-            --preEph_coeff			    : Coefficient for use in frame-signal preemphasis.
-                                          (float, default = 0.97)
-            --window_type				: Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
-                                          (string, default = "povey")
-            --remove_dc_offset		    : Subtract mean from waveform on each frame
-                                          (bool, default = true)
-            --is_fbank					: If true, compute power spetrum without frame energy. If
-                                          false, using the frame energy instead of the square of the
-                                          constant component of the signal. (bool, default = true)
-            --output_type				: If 1, return power spectrum. If 2, return log-power
-                                          spectrum. (int, default = 1)
-            --upper_frequency_limit		: High cutoff frequency for mel bins (if < 0, offset from
-                                          Nyquist) (float, default = 0)
-            --lower_frequency_limit		: Low cutoff frequency for mel bins (float, default = 20)
-            --filterbank_channel_count	: Number of triangular mel-frequency bins.
-                                         (float, default = 23)
-            --coefficient_count         : Number of cepstra in MFCC computation.
-                                         (int, default = 13)
-            --cepstral_lifter           : Constant that controls scaling of MFCCs.
-                                         (float, default = 22)
-            --use_energy                :Use energy (not C0) in MFCC computation.
-                                         (bool, default = True)
-        :return: An object of class HParams, which is a set of hyperparameters as name-value pairs.
+        """Set params.
+
+        Args:
+            config: contains the following fifteen optional parameters:
+
+            'window_length': Window length in seconds. (float, default = 0.025),
+            'frame_length': Hop length in seconds. (float, default = 0.010),
+            'snip_edges': If 1, the last frame (shorter than window_length) will be
+                          cutoff. If 2, 1 // 2 frame_length data will be padded
+                          to data. (int, default = 1),
+            'preEph_coeff': Coefficient for use in frame-signal preemphasis.
+                            (float, default = 0.97),
+            'window_type': Type of window ("hamm"|"hann"|"povey"|"rect"|"blac"|"tria").
+                            (string, default = "povey")
+            'remove_dc_offset': Subtract mean from waveform on each frame.
+                                (bool, default = true)
+            'is_fbank': If true, compute power spetrum without frame energy.
+                          If false, using the frame energy instead of the
+                          square of the constant component of the signal.
+                          (bool, default = true)
+            'coefficient_count': Number of cepstra in MFCC computation. (int, default = 13)
+            'output_type': If 1, return power spectrum. If 2, return log-power
+                            spectrum. (int, default = 1)
+            'upper_frequency_limit': High cutoff frequency for mel bins (if <= 0, offset
+                                      from Nyquist) (float, default = 0)
+            'lower_frequency_limit': Low cutoff frequency for mel bins. (float, default = 20)
+            'filterbank_channel_count': Number of triangular mel-frequency bins.
+                                        (float, default = 23)
+            'dither': Dithering constant (0.0 means no dither).
+                      (float, default = 1) [add robust to training]
+            'cepstral_lifter': Constant that controls scaling of MFCCs. (float, default = 22)
+            'use_energy': Use energy (not C0) in MFCC computation. (bool, default = True)
+
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         upper_frequency_limit = 0.0
@@ -122,13 +133,15 @@ class Mfcc(BaseFrontend):
         return hparams
 
     def call(self, audio_data, sample_rate):
-        """
-        Caculate mfcc features of audio data.
-        :param audio_data: the audio signal from which to compute spectrum.
-                           Should be an (1, N) tensor.
-        :param sample_rate: the samplerate of the signal we working with.
-        :return: A float tensor of size (num_channels, num_frames, num_frequencies)
-                containing mfcc features of every frame in speech.
+        """Caculate mfcc features of audio data.
+
+        Args:
+            audio_data: the audio signal from which to compute mfcc.
+            sample_rate: the sample rate of the signal we working with.
+
+        Shape:
+            - audio_data: :math:`(1, N)`
+            - sample_rate: float
         """
         p = self.config
         with tf.name_scope('mfcc'):
