@@ -174,6 +174,7 @@ class FastSpeech(BaseModel):
 
     def set_teacher_model(self, teacher_model, teacher_type):
         """set teacher model and initialize duration_calculator before training
+        
         Args:
             teacher_model: the loaded teacher model
             teacher_type: the model type, e.g., tacotron2, tts_transformer
@@ -184,6 +185,7 @@ class FastSpeech(BaseModel):
 
     def restore_from_pretrained_model(self, pretrained_model, model_type=""):
         """restore from pretrained model
+        
         Args:
             pretrained_model: the loaded pretrained model
             model_type: the model type, e.g: tts_transformer
@@ -208,6 +210,7 @@ class FastSpeech(BaseModel):
     def _feedforward_decoder(self, encoder_output, duration_indexes, duration_sequences,
                              output_length, training):
         """feed-forward decoder
+
         Args:
             encoder_output: encoder outputs, shape: [batch, x_steps, d_model]
             duration_indexes: argmax weights calculated from duration_calculator.
@@ -216,10 +219,12 @@ class FastSpeech(BaseModel):
                 shape: [batch, x_steps]
             output_length: the real output length
             training: if it is in the training stage
-        Returns:
+        Returns::
+
             before_outs: the outputs before postnet calculation
             after_outs: the outputs after postnet calculation
         """
+        # when using real durations, duration_indexes would be None
         if training is True:
             expanded_array = self.length_regulator(encoder_output, duration_indexes,
                                                    output_length=output_length)
@@ -274,11 +279,13 @@ class LengthRegulator(tf.keras.layers.Layer):
 
     def inference(self, phoneme_sequences, duration_sequences, alpha=1.0):
         """Calculate replicated sequences based on duration sequences
+
         Args:
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_sequences: durations of each frame, shape: [batch, x_steps]
             alpha: Alpha value to control speed of speech.
-        Returns:
+        Returns::
+
             expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         if alpha != 1.0:
@@ -319,11 +326,13 @@ class LengthRegulator(tf.keras.layers.Layer):
 
     def call(self, phoneme_sequences, duration_indexes, output_length):
         """Calculate replicated sequences based on duration sequences
+
         Args:
             phoneme_sequences: sequences of phoneme features, shape: [batch, x_steps, d_model]
             duration_indexes: durations of each frame, shape: [batch, y_steps]
             output_length: shape: [batch]
-        Returns:
+        Returns::
+
             expanded_array: replicated sequences based on durations, shape: [batch, y_steps, d_model]
         """
         duration_indexes = tf.expand_dims(duration_indexes, axis=-1) # [batch, y_steps, 1]
@@ -347,9 +356,10 @@ class DurationCalculator(tf.keras.layers.Layer):
 
     def __init__(self, teacher_model=None, teacher_type=None):
         """Initialize duration calculator
+
         Args:
             teacher_model: the pretrained model used to calculate durations and outputs.
-            teacher_type: the mode type
+            teacher_type: the teacher type
         """
         super().__init__()
         self.teacher_model = teacher_model
@@ -359,7 +369,8 @@ class DurationCalculator(tf.keras.layers.Layer):
         """
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
+
             durations: Batch of durations shape: [batch, max_input_length).
         """
         y_steps = tf.reduce_max(samples['output_length'])
@@ -397,9 +408,10 @@ class DurationCalculator(tf.keras.layers.Layer):
 
     def _calculate_t2_attentions(self, samples):
         """Calculate outputs and attention weights based on tacotron2
+        
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
             after_outs: the outputs from the teacher model
             attn_weights: the attention weights from the teacher model
         """
@@ -411,9 +423,10 @@ class DurationCalculator(tf.keras.layers.Layer):
 
     def _calculate_transformer_attentions(self, samples):
         """Calculate outputs and attention weights based on tts transformer
+
         Args:
             samples: samples from dataset
-        Returns:
+        Returns::
             after_outs: the outputs from the teacher model
             attn_weights: the attention weights from the teacher model
         """

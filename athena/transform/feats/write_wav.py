@@ -21,47 +21,66 @@ from athena.transform.feats.base_frontend import BaseFrontend
 
 
 class WriteWav(BaseFrontend):
-  """
-  Encode audio data (input) using sample rate (input),
-  return a write wav opration.
-  """
+    """Encode audio data (input) using sample rate (input), return a write wav opration.
+    The operation is based on tensorflow.audio.encode_wav.
 
-  def __init__(self, config: dict):
-    super().__init__(config)
+    Args:
+        config: a dictionary contains optional parameters of write wav.
 
-  @classmethod
-  def params(cls, config=None):
+    Example::
+        >>> config = {'sample_rate': 16000}
+        >>> write_wav_op = WriteWav.params(config).instantiate()
+        >>> write_wav_op('test_new.wav', audio_data, 16000)
     """
-      Set params.
-       :param config: contains one optional parameters:sample_rate(int, default=16000).
-       :return: An object of class HParams, which is a set of hyperparameters as
-                name-value pairs.
-       """
 
-    sample_rate = 16000
+    def __init__(self, config: dict):
+        super().__init__(config)
 
-    hparams = HParams(cls=cls)
-    hparams.add_hparam('sample_rate', sample_rate)
+    @classmethod
+    def params(cls, config=None):
+        """Set params.
 
-    if config is not None:
-      hparams.override_from_dict(config)
+        Args:
+            config: contains the following one optional parameter:
 
-    return hparams
+            'sample_rate': the sample rate of the signal. (default=16000)
 
-  def call(self, filename, audio_data, sample_rate):
-    """
-    Write wav using audio_data[tensor].
-    :param filename: filepath of wav.
-    :param audio_data: a tensor containing data of a wav.
-    :param sample_rate: the samplerate of the signal we working with.
-    :return: write wav opration.
-    """
-    filename = tf.constant(filename)
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
+        """
 
-    with tf.name_scope('writewav'):
-      audio_data = tf.cast(audio_data, dtype=tf.float32)
-      contents = tf.audio.encode_wav(
-          tf.expand_dims(audio_data, 1), tf.cast(sample_rate, dtype=tf.int32))
-      w_op = tf.io.write_file(filename, contents)
+        sample_rate = 16000
 
-    return w_op
+        hparams = HParams(cls=cls)
+        hparams.add_hparam('sample_rate', sample_rate)
+
+        if config is not None:
+            hparams.override_from_dict(config)
+
+        return hparams
+
+    def call(self, filename, audio_data, sample_rate):
+        """Write wav using audio_data.
+
+        Args:
+            filename: filepath of wav.
+            audio_data: a tensor containing data of a wav.
+            sample_rate: the sample rate of the signal we working with.
+
+        Shape:
+            - filename: string
+            - audio_data: :math:`(L)`
+            - sample_rate: float
+
+        Note: Return a op of write wav. Call it when writing a file.
+        """
+        filename = tf.constant(filename)
+
+        with tf.name_scope('writewav'):
+            audio_data = tf.cast(audio_data, dtype=tf.float32)
+            contents = tf.audio.encode_wav(
+                tf.expand_dims(audio_data, 1), tf.cast(sample_rate, dtype=tf.int32))
+            w_op = tf.io.write_file(filename, contents)
+
+        return w_op

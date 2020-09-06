@@ -23,30 +23,8 @@ import kaldiio
 from .speech_set import SpeechDatasetBuilder
 
 
-class SpeechDatasetKaldiIOBuilder(SpeechDatasetBuilder):
-    """ SpeechDatasetKaldiIOBuilder
-
-    Args:
-        for __init__(self, config=None)
-
-    Config:
-        feature_config: the config file for feature extractor, default={'type':'Fbank'}
-        data_csv: the path for original LDC HKUST,
-            default='/tmp-data/dataset/opensource/hkust/train.csv'
-        force_process: force process, if force_process=True, we will re-process the dataset,
-            if False, we will process only if the out_path is empty. default=False
-
-    Interfaces::
-        __len__(self): return the number of data samples
-
-        @property:
-        sample_shape:
-            {"input": tf.TensorShape([None, self.audio_featurizer.dim,
-                                  self.audio_featurizer.num_channels]),
-            "input_length": tf.TensorShape([]),
-            "output_length": tf.TensorShape([]),
-            "output": tf.TensorShape([None, self.audio_featurizer.dim *
-                                  self.audio_featurizer.num_channels]),}
+class SpeechDatasetKaldiIOBuilder(BaseDatasetBuilder):
+    """SpeechDatasetKaldiIOBuilder
     """
 
     default_config = {
@@ -63,7 +41,8 @@ class SpeechDatasetKaldiIOBuilder(SpeechDatasetBuilder):
             self.preprocess_data(self.hparams.data_scps_dir)
 
     def preprocess_data(self, file_path, apply_sort_filter=True):
-        """ Generate a list of tuples (feat_key, speaker). """
+        """ generate a list of tuples (feat_key, speaker).
+        """
         logging.info("Loading kaldi-format feats.scp " + \
             "and utt2spk (optional) from {}".format(file_path))
         self.kaldi_io_feats = kaldiio.load_scp(os.path.join(file_path, "feats.scp"))

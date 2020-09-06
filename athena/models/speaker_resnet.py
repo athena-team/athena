@@ -41,6 +41,7 @@ class SpeakerResnet(BaseModel):
         Reference to paper "Deep residual learning for image recognition"
         The implementation is the same as the standard resnet with 34 weighted layers,
         excepts using only 1/4 amount of filters to reduce computation.
+
         config:
             task: "speaker_identification" or "speaker_verification"
     """

@@ -231,7 +231,8 @@ class Tacotron2(BaseModel):
         Args:
             outputs: true labels, shape: [batch, y_steps, feat_dim]
             ori_lens: scalar
-        Returns:
+        Returns::
+
             reshaped_outputs: it has to be reshaped to match reduction_factor
                 shape: [batch, y_steps / reduction_factor, feat_dim * reduction_factor]
         '''
@@ -292,6 +293,7 @@ class Tacotron2(BaseModel):
             self.initialize_states(encoder_output, input_length)
         context_dim = prev_context.shape[-1]
         accum_attn_weight = prev_attn_weight
+
         outs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         logits = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
         attn_weights = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
@@ -338,9 +340,11 @@ class Tacotron2(BaseModel):
         """
         Args:
             y: the true label, shape: [batch, y_steps, feat_dim]
-        Returns:
-            y0: zeros will be padded as one step to the start step
-                shape: [batch, y_steps+1, feat_dim]
+        Returns::
+
+            y0: zeros will be padded as one step to the start step,
+            [batch, y_steps+1, feat_dim]
+
         """
         batch = tf.shape(y)[0]
         prev_out = tf.zeros([batch, 1, self.feat_dim * self.reduction_factor])
@@ -351,7 +355,8 @@ class Tacotron2(BaseModel):
         Args:
             encoder_output: encoder outputs, shape: [batch, x_step, eunits]
             input_length: shape: [batch]
-        Returns:
+        Returns::
+
             prev_rnn_states: initial states of rnns in decoder
                 [rnn layers, 2, batch, dunits]
             prev_attn_weight: initial attention weights, [batch, x_steps]
@@ -429,7 +434,8 @@ class Tacotron2(BaseModel):
             prev_attn_weight: previous attention weights, shape: [batch, x_steps]
             prev_context: previous context vector: [batch, attn_dim]
             training: if it is training mode
-        Returns:
+        Returns::
+
             out: shape: [batch, feat_dim]
             logit: shape: [batch, reduction_factor]
             current_rnn_states: [rnn_layers, 2, batch, dunits]
@@ -466,9 +472,11 @@ class Tacotron2(BaseModel):
     def synthesize(self, samples):
         """
         Synthesize acoustic features from the input texts
+
         Args:
             samples: the data source to be synthesized
-        Returns:
+        Returns::
+
             after_outs: the corresponding synthesized acoustic features
             attn_weights_stack: the corresponding attention weights
         """
@@ -529,6 +537,14 @@ class Tacotron2(BaseModel):
         return after_outs, attn_weights_stack
 
     def _synthesize_post_net(self, before_outs, logits_stack):
+        """
+        Args:
+            before_outs: the outputs before postnet
+            logits_stack: the logits of all steps
+        Returns::
+
+            after_outs: the corresponding synthesized acoustic features
+        """
         if self.hparams.clip_outputs:
             maximum = - self.hparams.clip_max_value - self.hparams.clip_lower_bound_decay
             maximum = tf.maximum(before_outs, maximum)

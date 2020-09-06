@@ -1,4 +1,4 @@
-# User Manual
+# Speech Features - User Manual
 
 ## Introduction
 
@@ -6,7 +6,7 @@ Transform is a preprocess data toolkit.
 
 ## Usage
 
-Transform support speech feature extract:
+Transform supports speech feature extract.
 
 ### 1. Import module
 
@@ -14,100 +14,152 @@ Transform support speech feature extract:
 from athena.transform import AudioFeaturizer
 ```
 
-### 2. Init a feature extract object
+### 2. Init a feature extract object and extract features
 
-#### Read wav
+#### ReadWav
+
+By using `ReadWav`, we can get audio data and sample rate from a wavfile.
 
 ```python
-conf = {'type':'ReadWav'}
-feature_ext = AudioFeaturizer()
+config = {'type': 'ReadWav'}
+audio_data, sample_rate = AudioFeaturizer(config)
 
 '''
-Other default args:
-'audio_channels':1
+The audio data range from [-32768, 32767].
 
-The shape of the output:
-[T, 1, 1]
+The shape of the output: [T, 1, 1].
 '''
 ```
 
 #### Spectrum
 
+Using `Spectrum` , we can get a complex matrix with dimensions `(num_frequency, num_frame)`, which means that the signal is composed of num_frequency sine waves with different 
+phases and magnitudes. For each T-F bin, the absolute value of the FFT is the magnitude, and the phase is the initial phase of the sine wave. The corresponding spectrum is called 
+the amplitude spectrum and the phase spectrum, as shown in the figure below.
+
 ```python
-conf = {'type':'Spectrum'}
-feature_ext = AudioFeaturizer(conf)
+config = {'type': 'Spectrum',
+          'output_type': 2,
+          'window_length': 0.025, 
+          'frame_length': 0.010, 
+          'preEph_coeff': 0.97,
+          'window_type': 'hamming'}
+spectrum_data = AudioFeaturizer(config)
 
 '''
-Other default args:
-'sample_rate' : 16000
-'window_length' : 0.025
-'frame_length' : 0.010
-'global_mean': 全局均值
-'global_variance': 全局方差
-'local_cmvn' : 默认是True, 做句子cmvn
+You can get power spectrum ('output_type': 1), log-power spectrum ('output_type': 2) or 
+magnitude spectrum ('output_type': 3).
 
-The shape of the output:
-[T, dim, 1]
+The shape of the output: [T, dim, 1]
 '''
 ```
 
-#### FliterBank
+#### Fbank
+
+Using `Fbank` , we can get a float matrix with dimensions `(num_frame, num_fbank, num_channel)`, which means the energy 
+in the Mel frequency band to log. The Mel-frequency bands aim to mimic the non-linear human ear perception of sound, by being more 
+discriminative at lower frequencies and less discriminative at higher frequencies. Each filter in the filter bank is 
+triangular having a response of 1 at the center frequency and decrease linearly towards 0 till it reaches the center 
+frequencies of the two adjacent filters where the response is 0. After applying the filter bank to the power spectrum 
+(periodogram) of the signal, we obtain the fbank feature.
+
 
 ```python
-conf = {'type':'Fbank'}
-feature_ext = AudioFeaturizer(conf)
+config = {'type': 'Fbank',
+          'delta_delta': False,
+          'lower_frequency_limit': 100,
+          'upper_frequency_limit': 0,
+          'filterbank_channel_count': 80}
+fbank_data = AudioFeaturizer(config)
 
 '''
-Other default args:
-'sample_rate' : 采样率 16000
-'window_length' : 窗长 0.025秒
-'frame_length' : 步长 0.010秒
-'upper_frequency_limit' : 4000
-'lower_frequency_limit': 20
-'filterbank_channel_count'  : 40
-'delta_delta' : 是否做差分 False
-'window' : 差分窗长 2
-'order' : 差分阶数 2
-'global_mean': 全局均值
-'global_variance': 全局方差
-'local_cmvn' : 默认是True, 做句子cmvn
+You can get delta fbank by setting 'delta_delta' to 'Ture'. The channel of fbank is equal to
+'order' + 1 ('delta_delta': True) or 1 ('delta_delta': False).
 
-Returns:
-  A tensor of shape [T, dim, num_channel].
-  dim = 40
-  num_channel = 1 if 'delta_delta' == False else 1 + 'order'
+The shape of the output: [T, dim, num_channel].
+'''
+```
+
+#### Pitch
+
+Using `Pitch` , we can get a float matrix with dimensions `(num_frame, 2)`, which is consisting of `(NCCF, pitch in Hz)` of 
+each frame. `NCCF` is the Normalized Cross Correlation Function, which is related to the probability of voicing and which helps
+in ASR. `Pitch` is the fundamental frequency (F0) of voice, which can get large performance improvements on tonal languages for ASR.
+
+```python
+config = {'type': 'Pitch',
+          'window_length': 0.025, 
+          'soft_min_f0': 10.0,
+          'lowpass-cutoff': 1000,
+          'max-f0': 400}
+pitch_data = AudioFeaturizer(config)
+
+'''
+You can get more information about pitch by "Ghahremani P, BabaAli B, Povey D, et al. A pitch extraction algorithm tuned 
+for automatic speech recognition[C]//2014 IEEE international conference on acoustics, speech and signal processing (ICASSP).
+ IEEE, 2014: 2494-2498."
+
+The shape of the output: [T, 2].
+'''
+
+```
+
+#### Mfcc
+
+Using `Mfcc` , we can get a float matrix with dimensions `(num_frame, num_coefficient)`.
+Mel-Frequency Cepstral Coefficients (MFCC) is a cepstrum extracted in the frequency domain of the Mel scale. 
+It is a feature widely used in automatic speech and speaker recognition. It turns out that filter bank coefficients computed
+in the fbank are highly correlated, which could be problematic in some machine learning algorithms. Therefore, we can 
+apply Discrete Cosine Transform (DCT) to decorrelate the filter bank coefficients and yield a compressed representation 
+of the filter banks. 
+
+```python
+config = {'type': 'Mfcc',
+          'coefficient_count': 13, 
+          'cepstral_lifter': 22, 
+          'use_energy': True }
+mfcc_data = AudioFeaturizer(config)
+
+'''
+Typically, for ASR, the resulting cepstral coefficients 2-13 are 
+retained and the rest are discarded.
+
+The shape of the output: [T, dim].
+'''
+```
+
+#### MelSpectrum
+
+Using `MelSpectrum` , we can get a float matrix with dimensions `(num_frame, num_filterbank)`. `Melspectrum` is
+applying triangular filters on a Mel-scale to the magnitude spectrum to extract frequency bands, which based on MelSpectrum of Librosa.
+However, `Fbank` is mainly based on Kaldi. `MelSpectrum` is a feature widely used in TTS.
+
+```python
+config = {'type': 'MelSpectrum',
+          'output_type': 1,
+          'lower_frequency_limit': 60,
+          'filterbank_channel_count': 40}
+mel_spectrum_data = AudioFeaturizer(config)
+
+'''
+The mel_spectrum features can be inversely transformed to waveform by vocoder.
+
+The shape of the output: [T, dim].
 '''
 ```
 
 #### CMVN
 
-```python
-conf = {'type':'CMVN'}
-cmvn = AudioFeaturizer(conf)
-
-'''
-Other configuration
-
-'global_mean': global cmvn
-'global_variance': global variance
-'local_cmvn' : default true
-
-'global_mean'和'global_variance'如果设置则会做全局cmvn，否则不做全局cmvn。
-'local_cmvn' 设置False不做句子cmvn
-'''
-```
-
-### 3. Feature extract
+Using  `CMVN`, we can do Cepstral Mean and Variance Normalization on features.
 
 ```python
-feat =  feature_ext(audio)
-'''
-audio : Audio file or audio data.
-feat : A tensor containing speech feature.
-'''
+config = {'type': 'CMVN',
+          'global_mean': 0.0,
+          'global_variance': 1.0}
+cmvn_features = AudioFeaturizer(config)
 ```
 
-### 4. Get feature dim and the number of channels
+### 3. Get feature dim and the number of channels
 
 ```python
 dim = feature_ext.dim
@@ -117,20 +169,19 @@ num_channels = feature_ext.num_channels
 # the shape of the output features: [None, dim, num_channels]
 ```
 
-### 5. Example
+### 4. Example
 
-#### 5.1 Extract speech feature filterbank from audio file:
+#### 4.1 Extract speech feature filterbank from audio file:
 
 ```python
 import tensorflow as tf
 from transform.audio_featurizer import AudioFeaturizer
 
 audio_file = 'englist.wav'
-conf = {'type':'Fbank'
-        'sample_rate':8000,
-        'delta_delta': True
-       }
-feature_ext = AudioFeaturizer(conf)
+config = {'type': 'Fbank',
+          'sample_rate': 8000,
+          'delta_delta': True}
+feature_ext = AudioFeaturizer(config)
 dim = feature_ext.dim
 print('Dim size is ', dim)
 num_channels = feature_ext.num_channels
@@ -149,7 +200,7 @@ Dim is  40
 Fbank shape is  (346, 40, 3) # [T, D, C]
 ```
 
-#### 5.2 CMVN usage:
+#### 4.2 CMVN usage:
 
 ```python
 import tensorflow as tf

@@ -22,15 +22,17 @@ import queue
 
 
 class DataQueue:
-    """Queue for data prefetching
-       args:
+    """Queue for data prefetching"""
+
+    def __init__(self, generator, capacity=20, num_threads=4, max_index=10000, wait_time=0.0001):
+        """
+
+        Args:
             generator(generator): instance of generator which feed data
             capacity(int): maximum data to prefetch
             num_threads(int): control concurrency, only take effect when do preprocessing
             wait_time(float): time to sleep when queue is full
-    """
-
-    def __init__(self, generator, capacity=20, num_threads=4, max_index=10000, wait_time=0.0001):
+        """        
         self.generator = generator
         self.capacity = capacity
         self.wait_time = wait_time
@@ -59,7 +61,8 @@ class DataQueue:
         self._stop.set()
 
     def generator_task(self):
-        """Enqueue batch data"""
+        """Enqueue batch data
+        """
         while not self._stop.is_set():
             try:
                 if self.index >= self.max_index:
@@ -85,12 +88,7 @@ class DataQueue:
 
 
 def test():
-    """
-    Test data queue.
-    Excpet return:
-        epoch: %d, nb_batch: %d: finish.
-    """
-
+    
     def generator(i):
         return i
 

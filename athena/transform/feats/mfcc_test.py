@@ -27,9 +27,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
 class MfccTest(tf.test.TestCase):
-    """
-    MFCC extraction test.
-    """
+    """MFCC extraction test."""
     def test_mfcc(self):
         wav_path_16k = str(
             Path(os.environ["MAIN_ROOT"]).joinpath("examples/sm1_cln.wav")

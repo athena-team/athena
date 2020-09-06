@@ -22,7 +22,7 @@ from ..text_featurizer import TextFeaturizer
 from .base import BaseDatasetBuilder
 
 class LanguageDatasetBuilder(BaseDatasetBuilder):
-    """ LanguageDatasetBuilder
+    """LanguageDatasetBuilder
     """
     default_config = {
         "input_text_config": None,
@@ -72,6 +72,21 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
         return self
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input": input_labels,
+                "input_length": input_length,
+                "output": output_labels,
+                "output_length": output_length,
+            }
+        """
         input_labels, input_length, output_labels, output_length = self.entries[index]
 
         return {
@@ -83,16 +98,36 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def num_class(self):
-        """ return the max_index of the vocabulary """
+        """:obj:`@property`
+
+        Returns:
+            int: the max_index of the vocabulary
+        """
         return len(self.output_text_featurizer)
 
     @property
     def input_vocab_size(self):
-        """ return the input vocab size """
+        """:obj:`@property`
+
+        Returns:
+            int: the input vocab size
+        """
         return len(self.input_text_featurizer)
 
     @property
     def sample_type(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_type of the dataset::
+
+            {
+                "input": tf.int32,
+                "input_length": tf.int32,
+                "output": tf.int32,
+                "output_length": tf.int32,
+            }
+        """
         return {
             "input": tf.int32,
             "input_length": tf.int32,
@@ -102,6 +137,18 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_shape(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_shape of the dataset::
+
+            {
+                "input": tf.TensorShape([None]),
+                "input_length": tf.TensorShape([]),
+                "output": tf.TensorShape([None]),
+                "output_length": tf.TensorShape([]),
+            }
+        """
         return {
             "input": tf.TensorShape([None]),
             "input_length": tf.TensorShape([]),
@@ -111,6 +158,18 @@ class LanguageDatasetBuilder(BaseDatasetBuilder):
 
     @property
     def sample_signature(self):
+        """:obj:`@property`
+
+        Returns:
+            dict: sample_signature of the dataset::
+
+            {
+                "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+                "input_length": tf.TensorSpec(shape=([None]), dtype=tf.int32),
+                "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+                "output_length": tf.TensorSpec(shape=([None]), dtype=tf.int32),
+            }
+        """
         return (
             {
                 "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),

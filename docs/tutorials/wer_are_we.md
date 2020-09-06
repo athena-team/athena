@@ -1,5 +1,5 @@
 
-# wer_are_we
+# WER are we?
 
 WER are we? An attempt at tracking states-of-the-art results and their corresponding codes on speech recognition.  *Feel free to correct!*
 (Inspired by [wer_are_we](https://github.com/syhw/wer_are_we))

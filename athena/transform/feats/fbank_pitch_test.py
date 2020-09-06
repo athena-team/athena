@@ -25,9 +25,7 @@ from athena.transform.feats.fbank_pitch import FbankPitch
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 class FbankPitchTest(tf.test.TestCase):
-    """
-    Fbank && Pitch extraction test.
-    """
+    """Fbank && Pitch extraction test."""
     def test_FbankPitch(self):
         wav_path = str(Path(os.environ['MAIN_ROOT']).joinpath('examples/sm1_cln.wav'))
 

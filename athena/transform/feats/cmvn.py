@@ -24,8 +24,18 @@ from athena.transform.feats.base_frontend import BaseFrontend
 
 
 class CMVN(BaseFrontend):
-    """
-    Do CMVN on features.
+    """Do CMVN on features.
+
+     Args:
+         config: contains four optional parameters.
+
+     Shape:
+        - output: :math:`(T, F)`.
+
+     Examples::
+        >>> config = {'global_mean': 0.0, 'global_variance': 1.0}
+        >>> cmvn_op = CMVN.params(config).instantiate()
+        >>> cmvn_out = cmvn_op('test.wav', 16000)
     """
     def __init__(self, config: dict):
         super().__init__(config)
@@ -36,7 +46,20 @@ class CMVN(BaseFrontend):
 
     @classmethod
     def params(cls, config=None):
-        """ set params """
+        """ Set params.
+
+        Args:
+            config: contains the following four optional parameters:
+
+            'type': Type of Opration. (string, default = 'CMVN')
+            'global_mean': Global mean of features. (float, default = 0.0)
+            'global_variance': Global variance of features. (float, default = 1.0)
+            'local_cmvn': If ture, local cmvn will be done on features. (bool, default = False)
+
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
+        """
 
         hparams = HParams(cls=cls)
         hparams.add_hparam("type", "CMVN")
@@ -57,6 +80,7 @@ class CMVN(BaseFrontend):
         return hparams
 
     def call(self, audio_feature, speed=1.0):
+        """Compute CMVN on features."""
         params = self.config
         if self.global_cmvn:
             audio_feature = (

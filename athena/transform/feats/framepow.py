@@ -22,25 +22,40 @@ from athena.transform.feats.base_frontend import BaseFrontend
 
 
 class Framepow(BaseFrontend):
-    """
-    Compute power of every frame in speech. Return a float tensor with
-    shape (1 * num_frames).
+    """Compute power of every frame in speech.
+
+     Args:
+         config: contains four optional parameters.
+
+     Shape:
+        - output: :math:`(T, 1)`.
+
+     Examples::
+        >>> config = {'window_length': 0.25, 'remove_dc_offset': True}
+        >>> framepow_op = Framepow.params(config).instantiate()
+        >>> framepow_out = framepow_op('test.wav', 16000)
     """
     def __init__(self, config: dict):
         super().__init__(config)
 
     @classmethod
     def params(cls, config=None):
-        """
-        Set params.
-        :param config: contains four optional parameters:
-            --window_length		: Window length in seconds. (float, default = 0.025)
-            --frame_length			: Hop length in seconds. (float, default = 0.010)
-            --snip_edges			: If True, the last frame (shorter than window_length)
-                                      will be cutoff. If False, 1 // 2 frame_length data will
-                                      be padded to data. (int, default = True)
-            --remove_dc_offset		: Subtract mean from waveform on each frame (bool, default = true)
-        :return:An object of class HParams, which is a set of hyperparameters as name-value pairs.
+        """Set params.
+
+        Args:
+            config: contains the following four optional parameters:
+
+            'window_length': Window length in seconds. (float, default = 0.025)
+            'frame_length': Hop length in seconds. (float, default = 0.010)
+            'snip_edges': If 1, the last frame (shorter than window_length) will be
+                          cutoff. If 2, 1 // 2 frame_length data will be padded
+                          to data. (int, default = 1)
+            'remove_dc_offset': Subtract mean from waveform on each frame.
+                                (bool, default = true)
+
+        Note:
+            Return an object of class HParams, which is a set of hyperparameters as
+            name-value pairs.
         """
 
         window_length = 0.025
@@ -60,14 +75,15 @@ class Framepow(BaseFrontend):
         return hparams
 
     def call(self, audio_data, sample_rate):
-        """
-        Caculate power of every frame in speech.
-        :param audio_data: the audio signal from which to compute spectrum.
-                           Should be an (1, N) tensor.
-        :param sample_rate: [option]the samplerate of the signal we working with,
-                            default is 16kHz.
-        :return:A float tensor of size (1 * num_frames) containing power of every
-                frame in speech.
+        """Caculate power of every frame in speech.
+
+        Args:
+            audio_data: the audio signal from which to compute spectrum.
+            sample_rate: the sample rate of the signal we working with.
+
+        Shape:
+            - audio_data: :math:`(1, N)`
+            - sample_rate: float
         """
 
         p = self.config
