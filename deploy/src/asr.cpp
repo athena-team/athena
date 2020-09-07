@@ -13,10 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ============================================================================== */
-/* This is an example script to load pb using TensorFlow C++ API. */
-
-#include "tensorflow/core/public/session.h"
-#include "Eigen/Dense"
+/* This is an example script to load ASR model using TensorFlow C++ API. */
 
 #include "../include/tensor_utils.h"
 #include "../include/utils.h"
@@ -28,11 +25,11 @@ int main(int argc, char** argv) {
     // Initialization of Tensorflow session for encoder graph and decoder graph
     tensorflow::Status status;
     tensorflow::Session* enc_session;
-    std::string enc_graph_path = "../graph/encoder.pb";
-    initSession(enc_session, enc_graph_path, status);
+    std::string enc_graph_path = "../graph_asr/graph/encoder.pb";
+    loadFrozenGraph(enc_session, enc_graph_path, status);
     tensorflow::Session* dec_session;
-    std::string dec_graph_path = "../graph/decoder.pb";
-    initSession(dec_session, dec_graph_path, status);
+    std::string dec_graph_path = "../graph_asr/graph/decoder.pb";
+    loadFrozenGraph(dec_session, dec_graph_path, status);
 
     // Initialization of encoder and decoder inputs
     std::vector <std::pair<std::string, tensorflow::Tensor>> enc_inputs;
@@ -52,14 +49,14 @@ int main(int argc, char** argv) {
 
     // Initialization of index_to_char map
     std::vector<std::string> index_to_char;
-    createMap(index_to_char, "../input/vocab.txt");
+    createMap(index_to_char, "../graph_asr/test_data/char3650.txt");
 
     std::cout << "Start argmax decoding ... " << std::endl;
     auto start = std::chrono::system_clock::now();
 
     // Encoder part
     // 1. Place value into input_seq
-    enc_inputs[0].second = getMatrixFromFile("../input/feats.txt");
+    enc_inputs[0].second = getAsrInputFromFile("../graph_asr/test_data/feats.txt");
 
     // 2. Place value into input_len
     auto input_len = enc_inputs[1].second.tensor<int, 1>();
@@ -144,4 +141,5 @@ int main(int argc, char** argv) {
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = end - start;
     std::cout << "Total run time of samples: " << diff.count() << " seconds." << std::endl;
+    return 0;
 }
