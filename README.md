@@ -21,17 +21,17 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [3.6) Install *athena* package](#36-install-athena-package)
     - [3.7) Test your installation](#37-test-your-installation)
     - [Notes](#notes)
-  - [4) Training](#5-training)
-    - [4.1) Prepare the data](#51-prepare-the-data)
-    - [4.2) Setting the Configuration File](#52-settting-the-configuration-file)
-    - [4.3) Data normalization](#53-data-normalization)
-    - [4.4) Train a model](#54-train-a-model)
-    - [4.5) Evaluate a model](#55-evaluate-a-model)
-    - [4.6) Scoring](#56-scoring)
-  - [5) Deployment](#6-deployment)
-  - [6) Results](#7-results)
-    - [6.1) ASR](#71-asr)
-  - [7) Directory Structure](#8-directory-structure)
+  - [4) Training](#4-training)
+    - [4.1) Prepare the data](#41-prepare-the-data)
+    - [4.2) Setting the Configuration File](#42-settting-the-configuration-file)
+    - [4.3) Data normalization](#43-data-normalization)
+    - [4.4) Train a model](#44-train-a-model)
+    - [4.5) Evaluate a model](#45-evaluate-a-model)
+    - [4.6) Scoring](#46-scoring)
+  - [5) Deployment](#5-deployment)
+  - [6) Results](#6-results)
+    - [6.1) ASR](#611-asr)
+  - [7) Directory Structure](#7-directory-structure)
 
 ## 2) Key Features
 
@@ -146,7 +146,7 @@ All of our training/ inference configurations are written in config.json. Below 
   "ckpt":"examples/asr/timit/ckpts/mtl_transformer_ctc_sp/",
   "summary_dir":"examples/asr/timit/ckpts/mtl_transformer_ctc_sp/event",
 
-  "solver_gpu":[2],
+  "solver_gpu":[0],
   "solver_config":{
     "clip_norm":100,  # clip gradients into a norm of 100
     "log_interval":10,  # print logs for log_interval steps
@@ -195,7 +195,7 @@ All of our training/ inference configurations are written in config.json. Below 
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},  # config for feature extraction
     "cmvn_file":"examples/asr/timit/data/cmvn",  # mean and variance of FBank
     "text_config": {"type":"eng_vocab", "model":"examples/asr/timit/data/vocab"},  # vocab list
-    "speed_permutation": [0.9, 1.0, 1.1],  # use speed perbutation to increase data diversitty
+    "speed_permutation": [0.9, 1.0, 1.1],  # use speed perturbation to increase data diversitty
     "input_length_range":[10, 8000]  # range of audio input length
   },
   "devset_config":{
@@ -214,14 +214,14 @@ All of our training/ inference configurations are written in config.json. Below 
 }
 ```
 
-To get state-of-the-arts models, we usually need to train for more epochs and use ctc joint decoding with language model. These are omitted for to make this tutorial easier to understand.
+To get state-of-the-art models, we usually need to train for more epochs and use ctc joint decoding with language model. These are omitted for to make this tutorial easier to understand.
 
 ### 4.3) Data normalization
 Data normalization is important for the convergence of neural network models. With the generated csv file, we will compute the cmvn file like this 
 ```
 python athena/cmvn_main.py examples/asr/$dataset_name/configs/mpc.json examples/asr/$dataset_name/data/all.csv
 ```
-The generated cmvn files will be found at ```examples/asr/timit/datta/cmvn```.
+The generated cmvn files will be found at ```examples/asr/timit/data/cmvn```.
 
 ### 4.4) Train a Model
 
@@ -260,7 +260,7 @@ For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK
 | Median |  1.0   36.0 | 85.0   10.8    2.9    2.8   17.5  100.0 |
 |----------------------------------------------------------------|
 ```
-
+The line with ```Sum/Avg``` is usually what you should be looking for if you just want an overall WER result. In this case, 11.4 is the substitution error, 4.3 is the deletion error, 3.2 is the insertion error and 18.8 is the total WER.
 
 
 ## 5) Deployment
