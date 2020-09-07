@@ -30,7 +30,7 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [4.6) Scoring](#46-scoring)
   - [5) Deployment](#5-deployment)
   - [6) Results](#6-results)
-    - [6.1) ASR](#611-asr)
+    - [6.1) ASR](#61-asr)
   - [7) Directory Structure](#7-directory-structure)
 
 ## 2) Key Features
