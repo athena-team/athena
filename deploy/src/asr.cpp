@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
     // Initialization of index_to_char map
     std::vector<std::string> index_to_char;
-    createMap(index_to_char, "../graph_asr/test_data/char3650.txt");
+    createMap(index_to_char, "../graph_asr/test_data/vocab.txt");
 
     std::cout << "Start argmax decoding ... " << std::endl;
     auto start = std::chrono::system_clock::now();
