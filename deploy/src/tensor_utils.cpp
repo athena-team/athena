@@ -15,12 +15,9 @@ limitations under the License.
 ============================================================================== */
 
 #include "tensor_utils.h"
-#include "tensorflow/core/public/session.h"
-#include <fstream>
-#include <Eigen/Dense>
 
 
-int initSession(tensorflow::Session *&session, 
+int loadFrozenGraph(tensorflow::Session *&session, 
                 const std::string &graph_path, tensorflow::Status &status) {
     status = tensorflow::NewSession(tensorflow::SessionOptions(), &session);
     if (!status.ok()) {
@@ -45,7 +42,8 @@ int initSession(tensorflow::Session *&session,
     return 0;
 }
 
-tensorflow::Tensor getMatrixFromFile(const std::string &filename) {
+tensorflow::Tensor getAsrInputFromFile(const std::string &filename) {
+    // get 40-dim fbank
     std::ifstream fin(filename);
     std::vector<float> dataPoints;
     float item = 0.0;
@@ -127,4 +125,69 @@ void createInputStructureDecoder(std::vector
 void createOutputNameStructureDecoder(std::vector<std::string> &output_names) {
     // logits: [1, classes] float
     output_names.emplace_back("strided_slice_3");
+}
+
+
+int loadSavedModel(tensorflow::SavedModelBundle &bundle, const std::string &model_path) {
+    tensorflow::SessionOptions sess_options;
+    tensorflow::RunOptions run_options;
+    tensorflow::Status status;
+    status = tensorflow::LoadSavedModel(sess_options, run_options, \
+        model_path, {tensorflow::kSavedModelTagServe}, &bundle);
+    if (!status.ok()) {
+        std::cout << status.ToString() << "\n";
+        return 1;
+    }
+    return 0;
+}
+
+
+tensorflow::Tensor getTtsInputFromFile(const std::string filename) {
+    std::ifstream fin(filename);
+    std::vector<int> dataPoints;
+    float item = 0.0;
+    while (fin >> item) {
+        dataPoints.push_back(item);
+    }
+    fin.close();
+
+    int nrows = int(dataPoints.size());
+    tensorflow::Tensor feats(tensorflow::DT_INT32, 
+                             tensorflow::TensorShape({1, nrows}));
+    auto feats_tensor = feats.tensor<int, 2>();
+
+    for (int row = 0; row < nrows; row++) {
+        feats_tensor(0, row) = dataPoints[row];
+    }
+    return feats;
+}
+
+
+void writeTtsOutputToFile(tensorflow::Tensor output, const std::string filename) {
+    std::ofstream fout(filename);
+    auto output_tensor = output.tensor<float, 3>();
+    int nrows = output.shape().dim_size(1);
+    int ncols = output.shape().dim_size(2);
+    for (int row = 0; row < nrows; row++) {
+        for (int col = 0; col < ncols; col++) {
+            fout << output_tensor(0, row, col) << " ";
+        }
+        fout << "\n";
+    }
+    fout.close();
+}
+
+
+void createInputStructure(std::vector
+                             <std::pair<std::string, tensorflow::Tensor>> &inputs) {
+    // input: [batch_size, input_len]
+    tensorflow::Tensor input(tensorflow::DT_FLOAT);
+    inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
+                        {"serving_default_x0:0", input});
+   
+}
+
+void createOutputNameStructure(std::vector<std::string> &output_names) {
+    // output: [batch_size, frame_size, dim]
+    output_names.emplace_back("StatefulPartitionedCall:0");
 }
