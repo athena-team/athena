@@ -179,7 +179,7 @@ void createInputStructure(std::vector
     // input: [batch_size, input_len]
     tensorflow::Tensor input(tensorflow::DT_FLOAT);
     inputs.emplace_back(std::pair<std::string, tensorflow::Tensor>
-                        {"serving_default_x0:0", input});
+                        {"serving_default_input:0", input});
    
 }
 
