@@ -28,6 +28,7 @@ Welcome to Athena's documentation!
    :caption: Tutorial
    :name: sec-tutorial
 
+   tutorials/athena_101
    transform/speech_feature
    transform/user_manual
    tutorials/speech_recognition
@@ -37,7 +38,7 @@ Welcome to Athena's documentation!
    tutorials/wer_are_we
    tutorials/deployment
    tutorials/athena.layers
-   
+
 .. toctree::
    :maxdepth: 1
    :caption: Contributing 
@@ -50,4 +51,4 @@ Welcome to Athena's documentation!
    :caption: API 
    :name: sec-api
 
-   
+
