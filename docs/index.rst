@@ -41,14 +41,14 @@ Welcome to Athena's documentation!
 
 .. toctree::
    :maxdepth: 1
-   :caption: API 
-   :name: sec-api
-   
-.. toctree::
-   :maxdepth: 1
    :caption: Contributing 
    :name: sec-contributing
 
    development/contributing
 
-   
+.. toctree::
+   :maxdepth: 1
+   :caption: API 
+   :name: sec-api
+
+
