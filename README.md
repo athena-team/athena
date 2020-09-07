@@ -17,13 +17,13 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [3.2) Install *tensorflow* backend](#32-install-tensorflow-backend)
     - [3.3) Install *sph2pipe*, *spm*, *kenlm*, *sclite* for ASR Tasks [Optional]](#33-install-sph2pipe-spm-kenlm-sclite-for-asr-tasks-optional)
     - [3.4) Install *horovod* for multiple-device training [Optional]](#34-install-horovod-for-multiple-device-training-optional)
-    - [3.5) Install *pydecoder* for WFST decoding [Optional]](#35-install-pydecoder-for-WFST-decoding-optional)
+    - [3.5) Install *pydecoder* for WFST decoding [Optional]](#35-install-pydecoder-for-wfst-decoding-optional)
     - [3.6) Install *athena* package](#36-install-athena-package)
     - [3.7) Test your installation](#37-test-your-installation)
     - [Notes](#notes)
   - [4) Training](#4-training)
     - [4.1) Prepare the data](#41-prepare-the-data)
-    - [4.2) Setting the Configuration File](#42-settting-the-configuration-file)
+    - [4.2) Setting the Configuration File](#42-setting-the-configuration-file)
     - [4.3) Data normalization](#43-data-normalization)
     - [4.4) Train a model](#44-train-a-model)
     - [4.5) Evaluate a model](#45-evaluate-a-model)
@@ -142,7 +142,7 @@ wav_filename	wav_length_ms	transcript	speaker
 
 All of our training/ inference configurations are written in config.json. Below is an example configuration file with comments to help you understand.
 
-```json
+```jsonc
 {
   "batch_size":16,
   "num_epochs":20,
