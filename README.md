@@ -260,7 +260,7 @@ For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK
 | Median |  1.0   36.0 | 85.0   10.8    2.9    2.8   17.5  100.0 |
 |----------------------------------------------------------------|
 ```
-The line with ```Sum/Avg``` is usually what you should be looking for if you just want an overall WER result. In this case, 11.4 is the substitution error, 4.3 is the deletion error, 3.2 is the insertion error and 18.8 is the total WER.
+The line with ```Sum/Avg``` is usually what you should be looking for if you just want an overall PER result. In this case, 11.4 is the substitution error, 4.3 is the deletion error, 3.2 is the insertion error and 18.8 is the total PER.
 
 
 ## 5) Deployment
