@@ -127,7 +127,6 @@ void createOutputNameStructureDecoder(std::vector<std::string> &output_names) {
     output_names.emplace_back("strided_slice_3");
 }
 
-
 int loadSavedModel(tensorflow::SavedModelBundle &bundle, const std::string &model_path) {
     tensorflow::SessionOptions sess_options;
     tensorflow::RunOptions run_options;
@@ -140,7 +139,6 @@ int loadSavedModel(tensorflow::SavedModelBundle &bundle, const std::string &mode
     }
     return 0;
 }
-
 
 tensorflow::Tensor getTtsInputFromFile(const std::string filename) {
     std::ifstream fin(filename);
@@ -162,7 +160,6 @@ tensorflow::Tensor getTtsInputFromFile(const std::string filename) {
     return feats;
 }
 
-
 void writeTtsOutputToFile(tensorflow::Tensor output, const std::string filename) {
     std::ofstream fout(filename);
     auto output_tensor = output.tensor<float, 3>();
@@ -176,7 +173,6 @@ void writeTtsOutputToFile(tensorflow::Tensor output, const std::string filename)
     }
     fout.close();
 }
-
 
 void createInputStructure(std::vector
                              <std::pair<std::string, tensorflow::Tensor>> &inputs) {
