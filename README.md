@@ -231,25 +231,25 @@ The generated cmvn files will be found at ```examples/asr/timit/data/cmvn```.
 
 With all the above preparation done, training becomes straight-forward. `athena/main.py` is the entry point of the training module. Just run:
 ```
-$ python athena/main.py examples/asr/timit/configs/mtl_transformer_sp.json
+$ python athena/main.py examples/asr/timit/configs/mtl_transformer_sp_101.json
 ```
 
 Please install Horovod and MPI at first, if you want to train model using multi-gpu. See the [Horovod page](https://github.com/horovod/horovod) for more instructions.
 
 To run on a machine with 4 GPUs with Athena:
 ```
-$ horovodrun -np 4 -H localhost:4 python athena/horovod_main.py examples/asr/timit/configs/mtl_transformer_sp.json
+$ horovodrun -np 4 -H localhost:4 python athena/horovod_main.py examples/asr/timit/configs/mtl_transformer_sp_101.json
 ```
 
 To run on 4 machines with 4 GPUs each with Athena:
 ```
-$ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/horovod_main.py examples/asr/timit/configs/mtl_transformer_sp.json
+$ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/horovod_main.py examples/asr/timit/configs/mtl_transformer_sp_101.json
 ```
 
 ### 4.5) Evaluate a model
 All of our inference related scripts are merged into inference.py. `athena/inference.py` is the entry point of inference. Just run:
 ```
-python athena/inference.py examples/asr/timit/configs/mtl_transformer_sp.json > decode.log
+python athena/inference.py examples/asr/timit/configs/mtl_transformer_sp_101.json > decode.log
 ```
 Please note the name of decode log is very important to get correct scoring results. Sometimes when you use nohup or screen, the actual decoding log may end up in nohup.out or somewhere else. In that case, you will need to copy these logs and paste them into decode.log.
 

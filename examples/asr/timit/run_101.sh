@@ -43,26 +43,26 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # calculate cmvn
-     echo "Calculating cmvn"
+    echo "Calculating cmvn"
     cat examples/asr/timit/data/train.csv > examples/asr/timit/data/all.csv
     tail -n +2 examples/asr/timit/data/dev.csv >> examples/asr/timit/data/all.csv
     tail -n +2 examples/asr/timit/data/test.csv >> examples/asr/timit/data/all.csv
     python  athena/cmvn_main.py \
-        examples/asr/timit/configs/mtl_transformer_sp.json examples/asr/timit/data/all.csv || exit 1
+        examples/asr/timit/configs/mtl_transformer_sp_101.json examples/asr/timit/data/all.csv || exit 1
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # training stage
     echo "Training"
     $horovod_cmd python athena/${horovod_prefix}main.py \
-        examples/asr/timit/configs/mtl_transformer_sp.json || exit 1
+        examples/asr/timit/configs/mtl_transformer_sp_101.json || exit 1
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # decoding stage
     echo "Decoding"
     python athena/inference.py \
-        examples/asr/timit/configs/mtl_transformer_sp.json > decode.log || exit 1
+        examples/asr/timit/configs/mtl_transformer_sp_101.json > decode.log || exit 1
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
