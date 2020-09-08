@@ -47,7 +47,8 @@ SUPPORTED_MODEL = {
     "stargan" : StarganModel,
     "tts_transformer": TTSTransformer,
     "fastspeech": FastSpeech,
-    "speaker_resnet": SpeakerResnet
+    "speaker_resnet": SpeakerResnet,
+    "las_mwer": SpeechLASMwer
 }
 
 SUPPORTED_OPTIMIZER = {

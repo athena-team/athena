@@ -46,6 +46,8 @@ from .layers.transformer import TransformerDecoder
 from .layers.transformer import TransformerEncoderLayer
 from .layers.transformer import TransformerDecoderLayer
 from .layers.resnet_block import ResnetBasicBlock
+from .layers.batch_beam_search import BatchBeamSearchLayer
+from .layers.listen_attend_spell import LASLayer
 
 # models
 from .models.base import BaseModel
@@ -60,6 +62,7 @@ from .models.rnn_lm import RNNLM
 from .models.translate_transformer import NeuralTranslateTransformer
 from .models.stargan_vc import StarganModel
 from .models.speaker_resnet import SpeakerResnet
+from .models.las_mwer import SpeechLASMwer
 
 # solver & loss & accuracy
 from .solver import BaseSolver
