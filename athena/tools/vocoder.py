@@ -54,20 +54,20 @@ class GriffinLim:
     def __call__(self, feats, hparams, name=None):
         linear_feats = self._logmel_to_linear(feats)
         samples = self._griffin_lim(linear_feats, hparams.gl_iters)
-        #samples = samples / 32768
+        samples = samples / 32768
         if not os.path.exists(hparams.output_directory):
             os.makedirs(hparams.output_directory)
         output_path = os.path.join(hparams.output_directory, '%s.wav' % str(name))
         write_wav(output_path,
                   self.sample_rate,
                   (samples * np.iinfo(np.int16).max).astype(np.int16))
+        seconds = float(samples.shape[0]) / self.sample_rate
+        return seconds
 
     def _logmel_to_linear(self, feats):
         """Convert FBANK to linear spectrogram.
-
         Args:
             feats: FBANK feats, shape: [length, channels]
-
         Returns:
             linear_feats: Linear spectrogram
         """
@@ -89,7 +89,6 @@ class GriffinLim:
         Args:
             linear_feats: linear spectrogram
             gl_iters: num of gl iterations
-
         Returns:
             waveform: Reconstructed waveform (N,).
 
