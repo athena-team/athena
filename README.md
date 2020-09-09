@@ -40,6 +40,7 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
 - Unsupervised pre-training
 - Multi-GPU training on one machine or across multiple machines with Horovod
 - End-to-end Tacotron2 based TTS with support for multi-speaker and GST
+- Transformer based TTS and FastSpeech
 - WFST-based decoding
 - Deployment with Tensorflow C++
 
