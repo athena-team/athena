@@ -21,7 +21,7 @@ import tensorflow as tf
 from .base import SpeechBaseDatasetBuilder
 
 
-class SpeechDatasetBuilder(BaseDatasetBuilder):
+class SpeechDatasetBuilder(SpeechBaseDatasetBuilder):
     """SpeechDatasetBuilder
     """
 
@@ -178,4 +178,3 @@ class SpeechDatasetBuilder(BaseDatasetBuilder):
                 "output_length": tf.TensorSpec(shape=([None]), dtype=tf.int32),
             },
         )
-

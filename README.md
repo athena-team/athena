@@ -28,20 +28,24 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [4.4) Train a model](#44-train-a-model)
     - [4.5) Evaluate a model](#45-evaluate-a-model)
     - [4.6) Scoring](#46-scoring)
-  - [5) Deployment](#5-deployment)
-  - [6) Results](#6-results)
-    - [6.1) ASR](#61-asr)
-  - [7) Directory Structure](#7-directory-structure)
+  - [5) Decoding with WFST](#5-decoding-with-wfst)
+    - [5.1) WFST graph creation](#51-wfst-graph-creation)
+    - [5.2) WFST decoding](#52-wfst-decoding)
+  - [6) Deployment](#6-deployment)
+  - [7) Results](#7-results)
+    - [7.1) ASR](#71-asr)
+  - [8) Directory Structure](#8-directory-structure)
 
 ## 2) Key Features
 
-- Hybrid CTC/Transformer based end-to-end ASR
+- Hybrid Attention/CTC based end-to-end ASR
 - Speech-Transformer
 - Unsupervised pre-training
 - Multi-GPU training on one machine or across multiple machines with Horovod
 - End-to-end Tacotron2 based TTS with support for multi-speaker and GST
 - Transformer based TTS and FastSpeech
 - WFST-based decoding
+- WFST creation and WFST-based decoding
 - Deployment with Tensorflow C++
 
 ## 3) Installation
@@ -175,7 +179,7 @@ All of our training/ inference configurations are written in config.json. Below 
       "label_smoothing_rate":0.0,  # label smoothing rate for output logits
       "schedual_sampling_rate":1.0  # scheduled sampling rate for decoder
     },
-    "mtl_weight":0.5 
+    "mtl_weight":0.5
   },
 
   "inference_config":{
@@ -222,7 +226,7 @@ All of our training/ inference configurations are written in config.json. Below 
 To get state-of-the-art models, we usually need to train for more epochs and use ctc joint decoding with language model. These are omitted for to make this tutorial easier to understand.
 
 ### 4.3) Data normalization
-Data normalization is important for the convergence of neural network models. With the generated csv file, we will compute the cmvn file like this 
+Data normalization is important for the convergence of neural network models. With the generated csv file, we will compute the cmvn file like this
 ```
 python athena/cmvn_main.py examples/asr/$dataset_name/configs/mpc.json examples/asr/$dataset_name/data/all.csv
 ```
@@ -255,7 +259,7 @@ python athena/inference.py examples/asr/timit/configs/mtl_transformer_sp_101.jso
 Please note the name of decode log is very important to get correct scoring results. Sometimes when you use nohup or screen, the actual decoding log may end up in nohup.out or somewhere else. In that case, you will need to copy these logs and paste them into decode.log.
 
 ### 4.6) Scoring
-For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK) first. The results of scoring can be found in `score/score_map/decode.log.result.map.sys`. The last few lines will look like this 
+For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK) first. The results of scoring can be found in `score/score_map/decode.log.result.map.sys`. The last few lines will look like this
 ```
 |================================================================|
 | Sum/Avg|  192   7215 | 84.4   11.4    4.3    3.2   18.8   99.5 |
@@ -267,8 +271,40 @@ For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK
 ```
 The line with ```Sum/Avg``` is usually what you should be looking for if you just want an overall PER result. In this case, 11.4 is the substitution error, 4.3 is the deletion error, 3.2 is the insertion error and 18.8 is the total PER.
 
+## 5) Decoding with WFST
+In Athena, we also provide functionalities for WFST graph creation and WFST based decoding with seq2seq models. To use it, you need to install [athena-decoder](https://github.com/athena-team/athena-decoder) first.
 
-## 5) Deployment
+### 5.1) WFST graph creation
+The graph creation scripts for HKUST and AISHELL can be found in the [build graph section](https://github.com/athena-team/athena-decoder#build-graph) of athena-decoder. We support the creation of TLG.fst (for ctc decoding) and LG.fst (for seq2seq model decoding). To build the graph, you need to provide lexicon and vocab of the target dataset.
+
+The graph creation follows the standard procedure of compose -> determinize -> minimize -> arcsort -> remove_disambig. In athena-decoeder, the whole procedure is written in python to make users easier to understand and debug.
+
+### 5.2) WFST decoding
+Once we finished graph creation, the decoding becomes straightforward. We just need to decode with a new json file. Usually the new json file ends with _wfst. The items related to WFST decoding are (taken from ```examples/asr/aishell/configs/mtl_transformer_sp_wfst.json```):
+```jsonc
+"inference_config":{
+    "decoder_type":"wfst_decoder",  # note its different from beam_search_decoder we usually use
+    "wfst_graph":"examples/asr/aishell/data/LG.fst",  # path for wfst graph
+    "acoustic_scale":10.0,  # scale of acoustic score and language model score
+    "max_active":100,  # max active tokens kept alive before path expanding
+    "min_active":0,  # min active tokens kept alive before path expanding
+    "wfst_beam":100.0,  # a constant to balance the score of beam_cutoff
+    "max_seq_len":100  # max length of output seq
+  },
+```
+
+Our WFST decoding follows similiar procedure as Kaldi and is composed of four major steps: init_decoding, process_emitting, process_nonemitting and get_best_path. For more detail, please checkout [code](https://github.com/athena-team/athena-decoder/blob/master/pydecoders/decoders/wfst_decoder.py) here.
+
+Take AISHELL as an example, with WFST decoding, the command to run becomes ```python athena/inference.py examples/asr/aishell/configs/mtl_transformer_sp_wfst.json```. Some results with AISHELL are listed below:
+Decoder  | CTC Joint Decoding |  Error Rate (CER)
+:-----------: | :------------: | -------:
+Beam Search  | No | 7.98%
+Beam Search  | Yes | 6.82%  |
+WFST  | No |  7.21%  |
+
+Note that beam search without CTC Joint Decoding is considerably worse. But WFST without CTC Joint decoding gives better results than beam search.
+
+## 6) Deployment
 After training, you can deploy the model on servers using the TensorFlow C++ API. Below are some steps to achieve this functionality with an ASR model.
 
 1. Install all dependencies, including TensorFlow, Protobuf, absl, Eigen3 and kenlm (optional).
@@ -283,9 +319,9 @@ $ ./argmax
 
 Detailed implementation is described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
 
-## 6) Results
+## 7) Results
 
-### 6.1) ASR
+### 7.1) ASR
 
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
@@ -297,7 +333,7 @@ Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h |
 
 To compare with other published results, see [wer_are_we.md](https://github.com/athena-team/athena/blob/master/docs/wer_are_we.md).
 
-## 7) Directory Structure
+## 8) Directory Structure
 
 Below is the basic directory structure for Athena
 
