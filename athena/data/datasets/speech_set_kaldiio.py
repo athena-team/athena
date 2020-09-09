@@ -23,7 +23,7 @@ import kaldiio
 from .speech_set import SpeechDatasetBuilder
 
 
-class SpeechDatasetKaldiIOBuilder(BaseDatasetBuilder):
+class SpeechDatasetKaldiIOBuilder(SpeechDatasetBuilder):
     """SpeechDatasetKaldiIOBuilder
     """
 
