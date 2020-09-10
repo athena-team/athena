@@ -316,7 +316,7 @@ After compiling, an executable file will be generated and you can run the execut
 $ ./asr
 ```
 
-Detailed implementation is described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
+Detailed implementation is described [here](deploy/README.md).
 
 ## 7) Results
 
@@ -330,7 +330,7 @@ English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) 
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
 Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 6.6% (CER)
 
-To compare with other published results, see [wer_are_we.md](https://github.com/athena-team/athena/blob/master/docs/wer_are_we.md).
+To compare with other published results, see [wer_are_we.md](docs/tutorials/wer_are_we.md).
 
 ## 8) Directory Structure
 
