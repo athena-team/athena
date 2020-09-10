@@ -84,5 +84,5 @@ $ make
 ```
 After compiling, you can run the executable file:
 ```
-$ ./argmax
+$ ./asr
 ```
