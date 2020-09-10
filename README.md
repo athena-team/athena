@@ -304,16 +304,16 @@ WFST  | No |  7.21%  |
 Note that beam search without CTC Joint Decoding is considerably worse. But WFST without CTC Joint decoding gives better results than beam search.
 
 ## 6) Deployment
-After training, you can deploy the model on servers using the TensorFlow C++ API. Below are some steps to achieve this functionality with an ASR model.
+After training, you can deploy ASR and TTS models on servers using the TensorFlow C++ API. As an example, below are some steps to achieve this functionality with an ASR model.
 
 1. Install all dependencies, including TensorFlow, Protobuf, absl, Eigen3 and kenlm (optional).
 2. Freeze the model to pb format with `athena/deploy_main.py`.
 3. Compile the C++ codes.
-4. Load the model and do argmax decoding in C++ codes, see `deploy/src/argmax.cpp` for the entry point.
+4. Load the model and do argmax decoding in C++ codes, see `deploy/src/asr.cpp` for the entry point.
 
 After compiling, an executable file will be generated and you can run the executable file:
 ```
-$ ./argmax
+$ ./asr
 ```
 
 Detailed implementation is described [here](https://github.com/athena-team/athena/blob/master/deploy/README.md).
