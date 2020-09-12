@@ -7,6 +7,6 @@ tqdm
 sentencepiece
 librosa
 jieba
-pandas
+pandas<=0.25.1 
 kaldiio
 https://github.com/kpu/kenlm/archive/master.zip
