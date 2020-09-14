@@ -39,7 +39,7 @@ sctk_path=tools/sctk
 
 bpe_prefix=examples/asr/switchboard/data/switchboard_bpe2000
 score_dir=examples/asr/switchboard/score
-decode_log=${score_dir}/decode.log
+decode_log=inference.log
 mkdir -p ${score_dir}
 
 
@@ -121,7 +121,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # decoding stage
     echo "Running decode ..."
     python athena/inference.py \
-        examples/asr/switchboard/configs/mtl_transformer_sp.json > ${decode_log} || exit 1
+        examples/asr/switchboard/configs/mtl_transformer_sp.json || exit 1
 fi
 
 
@@ -134,5 +134,5 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     cp ${dataset_dir}/LDC2002T43/reference/en20000405_hub5.glm ${score_dir}/glm
 
     # sclite should be installed
-    ./examples/asr/switchboard/local/score_sclite_hub.sh ${decode_log} ${bpe_prefix}.model ${score_dir} ${sctk_path}
+    ./examples/asr/switchboard/local/score_sclite_hub.sh inference.log ${bpe_prefix}.model ${score_dir} ${sctk_path}
 fi

@@ -20,7 +20,7 @@ r""" entry point for inference of all kinds of models """
 import sys
 import json
 import tensorflow as tf
-from absl import logging
+from absl import logging, flags
 from athena.main import (
     parse_config,
     build_model_from_jsonfile,
@@ -42,9 +42,9 @@ SOLVERS = {
 def inference(jsonfile, rank_size=1, rank=0):
     """ entry point for model inference, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
-    avg_num = 1 if 'model_avg_num' not in p.inference_config else p.inference_config['model_avg_num']
-    if avg_num > 0:
-        checkpointer.compute_nbest_avg(avg_num)
+    #avg_num = 1 if 'model_avg_num' not in p.inference_config else p.inference_config['model_avg_num']
+    #if avg_num > 0:
+    #    checkpointer.compute_nbest_avg(avg_num)
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
     dataset_builder.shard(rank_size, rank)
@@ -56,6 +56,9 @@ def inference(jsonfile, rank_size=1, rank=0):
 
 
 if __name__ == "__main__":
+    logging.use_absl_handler()
+    flags.FLAGS.mark_as_parsed()
+    logging.get_absl_handler().python_handler.stream = open("inference.log", "w")
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 2:
         logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))

@@ -83,7 +83,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ "$use_wfst" = false ]; the
     # beam search decoding
     echo "Running decode with beam search..."
     python athena/inference.py \
-        examples/asr/aishell/configs/mtl_transformer_sp.json > decode.log || exit 1
+        examples/asr/aishell/configs/mtl_transformer_sp.json || exit 1
 elif [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ "$use_wfst" = true ]; then
     # wfst decoding
     echo "Running decode with WFST..."
@@ -94,16 +94,30 @@ elif [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ "$use_wfst" = true ]; th
     wget "https://raw.githubusercontent.com/athena-team/athena-decoder/tree/master/examples/aishell/graph/words.txt"
     mv words.txt examples/asr/aishell/data
     python athena/inference.py \
-        examples/asr/aishell/configs/mtl_transformer_sp_wfst.json > decode.log || exit 1
+        examples/asr/aishell/configs/mtl_transformer_sp_wfst.json || exit 1
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     # score-computing stage
     echo "computing score with sclite ..."
-    if ! [ -x "$(command -v sclite)" ]; then
+    if ! [ -x "$(command -v ./tools/SCTK/bin/sclite)" ]; then
         echo "sclite is not installed !!"
         exit 1
     else
-        . ./athena/tools/score_computer.sh decode.log examples/asr/aishell/data/vocab score_save || exit 1
+        log=inference.log
+        score_dir=score
+        mkdir -p $score_dir
+
+        python athena/tools/process_decode_result.py $log examples/asr/aishell/data/vocab
+
+        for file in $log.result $log.label; do
+            awk '{print $0 "("NR".wav)"}' $file > $file.key
+            mv $file.key $file
+        done
+
+        ./tools/SCTK/bin/sclite -i wsj -r $log.label -h $log.result -e utf-8 -o all -O $score_dir \
+            > $score_dir/sclite.compute.log
+        grep Err "$score_dir"/inference.log.result.sys
+        grep Sum/Avg "$score_dir"/inference.log.result.sys
     fi
 fi
