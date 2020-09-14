@@ -42,9 +42,9 @@ SOLVERS = {
 def inference(jsonfile, rank_size=1, rank=0):
     """ entry point for model inference, do some preparation work """
     p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
-    #avg_num = 1 if 'model_avg_num' not in p.inference_config else p.inference_config['model_avg_num']
-    #if avg_num > 0:
-    #    checkpointer.compute_nbest_avg(avg_num)
+    avg_num = 1 if 'model_avg_num' not in p.inference_config else p.inference_config['model_avg_num']
+    if avg_num > 0:
+        checkpointer.compute_nbest_avg(avg_num)
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
     dataset_builder.shard(rank_size, rank)
