@@ -62,7 +62,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # decoding stage
     echo "Decoding"
     python athena/inference.py \
-        examples/asr/timit/configs/mtl_transformer_sp_101.json > decode.log || exit 1
+        examples/asr/timit/configs/mtl_transformer_sp_101.json || exit 1
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
@@ -72,7 +72,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         echo "sclite is not installed !!"
         exit 1
     else
-        log=decode.log
+        log=inference.log
         score_dir=score
         mkdir -p $score_dir/score_ori $score_dir/score_map
 
@@ -88,5 +88,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             > $score_dir/score_ori/sclite.compute.log
         ./tools/SCTK/bin/sclite -i wsj -r $log.label.map -h $log.result.map -e utf-8 -o all -O $score_dir/score_map \
             > $score_dir/score_map/sclite.compute.log
+        
+        echo "original results"
+        grep Err $score_dir/score_ori/inference.log.result.sys
+        grep Sum/Avg $score_dir/score_ori/inference.log.result.sys
+        echo "results after phoneme mapping"
+        grep Err $score_dir/score_map/inference.log.result.map.sys
+        grep Sum/Avg $score_dir/score_map/inference.log.result.map.sys
     fi
 fi
