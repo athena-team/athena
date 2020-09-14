@@ -253,12 +253,12 @@ $ horovodrun -np 16 -H server1:4,server2:4,server3:4,server4:4 python athena/hor
 ### 4.5) Evaluate a model
 All of our inference related scripts are merged into inference.py. `athena/inference.py` is the entry point of inference. Just run:
 ```
-python athena/inference.py examples/asr/timit/configs/mtl_transformer_sp_101.json > decode.log
+python athena/inference.py examples/asr/timit/configs/mtl_transformer_sp_101.json
 ```
-Please note the name of decode log is very important to get correct scoring results. Sometimes when you use nohup or screen, the actual decoding log may end up in nohup.out or somewhere else. In that case, you will need to copy these logs and paste them into decode.log.
+A file named `inference.log` will be generated, which contains the log of decoding. `inference.log` is very important to get correct scoring results, and it will be overwrited if you run `athena/inference.py` multiple times.
 
 ### 4.6) Scoring
-For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK) first. The results of scoring can be found in `score/score_map/decode.log.result.map.sys`. The last few lines will look like this
+For scoring, you will need to install [sclite](https://github.com/usnistgov/SCTK) first. The results of scoring can be found in `score/score_map/inference.log.result.map.sys`. The last few lines will look like this
 ```
 |================================================================|
 | Sum/Avg|  192   7215 | 84.4   11.4    4.3    3.2   18.8   99.5 |

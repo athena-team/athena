@@ -15,6 +15,7 @@
 # limitations under the License.
 # ==============================================================================
 # pylint: disable=invalid-name
+# processing decode result for timit corpus, mapping phones to target amount
 import sys
 import codecs
 
@@ -76,14 +77,18 @@ def process_files(decode_log_file, phone_map_file, phone_vocab_file, phone_map_a
 
                 decode_result.flush()
                 label_result.flush()
+                decode_map_result.flush()
+                label_map_result.flush()
                 to_continue = False
                 total_line = ""
     decode_result.close()
     label_result.close()
+    decode_map_result.close()
+    label_map_result.close()
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
-        print("Usage: python process_decode_result.py decode.log phones.60-48-39.map" +
+        print("Usage: python process_decode_result.py inference.log phones.60-48-39.map" +
               "phone.vocab phone_map_amount")
         sys.exit()
 
