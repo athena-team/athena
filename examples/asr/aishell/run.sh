@@ -117,7 +117,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
 
         ./tools/SCTK/bin/sclite -i wsj -r $log.label -h $log.result -e utf-8 -o all -O $score_dir \
             > $score_dir/sclite.compute.log
-        grep Err "$score_dir"/inference.log.result.sys
-        grep Sum/Avg "$score_dir"/inference.log.result.sys
+        grep Err $score_dir/inference.log.result.sys
+        grep Sum/Avg $score_dir/inference.log.result.sys
     fi
 fi
