@@ -20,7 +20,7 @@ r""" entry point for inference of all kinds of models """
 import sys
 import json
 import tensorflow as tf
-from absl import logging
+from absl import logging, flags
 from athena.main import (
     parse_config,
     build_model_from_jsonfile,
@@ -56,6 +56,9 @@ def inference(jsonfile, rank_size=1, rank=0):
 
 
 if __name__ == "__main__":
+    logging.use_absl_handler()
+    flags.FLAGS.mark_as_parsed()
+    logging.get_absl_handler().python_handler.stream = open("inference.log", "w")
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 2:
         logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))

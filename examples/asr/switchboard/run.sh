@@ -39,7 +39,7 @@ sctk_path=tools/sctk
 
 bpe_prefix=examples/asr/switchboard/data/switchboard_bpe2000
 score_dir=examples/asr/switchboard/score
-decode_log=${score_dir}/decode.log
+decode_log=inference.log
 mkdir -p ${score_dir}
 
 
@@ -121,7 +121,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # decoding stage
     echo "Running decode ..."
     python athena/inference.py \
-        examples/asr/switchboard/configs/mtl_transformer_sp.json > ${decode_log} || exit 1
+        examples/asr/switchboard/configs/mtl_transformer_sp.json || exit 1
 fi
 
 
