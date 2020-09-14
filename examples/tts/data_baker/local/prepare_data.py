@@ -20,21 +20,22 @@ detailed information can be seen on https://www.data-baker.com/open_source.html
 """
 
 import os
+import re
 import sys
 import codecs
+import urllib
+import rarfile
 import tempfile
-import re
 import pandas
-from six.moves import urllib
+import subprocess
 from absl import logging
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
-import rarfile
 from athena import get_wave_file_length
 
-# SUBSETS = ["train", "dev", "test"]
 GFILE = tf.compat.v1.gfile
 
+#The dataset isn't open source now so you should buy it if you need.
 URL = "https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar"
 
 # ascii code, used to delete Chinese punctuation
@@ -195,7 +196,15 @@ def pinyin_2_phoneme(pinyin_line, words):
             i += 1
     return ' '.join(sent_phoneme)
 
-
+def unrar(rar_filepath, directory):
+    out_path = os.path.join(directory, 'BZNSYP')
+    rfile = rarfile.RarFile(rar_filepath)  # need to install unrar!!!!
+    rfile.extractall(out_path) 
+    for f in rfile.namelist():
+        rar_file = os.path.join(out_path, f)
+        rf = rarfile.RarFile(rar_file)
+        rf.extractall(out_path)
+    
 def download_and_extract(directory, url):
     """Download and extract the given dataset.
     Args:
@@ -203,7 +212,6 @@ def download_and_extract(directory, url):
         url: the url to download the data file.
     """
     _, rar_filepath = tempfile.mkstemp(suffix=".rar")  # get rar_path
-
     try:
         logging.info("Downloading %s to %s" % (url, rar_filepath))
 
@@ -220,15 +228,15 @@ def download_and_extract(directory, url):
         logging.info(
             "Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size)  # size-->bytes
         )
-        rf = rarfile.RarFile(rar_filepath)  # need to install unrar!!!!
-        rf.extractall(directory)
+        unrar(rar_filepath, directory)
+        logging.info("Successfully extracted data from rar")
     finally:
         GFILE.Remove(rar_filepath)
 
 def trans_prosody(dataset_dir):
     trans_path = os.path.join(dataset_dir, "BZNSYP/ProsodyLabeling/")
     is_sentid_line = True
-    with open(trans_path + '000001-010000.txt', encoding='utf-8') as f,\
+    with open(trans_path + '000001-010000.txt', encoding='gbk') as f,\
             open(trans_path + 'biaobei_prosody.csv', 'w') as fw:
         for line in f:
             if is_sentid_line:
@@ -260,7 +268,9 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
             ...
     """
     logging.info("ProcessingA audio and transcript for {}".format("all_files"))
-    audio_dir = os.path.join(dataset_dir, "BZNSYP/Wave/")
+    audio_dir = os.path.join(dataset_dir, "BZNSYP/")
+    subprocess.call(["mkdir", "Wave_24"], cwd=audio_dir) #mkdir Wave_24
+
     prosodyLabel_dir = os.path.join(dataset_dir, "BZNSYP/ProsodyLabeling/")
 
     files = []
@@ -270,10 +280,13 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
         for line in f:
             transcript_id = line.strip().split("|")[0]
             transcript = line.strip().split("|")[1]
+            #downsample 48k to 24k
+            wav48k = os.path.join(audio_dir, 'Wave/' + transcript_id + '.wav')
+            wav24k = os.path.join(audio_dir, 'Wave_24/' + transcript_id + '.wav')
+            subprocess.getoutput('cat %s | /usr/bin/sox -t wav - -c 1 -b 16 -t wav - rate 24000  >  %s' % (wav48k,wav24k))    
             # get wav_length
-            wav_file = os.path.join(audio_dir, transcript_id + '.wav')
-            wav_length = get_wave_file_length(wav_file)
-            files.append((os.path.abspath(wav_file), wav_length, transcript))
+            wav_length = get_wave_file_length(wav24k)
+            files.append((os.path.abspath(wav24k), wav_length, transcript))
 
     # Write to CSV file which contains three columns:
     df = pandas.DataFrame(
@@ -308,13 +321,13 @@ def split_train_dev_test(total_csv, output_dir):
 
 def processor(dircetory):
     """ download and process """
+    logging.info("The dataset isn't an open source now so you may need to buy it.")
     # already downloaded data_baker
     data_baker = os.path.join(dircetory, "BZNSYP.rar")
     if os.path.exists(data_baker):
         logging.info("{} already exist".format(data_baker))
     else:
         download_and_extract(dircetory, URL)
-
     # get total_csv
     logging.info("Processing the BiaoBei total.csv in {}".format(dircetory))
     total_csv_path = os.path.join(dircetory, "total.csv")
