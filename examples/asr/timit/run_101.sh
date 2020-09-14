@@ -62,7 +62,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # decoding stage
     echo "Decoding"
     python athena/inference.py \
-        examples/asr/timit/configs/mtl_transformer_sp_101.json|| exit 1
+        examples/asr/timit/configs/mtl_transformer_sp_101.json || exit 1
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then

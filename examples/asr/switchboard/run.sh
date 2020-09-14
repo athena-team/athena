@@ -134,5 +134,5 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     cp ${dataset_dir}/LDC2002T43/reference/en20000405_hub5.glm ${score_dir}/glm
 
     # sclite should be installed
-    ./examples/asr/switchboard/local/score_sclite_hub.sh inference.log ${bpe_prefix}.model ${score_dir} ${sctk_path}
+    ./examples/asr/switchboard/local/score_sclite_hub.sh ${decode_log} ${bpe_prefix}.model ${score_dir} ${sctk_path}
 fi
