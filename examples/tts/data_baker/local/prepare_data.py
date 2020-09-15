@@ -35,7 +35,6 @@ from athena import get_wave_file_length
 
 GFILE = tf.compat.v1.gfile
 
-#The dataset isn't open source now so you should buy it if you need.
 URL = "https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar"
 
 # ascii code, used to delete Chinese punctuation
@@ -321,7 +320,6 @@ def split_train_dev_test(total_csv, output_dir):
 
 def processor(dircetory):
     """ download and process """
-    logging.info("The dataset isn't an open source now so you may need to buy it.")
     # already downloaded data_baker
     data_baker = os.path.join(dircetory, "BZNSYP.rar")
     if os.path.exists(data_baker):
