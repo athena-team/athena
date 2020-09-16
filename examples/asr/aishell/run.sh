@@ -89,10 +89,9 @@ elif [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ "$use_wfst" = true ]; th
     echo "Running decode with WFST..."
     echo "For now we will simply download LG.fst and words.txt from athena-decoder project"
     echo "Feel free to checkout graph creation manual at https://github.com/athena-team/athena-decoder#build-graph"
-    wget "https://raw.githubusercontent.com/athena-team/athena-decoder/tree/master/examples/aishell/graph/LG.fst"
-    mv LG.fst examples/asr/aishell/data
-    wget "https://raw.githubusercontent.com/athena-team/athena-decoder/tree/master/examples/aishell/graph/words.txt"
-    mv words.txt examples/asr/aishell/data
+    git clone https://github.com/athena-team/athena-decoder
+    cp athena-decoder/examples/aishell/graph/LG.fst examples/asr/aishell/data/
+    cp athena-decoder/examples/aishell/graph/words.txt examples/asr/aishell/data/
     python athena/inference.py \
         examples/asr/aishell/configs/mtl_transformer_sp_wfst.json || exit 1
 fi
