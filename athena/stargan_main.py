@@ -101,8 +101,7 @@ def build_model_from_jsonfile_stargan(jsonfile, pre_run=True):
         model=model,
         optimizer_g=model.get_stage_model("generator").optimizer,
 	optimizer_d=model.get_stage_model("discriminator").optimizer,
-	optimizer_c=model.get_stage_model("classifier").optimizer,
-	model_name="gan"
+	optimizer_c=model.get_stage_model("classifier").optimizer
     )
     if pre_run or p.pretrained_model is not None:
         # pre_run for lazy initialize in keras
