@@ -103,6 +103,7 @@ def build_model_from_jsonfile_stargan(jsonfile, pre_run=True):
 	optimizer_d=model.get_stage_model("discriminator").optimizer,
 	optimizer_c=model.get_stage_model("classifier").optimizer
     )
+    
     if pre_run or p.pretrained_model is not None:
         # pre_run for lazy initialize in keras
         solver = GanSolver(
