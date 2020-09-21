@@ -171,6 +171,7 @@ class StarganModel(BaseModel):
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
         self.num_features = self.hparams.codedsp_dim
         self.batchsize = 1
+        # speaker number will automatic count from data
         self.speaker_num = data_descriptions.spk_num
         self.classifier = Classifier(speaker_num=self.speaker_num, optimizer_config=self.hparams.optimizer_config)
         self.discriminator = Discriminator()
@@ -191,7 +192,7 @@ class StarganModel(BaseModel):
                                                               samples["tar_speaker"], samples["src_speaker"]
 
         target_label_reshaped = tf.reshape(target_label, [-1, 1, 1, self.speaker_num])
-        # "classifier"  "generator"  "discirmination"
+        # classifier"  "generator"  "discirmination"
         if stage == "classifier":
             # Classifier training process
             domain_out_real = self.classifier(target_real)
