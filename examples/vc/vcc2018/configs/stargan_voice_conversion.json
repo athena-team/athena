@@ -4,7 +4,7 @@
   "sorta_epoch":1,
   "ckpt":"examples/vc/vcc2018/ckpts/StarGAN/",
   "summary_dir":"examples/vc/vcc2018/ckpts/StarGAN/event",
-  "solver_gpu":[],
+  "solver_gpu":[0],
   "solver_config":{
     "clip_norm":100,
     "log_interval":10,
