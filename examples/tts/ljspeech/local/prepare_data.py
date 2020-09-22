@@ -26,6 +26,8 @@ import re
 import sys
 import tarfile
 import inflect
+import urllib
+import tempfile
 import codecs
 import pandas
 from absl import logging
@@ -203,6 +205,7 @@ def download_and_extract(directory, url):
         )
         with tarfile.open(tar_filepath, "r") as tar:
             tar.extractall(directory)
+        logging.info("Successfully extracted data from LJSpeech-1.1.tar.bz2")
     finally:
         GFILE.Remove(tar_filepath)
 
@@ -228,9 +231,8 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
             -audio-LJ001-0002.s16
             ...
     """
-    logging.info("ProcessingA audio and transcript for {}".format("all_files"))
+    logging.info("Processing audio and transcript for {}".format("all_files"))
     wav_dir = os.path.join(dataset_dir, "LJSpeech-1.1/wavs/")
-
     files = []
     # ProsodyLabel ---word
     with codecs.open(os.path.join(dataset_dir, "LJSpeech-1.1/metadata.csv"),
@@ -250,7 +252,6 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
 
     # Write to txt file which contains three columns:
     fp = open(total_csv_path, 'w', encoding="utf-8")
-
     fp.write("wav_filename"+'\t'
              "wav_length_ms"+'\t'
              "transcript"+'\n')
@@ -258,11 +259,8 @@ def convert_audio_and_split_transcript(dataset_dir, total_csv_path):
         fp.write(str(files[i][0])+'\t')
         fp.write(str(files[i][1])+'\t')
         fp.write(str(files[i][2])+'\n')
-
-    fp.close()
-    
+    fp.close()    
     logging.info("Successfully generated csv file {}".format(total_csv_path))
-
 
 def split_train_dev_test(total_csv, output_dir):
     # get total_csv
@@ -287,22 +285,20 @@ def split_train_dev_test(total_csv, output_dir):
     x_test.to_csv(test_csv_path, index=False, sep="\t")
     logging.info("Successfully generated csv file {}".format(test_csv_path))
 
-
 def processor(dircetory):
     """ download and process """
-    # download the dataset
+    #logging.info("Downloading the dataset may take a long time so you can download it in another way and move it to the dircetory {}".format(dircetory))
     LJSpeech = os.path.join(dircetory, "LJSpeech-1.1.tar.bz2")
     if os.path.exists(LJSpeech):
         logging.info("{} already exist".format(LJSpeech))
     else:
-        download_and_extract(dircetory, URL)
+        download_and_extract(dircetory, URL)   
     # get total_csv
     logging.info("Processing the LJspeech total.csv in {}".format(dircetory))
     total_csv_path = os.path.join(dircetory, "total.csv")
     convert_audio_and_split_transcript(dircetory, total_csv_path)
     split_train_dev_test(total_csv_path, dircetory)
     logging.info("Finished processing LJspeech csv ")
-
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
