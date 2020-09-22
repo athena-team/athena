@@ -171,7 +171,8 @@ class StarganModel(BaseModel):
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
         self.num_features = self.hparams.codedsp_dim
         self.batchsize = 1
-        self.speaker_num = data_descriptions.speaker_num
+        # speaker number will automatic count from data
+        self.speaker_num = data_descriptions.spk_num
         self.classifier = Classifier(speaker_num=self.speaker_num, optimizer_config=self.hparams.optimizer_config)
         self.discriminator = Discriminator()
         self.generator = Generator()

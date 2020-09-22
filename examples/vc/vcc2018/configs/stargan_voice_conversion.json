@@ -4,7 +4,7 @@
   "sorta_epoch":1,
   "ckpt":"examples/vc/vcc2018/ckpts/StarGAN/",
   "summary_dir":"examples/vc/vcc2018/ckpts/StarGAN/event",
-  "solver_gpu":[],
+  "solver_gpu":[0],
   "solver_config":{
     "clip_norm":100,
     "log_interval":10,
@@ -18,7 +18,7 @@
     "codedsp_dim":36,
     "lambda_cycle":10,
     "lambda_identity":5,
-    "lambda_classifier":3
+    "lambda_classifier":3,
 
     "optimizer_config":{
       "d_model":512,
@@ -37,31 +37,29 @@
   "dataset_builder": "voice_conversion_dataset",
   "num_data_threads": 1,
   "trainset_config":{
-    "data_csv": "examples/vc/haitian/data_numpy/train.csv",
+    "data_csv": "examples/vc/vcc2018/data_numpy/train.csv",
     "codedsp_dim":36,
-    "cmvn_file":"examples/vc/haitian/data/cmvn",
+    "cmvn_file":"examples/vc/vcc2018/data/cmvn",
     "input_length_range":[10, 8000],
     "enable_load_from_disk": true,
-    "codedsp_dim":36,
     "fs": 16000,
-    "fft_size": 1024,
-    "speaker_num":9
+    "fft_size": 1024
   },
   "devset_config":{
-    "data_csv": "examples/vc/haitian/data_numpy/dev.csv",
+    "data_csv": "examples/vc/vcc2018/data_numpy/dev.csv",
     "codedsp_dim":36,
-    "cmvn_file":"examples/vc/haitian/data/cmvn",
+    "cmvn_file":"examples/vc/vcc2018/data/cmvn",
     "input_length_range":[10, 8000],
     "enable_load_from_disk": true,
-    "codedsp_dim":36,
     "fs": 16000,
     "fft_size": 1024
   },
   "testset_config":{
-    "data_csv": "examples/vc/haitian/data_numpy/test.csv",
+    "data_csv": "examples/vc/vcc2018/data_numpy/test.csv",
     "codedsp_dim":36,
-    "cmvn_file":"examples/vc/haitian/data/cmvn",
-    "codedsp_dim":36,
+    "cmvn_file":"examples/vc/vcc2018/data/cmvn",
+    "input_length_range":[10, 8000],
+    "enable_load_from_disk": true,
     "fs": 16000,
     "fft_size": 1024
   }
