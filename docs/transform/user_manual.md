@@ -43,7 +43,7 @@ config = {'type': 'Spectrum',
           'window_length': 0.025, 
           'frame_length': 0.010, 
           'preEph_coeff': 0.97,
-          'window_type': 'hamming'}
+          'window_type': 'hamm'}
 spectrum_data = AudioFeaturizer(config)
 
 '''
