@@ -9,4 +9,9 @@ librosa
 jieba
 pandas
 kaldiio
+tarfile
+rarfile
+inflect
+urllib
+tempfile
 https://github.com/kpu/kenlm/archive/master.zip
