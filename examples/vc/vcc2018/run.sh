@@ -22,7 +22,7 @@ fi
 
 source tools/env.sh
 
-stage=2
+stage=-1
 stop_stage=1000
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
