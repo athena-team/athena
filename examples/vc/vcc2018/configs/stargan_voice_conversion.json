@@ -23,7 +23,7 @@
     "optimizer_config":{
       "d_model":512,
       "warmup_steps":8000,
-      "k":0.5,
+      "k":0.12,
       "decay_steps": 200000,
       "decay_rate": 0.1
     }
