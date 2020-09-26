@@ -75,3 +75,18 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     python athena/convert_main.py \
         examples/vc/vcc2018/configs/stargan_voice_conversion.json || exit 1
 fi
+
+
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    echo "convert wavs using paralel WaveGAN vocoder..."
+    srcspks=("SEF1" "SEF2")
+    tarspks=("SEM1" "SEM2")
+    for srcspk in ${srcspks[*]};
+    do
+        for tarspk in ${tarspks[*]};
+        do
+            echo "PWG decoding (${srcspk}-${tarspk})."
+            python runpwg.py  -s ${srcspk} -t ${tarspk} -3
+        done
+    done
+fi
