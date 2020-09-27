@@ -77,6 +77,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 fi
 
 
+"this paralel WaveGAN vocoder is reference from https://github.com/bigpon/vcc20_baseline_cyclevae"
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "convert wavs using paralel WaveGAN vocoder..."
     srcspks=("SEF1" "SEF2")
