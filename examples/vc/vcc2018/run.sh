@@ -51,12 +51,9 @@ fi
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # calculate cmvn
     echo "Computing cmvn"
-    cat examples/vc/vcc2018/data_numpy/train.csv > examples/vc/vcc2018/data_numpy/all.csv
-    tail -n +2 examples/vc/vcc2018/data_numpy/dev.csv >> examples/vc/vcc2018/data_numpy/all.csv
-    tail -n +2 examples/vc/vcc2018/data_numpy/test.csv >> examples/vc/vcc2018/data_numpy/all.csv
     # python CUDA_VISIBLE_DEVICES='' athena/cmvn_main.py
 	python athena/cmvn_main.py examples/vc/vcc2018/configs/stargan_voice_conversion.json \
-	        examples/vc/vcc2018/data_numpy/all.csv || exit 1
+	        examples/vc/vcc2018/data_numpy/train.csv || exit 1
 fi
 
 
@@ -77,7 +74,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 fi
 
 
-"this paralel WaveGAN vocoder is reference from https://github.com/bigpon/vcc20_baseline_cyclevae"
+"this parallel WaveGAN vocoder is reference from https://github.com/bigpon/vcc20_baseline_cyclevae"
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "convert wavs using paralel WaveGAN vocoder..."
     srcspks=("SEF1" "SEF2")
