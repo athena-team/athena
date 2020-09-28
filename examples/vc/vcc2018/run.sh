@@ -22,14 +22,14 @@ fi
 
 source tools/env.sh
 
-stage=-1
+stage=0
 stop_stage=1000
 horovod_cmd="horovodrun -np 4 -H localhost:4"
 horovod_prefix="horovod_"
 dataset_dir=examples/vc/vcc2018/data
 data_disk_dir=examples/vc/vcc2018/data_numpy
 
-if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
+if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data disk
     echo "Prepare data disk"
     mkdir -p examples/vc/vcc2018/data_numpy
@@ -37,7 +37,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
         $dataset_dir $data_disk_dir examples/vc/vcc2018/configs/stargan_voice_conversion.json || exit 1
 fi
 
-if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # prepare data
     echo "Creating csv"
     mkdir -p examples/vc/vcc2018/data
@@ -48,7 +48,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         $data_disk_dir examples/vc/vcc2018/data_numpy || exit 1
 fi
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # calculate cmvn
     echo "Computing cmvn"
     # python CUDA_VISIBLE_DEVICES='' athena/cmvn_main.py
@@ -57,7 +57,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # training stage
     echo "training stargan"
     #$horovod_cmd python athena/${horovod_prefix}main.py \
@@ -66,7 +66,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # convert stage
     echo "convert wavs ..."
     python athena/convert_main.py \
@@ -75,7 +75,7 @@ fi
 
 
 "this parallel WaveGAN vocoder is reference from https://github.com/bigpon/vcc20_baseline_cyclevae"
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "convert wavs using paralel WaveGAN vocoder..."
     srcspks=("SEF1" "SEF2")
     tarspks=("SEM1" "SEM2")
