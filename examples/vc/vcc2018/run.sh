@@ -69,7 +69,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # convert stage
     echo "convert wavs ..."
-    python athena/convert_main.py \
+    python athena/inference.py \
         examples/vc/vcc2018/configs/stargan_voice_conversion.json || exit 1
 fi
 

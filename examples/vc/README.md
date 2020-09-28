@@ -27,11 +27,7 @@ The script examples/vc/$task_name/local/prepare_data.py would generate the desir
 ### (3) Data normalization
 With the generated csv file, we should compute the cmvn file firstly like this 
 ```
-$ python athena/cmvn_main.py examples/vc/$task_name/configs/stargan_voice_conversion.json examples/vc/$task_name/data/train.csv
-```
-We can also directly run the training command like this 
-```
-$ python athena/main.py examples/vc/$task_name/configs/stargan_voice_conversion.json
+$ python athena/cmvn_main.py examples/vc/$task_name/configs/stargan_voice_conversion.json examples/vc/$task_name/data_numpy/train.csv
 ```
 It will automatically compute the cmvn file before training if the cmvn file does not exist.
 
@@ -41,7 +37,7 @@ You can train a StarGAN model using json file examples/vc/$task_name/configs/sta
 ### (5) Conversion
 We provide a simple synthesis process using World vocoder. To test your training performance, run
 ```
-$ python athena/synthesize_main.py examples/vc/$task_name/stargan_voice_conversion.json
+$ python athena/inference.py examples/vc/$task_name/stargan_voice_conversion.json
 ```
 
 ### (6) High quality voice conversion
