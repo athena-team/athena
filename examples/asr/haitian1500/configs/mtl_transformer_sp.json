@@ -2,8 +2,8 @@
   "batch_size":16,
   "num_epochs":50,
   "sorta_epoch":1,
-  "ckpt":"examples/asr/aishell/ckpts/mtl_transformer_ctc/",
-  "summary_dir":"examples/asr/aishell/ckpts/mtl_transformer_ctc/event",
+  "ckpt":"examples/asr/haitian1500/ckpts/mtl_transformer_ctc/",
+  "summary_dir":"examples/asr/haitian1500/ckpts/mtl_transformer_ctc/event",
 
   "solver_gpu":[],
   "solver_config":{
@@ -38,7 +38,7 @@
     "ctc_weight":0.5,
     "lm_weight":0.7,
     "lm_type": "rnn",
-    "lm_path":"examples/asr/aishell/configs/rnnlm.json"
+    "lm_path":"examples/asr/haitian1500/configs/rnnlm.json"
   },
 
   "optimizer":"warmup_adam",
@@ -53,24 +53,24 @@
   "dataset_builder": "speech_recognition_dataset",
   "num_data_threads": 1,
   "trainset_config":{
-    "data_csv": "examples/asr/aishell/data/train.csv",
+    "data_csv": "examples/asr/haitian1500/data/train.csv",
     "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "cmvn_file":"examples/asr/haitian1500/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"},
     "input_length_range":[10, 8000],
     "speed_permutation": [0.9, 1.0, 1.1]
   },
   "devset_config":{
-    "data_csv": "examples/asr/aishell/data/dev.csv",
+    "data_csv": "examples/asr/haitian1500/data/dev.csv",
     "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "cmvn_file":"examples/asr/haitian1500/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"},
     "input_length_range":[10, 8000]
   },
   "testset_config":{
-    "data_csv": "examples/asr/aishell/data/test.csv",
+    "data_csv": "examples/asr/haitian1500/data/test.csv",
     "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
-    "cmvn_file":"examples/asr/aishell/data/cmvn",
-    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"}
+    "cmvn_file":"examples/asr/haitian1500/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"}
   }
 }

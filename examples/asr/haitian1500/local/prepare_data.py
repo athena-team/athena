@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-""" data baker dataset
-Speech corpus is a female who pronounces standard Mandarin.
-It includes about 12 hours and is composed of 10000 sentences.
-detailed information can be seen on https://www.data-baker.com/open_source.html
+""" haitian1500 dataset
 """
-
 import os
 import re
 import sys
+import tarfile
+import tempfile
+import inflect
 import codecs
 import pandas
 import numpy as np
@@ -42,23 +41,23 @@ def download_and_extract(directory, url):
     _, tar_filepath = tempfile.mkstemp(suffix=".tar")  # get rar_path
 
     try:
-        logging.info("Downloading %s to %s" % (url, rar_filepath))
+        logging.info("Downloading %s to %s" % (url, tar_filepath))
 
         def _progress(count, block_size, total_size):
             sys.stdout.write(
                 "\r>> Downloading {} {:.1f}%".format(
-                    rar_filepath, 100.0 * count * block_size / total_size
+                    tar_filepath, 100.0 * count * block_size / total_size
                 )
             )
             sys.stdout.flush()
 
-        urllib.request.urlretrieve(url, rar_filepath, _progress)  # show the progress of download
-        statinfo = os.stat(rar_filepath)  # run a stat
+        urllib.request.urlretrieve(url, tar_filepath, _progress)  # show the progress of download
+        statinfo = os.stat(tar_filepath)  # run a stat
         logging.info(
             "Successfully downloaded %s, size(bytes): %d" % (url, statinfo.st_size)  # size -->bytes
         )
-        rf = rarfile.RarFile(rar_filepath)  # need to install unrar!!!!
-        rf.extractall(directory)
+        with tarfile.open(tar_filepath, "r") as tar:
+            tar.extractall(directory)
     finally:
         GFILE.Remove(tar_filepath)
 
@@ -172,14 +171,14 @@ def all_fun(out_dir, in_dir, file_name):
 
 def processor(dircetory):
     """ download and process """
-    #in_dir--/tmp-data/corpus/
-    '''
-    haitian = os.path.join(dircetory, "haitian.rar")
+    
+    
+    haitian = os.path.join(dircetory, "haitian1500.rar")
     if os.path.exists(haitian):
         logging.info("{} already exist".format(haitian))
     else:
         download_and_extract(dircetory, URL)
-    '''
+    
     # dircetory- "examples/asr/open_source1/data/select_100"
     logging.info("Processing the haitian tcsv in {}".format(dircetory))  
     

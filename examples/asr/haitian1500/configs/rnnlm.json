@@ -2,7 +2,7 @@
   "batch_size":64,
   "num_epochs":70,
   "sorta_epoch":1,
-  "ckpt":"examples/asr/aishell/ckpts/rnnlm",
+  "ckpt":"examples/asr/haitian1500/ckpts/rnnlm",
 
   "solver_gpu":[],
   "solver_config":{
@@ -36,13 +36,13 @@
   "dataset_builder": "language_dataset",
   "num_data_threads": 1,
   "trainset_config":{
-    "data_csv":"examples/asr/aishell/data/train.trans.csv",
-    "input_text_config":{"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
-    "output_text_config":{"type":"vocab", "model":"examples/asr/aishell/data/vocab"}
+    "data_csv":"examples/asr/haitian1500/data/train.trans.csv",
+    "input_text_config":{"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"},
+    "output_text_config":{"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"}
   },
   "devset_config":{
-    "data_csv":"examples/asr/aishell/data/dev.trans.csv",
-    "input_text_config":{"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
-    "output_text_config":{"type":"vocab", "model":"examples/asr/aishell/data/vocab"}
+    "data_csv":"examples/asr/haitian1500/data/dev.trans.csv",
+    "input_text_config":{"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"},
+    "output_text_config":{"type":"vocab", "model":"examples/asr/haitian1500/data/vocab"}
   }
 }
