@@ -447,7 +447,9 @@ class ConvertSolver(BaseSolver):
     """ ConvertSolver
     """
     default_config = {
-        "output_directory": "./gen_vcc2018/"
+        "output_directory": "./gen_vcc2018/",
+        "model_avg_num": 1,
+        "fs": 22050
     }
 
     def __init__(self, model=None, data_descriptions=None, config=None):
@@ -458,7 +460,7 @@ class ConvertSolver(BaseSolver):
         self.speakers_ids_dict = data_descriptions.speakers_ids_dict
         self.fs, self.fft_size = data_descriptions.fs, data_descriptions.fft_size
 
-    def convert(self, dataset):
+    def inference(self, dataset, rank_size=1):
         if dataset is None:
             print("convert dataset error!")
             return

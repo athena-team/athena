@@ -72,11 +72,28 @@ if __name__ == "__main__":
     SAMPLE_RATE = p.trainset_config["fs"]
     FFTSIZE = p.trainset_config["fft_size"]
 
+    # we will generate a dev set of our own
+    os.system('mkdir -p ' + os.path.join(DATASET_DIR, 'dev'))
+    for dir in os.listdir(os.path.join(DATASET_DIR, 'train')):
+        if not dir.startswith('V'):
+            continue
+        os.system('mkdir -p ' + os.path.join(DATASET_DIR, 'dev') + '/' + dir)
+        file_list = os.listdir(os.path.join(DATASET_DIR, 'train') + '/' + dir)
+        print(os.path.join(DATASET_DIR, 'train') + '/' + dir)
+        print(file_list)
+        # for each speaker, we take 5 samples for dev set
+        for i in range(5):
+            os.system('mv ' + os.path.join(DATASET_DIR, 'train') + '/' + dir + '/' + file_list[i] + ' ' + os.path.join(DATASET_DIR, 'dev') + '/' + dir)
+    print('development set construction done!')
+
     for data in SUBSETS:
         input_dir = os.path.join(DATASET_DIR, data)
         output_dir = os.path.join(OUTPUT_DIR, data)
         spks = [x for x in os.listdir(input_dir)]
         for spk in spks:
+            # there are some files, not dir, in vcc2018 data, also we don't want to deal with transcriptiosn
+            if os.path.isfile(os.path.join(input_dir, spk)) or not spk.startswith('V'):
+                continue
             input_spk = os.path.join(input_dir, spk)
             output_spk = os.path.join(output_dir, spk)
             print(input_spk, output_spk)
