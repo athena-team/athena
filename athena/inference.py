@@ -26,7 +26,8 @@ from athena.main import (
     build_model_from_jsonfile,
     SUPPORTED_DATASET_BUILDER
 )
-from athena import BaseSolver, DecoderSolver, SynthesisSolver, HorovodSolver
+from athena.stargan_main import build_model_from_jsonfile_stargan
+from athena import BaseSolver, DecoderSolver, SynthesisSolver, HorovodSolver, ConvertSolver
 
 try:
     import horovod.tensorflow as hvd
@@ -36,12 +37,16 @@ except ImportError:
 
 SOLVERS = {
     "asr": DecoderSolver,
-    "tts": SynthesisSolver
+    "tts": SynthesisSolver,
+    "vc": ConvertSolver,
 }
 
-def inference(jsonfile, rank_size=1, rank=0):
+def inference(jsonfile, config, rank_size=1, rank=0):
     """ entry point for model inference, do some preparation work """
-    p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
+    if config.solver_type == 'vc':
+        p, model, checkpointer = build_model_from_jsonfile_stargan(jsonfile, is_train=False)
+    else:
+        p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
     avg_num = 1 if 'model_avg_num' not in p.inference_config else p.inference_config['model_avg_num']
     if avg_num > 0:
         checkpointer.compute_nbest_avg(avg_num)
@@ -84,4 +89,4 @@ if __name__ == "__main__":
     else:
         BaseSolver.initialize_devices(p.solver_gpu)
 
-    inference(jsonfile, rank_size=rank_size, rank=rank_index)
+    inference(jsonfile, p, rank_size=rank_size, rank=rank_index)
