@@ -39,6 +39,7 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         "codedsp_dim": 36,
         "fs": 16000,
         "fft_size": 1024,
+        "num_speakers": 0
     }
 
     def __init__(self, config=None):
@@ -53,8 +54,12 @@ class VoiceConversionDatasetBuilder(BaseDatasetBuilder):
         if self.hparams.data_csv is not None:
             self.preprocess_data(self.hparams.data_csv)
 
+        # to deal with the problem that train/eval have different number of speakers
+        if self.hparams.num_speakers != 0:
+            self.spk_num = self.hparams.num_speakers
+        else:
+            self.spk_num = len(self.speakers)
         # create one-hot speaker embedding
-        self.spk_num = len(self.speakers)
         self.spk_one_hot = {}
         onehot_arr = tf.eye(self.spk_num, dtype=tf.float32)
         spk_count = 0

@@ -227,7 +227,6 @@ class WorldFeatureNormalizer(FeatureNormalizer):
         for speaker in speakers:
             coded_sps, f0s = [], []
             for audio_file in entries_person_wavs[speaker]:
-                wav, _ = librosa.load(audio_file, sr=fs, mono=True, dtype=np.float64)
                 # World Vocoder parameterizes speech into three components:
                 #     Pitch (fundamental frequency, F0) contour
                 #     Harmonic spectral envelope(sp)
