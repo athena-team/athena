@@ -43,9 +43,6 @@ class Transformer(tf.keras.layers.Layer):
         >>> src = tf.random.normal((10, 32, 512))
         >>> tgt = tf.random.normal((20, 32, 512))
         >>> out = transformer_model(src, tgt)
-
-    Note: A full example to apply nn.Transformer module for the word language model is available in
-    https://github.com/pytorch/examples/tree/master/word_language_model
     """
 
     def __init__(
@@ -371,7 +368,6 @@ class TransformerDecoderLayer(tf.keras.layers.Layer):
             memory: the sequence from the last layer of the encoder (required).
             tgt_mask: the mask for the tgt sequence (optional).
             memory_mask: the mask for the memory sequence (optional).
-
         """
         out = self.attn1(tgt, tgt, tgt, mask=tgt_mask)[0]
         out = self.norm1(tgt + self.dropout1(out, training=training))
