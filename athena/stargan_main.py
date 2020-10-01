@@ -80,7 +80,7 @@ def parse_config(config):
     logging.info("hparams: {}".format(p))
     return p
 
-def build_model_from_jsonfile_stargan(jsonfile, pre_run=True, is_train=True):
+def build_model_from_jsonfile_stargan(jsonfile, pre_run=True):
     """ creates model using configurations in json, load from checkpoint
     if previous models exist in checkpoint dir.
     This function differs from build_model_from_jsonfile because it uses multiple 
