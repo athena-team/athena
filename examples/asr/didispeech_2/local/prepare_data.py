@@ -150,9 +150,9 @@ def split_train_dev_test(output_dir):
     x_test.insert(2, 'transcript', y_test)
     x_dev.insert(2, 'transcript', y_dev)
     # get csv_path
-    train_csv_path = os.path.join(output_dir, file_name + 'train.csv')
-    dev_csv_path = os.path.join(output_dir, file_name + 'dev.csv')
-    test_csv_path = os.path.join(output_dir, file_name + 'test.csv')
+    train_csv_path = os.path.join(output_dir, 'train.csv')
+    dev_csv_path = os.path.join(output_dir, 'dev.csv')
+    test_csv_path = os.path.join(output_dir, 'test.csv')
     # generate csv
     x_train.to_csv(train_csv_path, index=False, sep="\t")
     logging.info("Successfully generated train_csv file {}".format(train_csv_path))
