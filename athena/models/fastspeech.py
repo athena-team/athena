@@ -292,36 +292,55 @@ class LengthRegulator(tf.keras.layers.Layer):
             duration_sequences = tf.cast(
                 tf.math.round(tf.cast(duration_sequences, dtype=tf.float32) * alpha),
                 dtype=tf.int32)
-        batch = tf.shape(phoneme_sequences)[0]
         x_steps = tf.shape(phoneme_sequences)[1]
-        d_model = tf.shape(phoneme_sequences)[2]
+        batch = tf.shape(phoneme_sequences)[0]
         # the duration value of one phoneme at least is one
-        total_durations = tf.reduce_sum(duration_sequences, axis=1) # [batch]
-        max_duration = tf.reduce_max(total_durations)
 
-        def expand_phoneme(batch_i):
-            phoneme_sequence = phoneme_sequences[batch_i]
-            duration_sequence = duration_sequences[batch_i]
-            total_duration = total_durations[batch_i]
-            expanded_array = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
-            expanded_array = expanded_array.write(0, tf.zeros([d_model]))
-            for step_i in tf.range(x_steps):
-                duration = duration_sequence[step_i]
-                if duration == 0:
-                    continue
-                phoneme = phoneme_sequence[step_i]
-                expanded_phoneme = tf.expand_dims(phoneme, axis=0)
-                expanded_phoneme = tf.tile(expanded_phoneme, [duration, 1]) # [duration, d_model]
-                expanded_array = expanded_array.unstack(tf.concat([expanded_array.stack(),
-                                                                   expanded_phoneme], axis=0))
-            expanded_array = tf.concat([expanded_array.stack(),
-                                        tf.zeros([max_duration - total_duration, d_model])],
-                                       axis=0)[1:] # [max_duration, d_model]
-            return expanded_array
+        # max_duration_i: the max duration of all the indexes
+        max_duration_i = tf.reduce_max(duration_sequences)
+        background = tf.ones([batch, x_steps, max_duration_i], dtype=tf.int32) * -1
+
+        # durations represents frame size for each index, shape: [batch, x_steps, max_duration_i]
+        durations = tf.tile(duration_sequences[:, :, tf.newaxis], [1, 1, max_duration_i])
+        duration_order_array = tf.range(max_duration_i)
+        duration_order_array = tf.tile(duration_order_array[tf.newaxis, tf.newaxis, :],
+                                       [batch, x_steps, 1])
+        step_order_array = tf.range(x_steps)
+        step_order_array = tf.tile(step_order_array[tf.newaxis, :, tf.newaxis],
+                                   [batch, 1, max_duration_i])
+        #duration_indexes examples:
+        #if we discard the batch dimension, duration_indexes will be like:
+        #    [[0, 0, -1, -1],
+        #     [1, 1, 1, -1],
+        #     [2, -1, -1, -1]]
+        #And the corresponding duration sequence is [2, 3, 1]
+        duration_indexes = tf.where(duration_order_array < durations, step_order_array, background)
+        duration_indexes = tf.reshape(duration_indexes, [batch, -1]) # [batch, x_steps*max_duration_i]
+
+        valid_durations = tf.cast((duration_indexes != -1), dtype=tf.int32)
+        total_duration_batches = tf.reduce_sum(valid_durations, axis=-1) # [batch]
+        y_steps = tf.reduce_max(total_duration_batches)
+
+        def validate_duration_sequences(batch_i):
+            duration_index_per_batch = duration_indexes[batch_i] # [x_step * max_duration_i]
+            # it is used to discard the index with the value of -1
+            valid_duration_index_per_batch = valid_durations[batch_i] # [x_step * max_duration_i]
+            valid_duration_index_per_batch = tf.cast(valid_duration_index_per_batch, dtype=tf.bool)
+            duration_index_per_batch = duration_index_per_batch[valid_duration_index_per_batch]
+            total_duration_per_batch = total_duration_batches[batch_i]
+            padding = tf.ones([y_steps - total_duration_per_batch], dtype=tf.int32) * -1
+            valid_duration_seqs = tf.concat([duration_index_per_batch, padding], axis=0) # [y_steps]
+            batch_padding = tf.ones([y_steps, 1], dtype=tf.int32) * batch_i # [y_steps]
+            valid_duration_seqs = tf.concat([batch_padding, valid_duration_seqs[:, tf.newaxis]],
+                                            axis=-1)
+            return valid_duration_seqs
 
         batches = tf.range(batch)
-        expanded_phone_list = tf.map_fn(expand_phoneme, batches, dtype=tf.float32,
-                                        parallel_iterations=128)
+        # duration_indexes, shape: [batch, y_steps, 2]
+        batch_duration_indexes = tf.map_fn(validate_duration_sequences, batches, parallel_iterations=128)
+        # phoneme_sequences, shape: [batch, x_steps, d_model]
+        # expanded_phone_list, shape: [batch, y_steps, d_model]
+        expanded_phone_list = tf.gather_nd(phoneme_sequences, batch_duration_indexes)
         return expanded_phone_list
 
     def call(self, phoneme_sequences, duration_indexes, output_length):
@@ -377,12 +396,7 @@ class DurationCalculator(tf.keras.layers.Layer):
         x_steps = tf.reduce_max(samples['input_length'])
         teacher_outs = None
         if self.teacher_type is None:
-            duration_index = samples['duration']
-            weights_argmax = duration_index[:, :y_steps] # [batch, y_steps]
-            if tf.shape(weights_argmax)[1] < y_steps:
-                padding = tf.zeros([tf.shape(weights_argmax)[0], y_steps - tf.shape(weights_argmax)[1]],
-                                   dtype=tf.int32)
-                weights_argmax = tf.concat([weights_argmax, padding], axis=1)
+            weights_argmax = samples['duration']
         elif self.teacher_type == 'tts_transformer':
             teacher_outs, attn_weights = self._calculate_transformer_attentions(samples)
             weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)
