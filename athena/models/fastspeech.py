@@ -249,6 +249,8 @@ class FastSpeech(BaseModel):
         _, input_mask = create_multihead_mask(None, None, samples['input'], reverse=True)
         encoder_output = self.encoder(x0, input_mask, training=training) # [batch, x_steps, d_model]
         teacher_outs, duration_indexes, duration_sequences = self.duration_calculator(samples)
+        if teacher_outs is None:
+            teacher_outs = tf.zeros_like(samples['output'])
         pred_duration_sequences = self.duration_predictor(encoder_output, training=training)
         output_length = samples['output_length']
         before_outs, after_outs = self._feedforward_decoder(encoder_output, duration_indexes,
@@ -394,9 +396,13 @@ class DurationCalculator(tf.keras.layers.Layer):
         """
         y_steps = tf.reduce_max(samples['output_length'])
         x_steps = tf.reduce_max(samples['input_length'])
+        batch = tf.shape(samples['input_length'])[0]
         teacher_outs = None
         if self.teacher_type is None:
             weights_argmax = samples['duration']
+            if tf.shape(weights_argmax)[1] == 0:
+                # for initialization
+                weights_argmax = tf.ones([batch, y_steps], dtype=tf.int32)
         elif self.teacher_type == 'tts_transformer':
             teacher_outs, attn_weights = self._calculate_transformer_attentions(samples)
             weights_argmax = tf.cast(tf.argmax(attn_weights, axis=-1), dtype=tf.int32)

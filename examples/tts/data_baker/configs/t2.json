@@ -47,7 +47,7 @@
     "step_monotonic": false,
     "sma_mode": "soft",
 
-    "reduction_factor": 3,
+    "reduction_factor": 1,
     "clip_outputs": false,
     "clip_lower_bound_decay": 0.1,
     "clip_max_value": 4,
