@@ -46,11 +46,18 @@ def freeze_session(session, output_names=None, clear_devices=True):
     outgraph = tf.compat.v1.graph_util.remove_training_nodes(frozen_graph)
     return outgraph
 
-def freeze_graph(json_file, frozen_graph_dir):
+
+def freeze_graph_tf1(json_file, frozen_graph_dir):
     """ freeze TensorFlow model trained on Python to pb format,
         which gather graph defination and weights together into
         a single file .
     """
+    # restore the best model
+    _, model, _, checkpointer = build_model_from_jsonfile(json_file, pre_run=False)
+    model.deploy()
+    checkpointer.restore_from_best()
+    model.save_weights(os.path.join(frozen_graph_dir, "model.h5"))
+
     tf.keras.backend.clear_session()
     tf.compat.v1.disable_eager_execution()
 
@@ -67,13 +74,26 @@ def freeze_graph(json_file, frozen_graph_dir):
                                       [out.op.name for out in model.deploy_decoder.outputs])
     tf.compat.v1.train.write_graph(frozen_graph_dec, frozen_graph_dir, "decoder.pb", as_text=False)
 
-def restore_model(json_file, frozen_graph_dir):
-    """ restore the best model """
-    _, model, _, checkpointer = build_model_from_jsonfile(json_file, pre_run=False)
-    model.deploy()
-    checkpointer.restore_from_best()
-    model.save_weights(os.path.join(frozen_graph_dir, "model.h5"))
 
+def freeze_saved_model(json_file, frozen_graph_dir):
+    """ freeze TensorFlow model trained on Python to saved model,
+    """
+    _, model, _, checkpointer = build_model_from_jsonfile(json_file, pre_run=False)
+
+    def inference(x):
+        samples = {"input": x}
+        outputs = model.synthesize(samples)
+        return outputs[0]
+
+    model.deploy_function = tf.function(inference,
+                                        input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32)])
+    tf.saved_model.save(obj=model, export_dir=frozen_graph_dir)
+
+
+FreezeFunctions = {
+    "asr": freeze_graph_tf1,
+    "tts": freeze_saved_model
+}
 
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
@@ -91,5 +111,5 @@ if __name__ == "__main__":
     if not os.path.exists(frozen_graph_dir):
         os.mkdir(frozen_graph_dir)
 
-    restore_model(json_file, frozen_graph_dir)
-    freeze_graph(json_file, frozen_graph_dir)
+    freeze_function = FreezeFunctions[p.solver_type]
+    freeze_function(json_file, frozen_graph_dir)
