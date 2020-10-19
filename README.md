@@ -25,7 +25,7 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [4.1) Prepare the data](#41-prepare-the-data)
     - [4.2) Setting the Configuration File](#42-setting-the-configuration-file)
     - [4.3) Data normalization](#43-data-normalization)
-    - [4.4) Train a model](#44-train-a-model)
+    - [4.4) Train a Model](#44-train-a-model)
     - [4.5) Evaluate a model](#45-evaluate-a-model)
     - [4.6) Scoring](#46-scoring)
   - [5) Decoding with WFST](#5-decoding-with-wfst)
@@ -299,9 +299,11 @@ Decoder  | CTC Joint Decoding |  Error Rate (CER)
 :-----------: | :------------: | -------:
 Beam Search  | No | 7.98%
 Beam Search  | Yes | 6.82%  |
-WFST  | No |  7.21%  |
+WFST  | No |  7.21% ** |
 
 Note that beam search without CTC Joint Decoding is considerably worse. But WFST without CTC Joint decoding gives better results than beam search.
+
+** The result using WFST mainly because of using larger beam size
 
 ## 6) Deployment
 After training, you can deploy ASR and TTS models on servers using the TensorFlow C++ API. As an example, below are some steps to achieve this functionality with an ASR model.
