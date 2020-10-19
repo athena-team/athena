@@ -93,7 +93,8 @@ def parse_jsonfile(jsonfile):
     config = None
     with open(jsonfile) as file:
         config = json.load(file)
-    p = parse_config(config)
+    p = register_and_parse_hparams(DEFAULT_CONFIGS, config, cls="main")
+    logging.info("hparams: {}".format(p))
     return p
 
 def build_model_from_jsonfile(jsonfile, pre_run=True):
