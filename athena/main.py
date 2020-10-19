@@ -87,14 +87,20 @@ def parse_config(config):
     logging.info("hparams: {}".format(p))
     return p
 
-def build_model_from_jsonfile(jsonfile, pre_run=True):
-    """ creates model using configurations in json, load from checkpoint
-    if previous models exist in checkpoint dir
+def parse_jsonfile(jsonfile):
+    """ parse the jsonfile, output the parameters
     """
     config = None
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
+    return p
+
+def build_model_from_jsonfile(jsonfile, pre_run=True):
+    """ creates model using configurations in json, load from checkpoint
+    if previous models exist in checkpoint dir
+    """
+    p = parse_jsonfile(jsonfile)
 
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.trainset_config)
     if p.trainset_config is None and p.num_classes is None:
@@ -185,10 +191,7 @@ if __name__ == "__main__":
         sys.exit()
     tf.random.set_seed(1)
 
-    json_file = sys.argv[1]
-    config = None
-    with open(json_file) as f:
-        config = json.load(f)
-    p = parse_config(config)
+    jsonfile = sys.argv[1]
+    p = parse_jsonfile(jsonfile)
     BaseSolver.initialize_devices(p.solver_gpu)
-    train(json_file, BaseSolver, 1, 0)
+    train(jsonfile, BaseSolver, 1, 0)

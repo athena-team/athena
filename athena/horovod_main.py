@@ -23,7 +23,7 @@ import tensorflow as tf
 import horovod.tensorflow as hvd
 from absl import logging
 from athena import HorovodSolver
-from athena.main import parse_config, train
+from athena.main import parse_jsonfile, train
 
 
 if __name__ == "__main__":
@@ -33,12 +33,9 @@ if __name__ == "__main__":
         sys.exit()
     tf.random.set_seed(1)
 
-    json_file = sys.argv[1]
-    config = None
-    with open(json_file) as f:
-        config = json.load(f)
-    p = parse_config(config)
+    jsonfile = sys.argv[1]
+    p = parse_jsonfile(jsonfile)
     HorovodSolver.initialize_devices(p.solver_gpu)
     #multi-servers training should use hvd.rank()
-    train(json_file, HorovodSolver, hvd.size(), hvd.rank())
+    train(jsonfile, HorovodSolver, hvd.size(), hvd.rank())
 
