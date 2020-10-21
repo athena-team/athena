@@ -461,7 +461,7 @@ class ZoneOutCell(tf.keras.layers.LSTMCell):
         self.zoneout_rate = zoneout_rate
         self.drop_layer = tf.keras.layers.Dropout(self.zoneout_rate)
 
-    def call(self, inputs, states, training: bool = None):
+    def call(self, inputs, states, training=False):
         """Runs vanilla LSTM Cell and applies zoneout.
         """
         # Apply vanilla LSTM

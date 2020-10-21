@@ -481,7 +481,7 @@ class Tacotron2(BaseModel):
             attn_weights_stack: the corresponding attention weights
         """
         x0 = samples["input"]
-        input_length = samples["input_length"]
+        input_length = tf.convert_to_tensor([tf.shape(x0)[1]]) # batch size == 1
         batch = tf.shape(x0)[0]
         encoder_output = self.encoder(x0, training=False) # shape: [batch, x_steps, eunits]
 
@@ -522,7 +522,9 @@ class Tacotron2(BaseModel):
             logits = logits.write(y_index, logit)
             attn_weights = attn_weights.write(y_index, new_weight)
             prev_attn_weight = new_weight
+            prev_attn_weight = tf.ensure_shape(prev_attn_weight, [1, None])
             accum_attn_weight += new_weight
+            accum_attn_weight = tf.ensure_shape(accum_attn_weight, [1, None])
             probs = tf.nn.sigmoid(logit)
             time_to_end = probs > self.hparams.end_prob
             time_to_end = tf.reduce_any(time_to_end)
