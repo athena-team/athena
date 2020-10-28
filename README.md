@@ -324,16 +324,15 @@ Detailed implementation is described [here](deploy/README.md).
 
 ### 7.1) MPC
 Masked Predictive Coding (MPC) uses masked reconstruction objective to perform predictive coding on transformer based models. It achieved significant improvements on various speech recognition datasets. For more information, please refer to following paper(s).
+
 [Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932.pdf)
-
 [A Further Study of Unsupervised Pre-training for Transformer Based Speech Recognition](https://arxiv.org/pdf/2005.09862.pdf)
-
 MPC models can be trained by running ```python athena/main.py examples/asr/*/configs/mpc.json```. To use pretrained MPC model in ASR training, simply set the "pretrained_model" section in ASR json config to the checkpoint dir of MPC model and proceed training.
 
 ### 7.2) Speech SimCLR
 Speech SimCLR is a new self-supervised objective for speech representation learning. During training, Speech SimCLR applies augmentation on raw speech and its spectrogram. Its objective is the combination of contrastive loss that maximizes agreement between differently augmented samples in the latent space and reconstruction loss of input representation. For more information, please refer to following paper(s).
-[Speech SimCLR: Combining Contrastive and Reconstruction Objective for Self-supervised Speech Representation Learning](https://arxiv.org/abs/2010.13991.pdf)
 
+[Speech SimCLR: Combining Contrastive and Reconstruction Objective for Self-supervised Speech Representation Learning](https://arxiv.org/abs/2010.13991.pdf)
 For now, pre-training with Speech SimCLR is only supported for Librispeech. You can run it with ```python athena/main.py examples/asr/librispeech/configs/speech_simclr.json```. For feature extraction, simply run ```python athena/inference.py examples/asr/librispeech/configs/speech_simclr.json```. The pre-trained Speech SimCLR models can be found here.
 
 ## 8) Results
