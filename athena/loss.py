@@ -663,3 +663,55 @@ def ClassifyLoss(target_label_reshaped, domain_out_real):
     return domain_real_loss
 
 
+
+class ContrastiveLoss(tf.keras.losses.Loss):
+    """
+    Contrastive Loss for SimCLR Model
+    """
+    def __init__(self, temperature=1.0, normalization=True, name="ContrastiveLoss", ps=None):
+        super().__init__(name=name)
+
+        self.temperature = temperature
+        self.norm = normalization
+        self.cross_entropy = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.ps = ps
+
+    def gpu_cross_replica_concat(self, tensor):
+        num_replicas = self.ps.size()
+        ext_tensor = tf.scatter_nd(
+            indices=[[hvd.rank()]],
+            updates=[tensor],
+            shape=[num_replicas, tf.shape(tensor)[0], tf.shape(tensor)[1]])
+
+        ext_tensor = hvd.allreduce(ext_tensor, average=False)
+        return tf.reshape(ext_tensor, [-1, tf.shape(ext_tensor)[2]])
+
+    def __call__(self, hidden, samples, logit_length=None):
+        if self.norm:
+            hidden = tf.math.l2_normalize(hidden, axis=-1)
+        hidden1, hidden2 = tf.split(hidden, 2, 0)
+        batch_size = tf.shape(hidden1)[0]
+        if self.ps.size() > 0:
+            hidden1_large = self.ps.allgather(hidden1)
+            hidden2_large = self.ps.allgather(hidden2)
+            c = tf.shape(hidden1_large)[-1]
+            enlarged_batch_size = tf.shape(hidden1_large)[0]
+            replica_id = self.ps.rank()
+            labels_idx = tf.range(batch_size) + replica_id * batch_size
+            labels = tf.one_hot(labels_idx, enlarged_batch_size * 2)
+            masks = tf.one_hot(labels_idx, enlarged_batch_size)
+        else:
+            hidden1_large = hidden1
+            hidden2_large = hidden2
+            labels = tf.one_hot(tf.range(batch_size), batch_size * 2)
+            masks = tf.one_hot(tf.range(batch_size), batch_size)
+        logits_aa = tf.matmul(hidden1, hidden1_large, transpose_b=True) / self.temperature
+        logits_aa = logits_aa - masks * 1e9
+        logits_bb = tf.matmul(hidden2, hidden2_large, transpose_b=True) / self.temperature
+        logits_bb = logits_bb - masks * 1e9
+        logits_ab = tf.matmul(hidden1, hidden2_large, transpose_b=True) / self.temperature
+        logits_ba = tf.matmul(hidden2, hidden1_large, transpose_b=True) / self.temperature
+        loss_a = self.cross_entropy(labels, tf.concat([logits_ab, logits_aa], 1))
+        loss_b = self.cross_entropy(labels, tf.concat([logits_ba, logits_bb], 1))
+        loss = loss_a + loss_b
+

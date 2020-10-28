@@ -51,14 +51,17 @@ class BaseSolver(tf.keras.Model):
         "enable_tf_function": True
     }
     def __init__(self, model, optimizer, sample_signature, eval_sample_signature=None,
-                 config=None, **kwargs):
+                 config=None, ps=None, **kwargs):
         super().__init__(**kwargs)
         self.model = model
         self.optimizer = optimizer
+        self.ps = ps
         self.metric_checker = MetricChecker(self.optimizer)
         self.sample_signature = sample_signature
         self.eval_sample_signature = eval_sample_signature
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.train_op = None
+        self.eval_op = None
 
     @staticmethod
     def initialize_devices(solver_gpus=None):
