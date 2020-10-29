@@ -336,7 +336,7 @@ Speech SimCLR is a new self-supervised objective for speech representation learn
 
 [Speech SimCLR: Combining Contrastive and Reconstruction Objective for Self-supervised Speech Representation Learning](https://arxiv.org/abs/2010.13991.pdf)
 
-For now, pre-training with Speech SimCLR is only supported for Librispeech. You can run it with ```python athena/main.py examples/asr/librispeech/configs/speech_simclr.json```. For feature extraction, simply run ```python athena/inference.py examples/asr/librispeech/configs/speech_simclr.json```. The pre-trained Speech SimCLR models can be found here.
+For now, pre-training with Speech SimCLR is only supported for Librispeech. You can run it with ```python athena/main.py examples/asr/librispeech/configs/speech_simclr.json```. For feature extraction, simply run ```python athena/inference.py examples/asr/librispeech/configs/speech_simclr.json```. The pre-trained Speech SimCLR models can be found [here](https://drive.google.com/file/d/1YYFmtB1RHRuw8s7lPWLxjihye9ssI5ax/view?usp=sharing).
 
 ## 8) Results
 
