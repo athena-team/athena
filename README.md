@@ -132,14 +132,14 @@ python examples/asr/timit/local/prepare_data.py examples/asr/timit/data/TIMIT ex
 Below is an example csv we generated, it contains the absolute path of input audio, its length, its transcript and its speaker
 ```csv
 wav_filename	wav_length_ms	transcript	speaker
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SI1456.WAV	3065	sil dh iy z eh er er vcl g ae sh vcl b ah vcl b ax sh epi m ey cl k hh ay l ix f ah ng cl sh epi en el th er m el vcl b eh r ix er z sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX286.WAV	3283	sil ih n eh v r ih m ey vcl jh er cl k l ow v er l iy f cl t r ae f ix cl k s ah m cl t ay m z vcl g eh cl s vcl b ae cl t ah cl p sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX196.WAV	1740	sil hh aw vcl d uw ao r sh cl ch er zh epi m ey cl p er l vcl d z sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX106.WAV	2214	sil eh hh y uw vcl jh cl t ae cl p ix sh cl t r ix hh ah ng ix n er hh ah l w ey sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX16.WAV	1926	sil ey r ow l el v w ay er l ey n ih er dh ax w ao l sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SI2086.WAV	2745	sil ae vcl b s el uw sh en f ao r hh ix z l ay hh sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX376.WAV	2464	sil w ih m ix n m ey n eh v er vcl b ix cl k ah ng cl k ax m cl p l iy cl l iy cl k w el cl t ax m eh n sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SI826.WAV	3596	sil k ao sh en cl k en cl t ih n y uw s ix vcl m ih n ax sh cl t r ey sh en ix z epi n aa vcl r eh cl k m eh n d ix f ax l ae cl t ey dx ng cl k aw z sil	MCLM0
+MCLM0-SI1456.WAV	3065	sil dh iy z eh er er vcl g ae sh vcl b ah vcl b ax sh epi m ey cl k hh ay l ix f ah ng cl sh epi en el th er m el vcl b eh r ix er z sil	MCLM0
+MCLM0-SX286.WAV	3283	sil ih n eh v r ih m ey vcl jh er cl k l ow v er l iy f cl t r ae f ix cl k s ah m cl t ay m z vcl g eh cl s vcl b ae cl t ah cl p sil	MCLM0
+MCLM0-SX196.WAV	1740	sil hh aw vcl d uw ao r sh cl ch er zh epi m ey cl p er l vcl d z sil	MCLM0
+MCLM0-SX106.WAV	2214	sil eh hh y uw vcl jh cl t ae cl p ix sh cl t r ix hh ah ng ix n er hh ah l w ey sil	MCLM0
+MCLM0-SX16.WAV	1926	sil ey r ow l el v w ay er l ey n ih er dh ax w ao l sil	MCLM0
+MCLM0-SI2086.WAV	2745	sil ae vcl b s el uw sh en f ao r hh ix z l ay hh sil	MCLM0
+MCLM0-SX376.WAV	2464	sil w ih m ix n m ey n eh v er vcl b ix cl k ah ng cl k ax m cl p l iy cl l iy cl k w el cl t ax m eh n sil	MCLM0
+MCLM0-SI826.WAV	3596	sil k ao sh en cl k en cl t ih n y uw s ix vcl m ih n ax sh cl t r ey sh en ix z epi n aa vcl r eh cl k m eh n d ix f ax l ae cl t ey dx ng cl k aw z sil	MCLM0
 ```
 
 ### 4.2) Setting the Configuration File
