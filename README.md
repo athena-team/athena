@@ -367,5 +367,9 @@ Below is the basic directory structure for Athena
 |   |   |-- data_baker
 |   |   |-- libritts
 |   |   |-- ljspeech
+|   |-- speaker_identification # examples for speaker identification
+|   |   |-- voxceleb
+|   |-- vc # examples for voice conversion
+|   |   |-- vcc2018
 |-- tools  # need to source env.sh before training
 ```
