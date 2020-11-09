@@ -63,10 +63,11 @@ class Seq2SeqSparseCategoricalCrossentropy(tf.keras.losses.CategoricalCrossentro
     def __call__(self, logits, samples, logit_length=None):
         labels = insert_eos_in_labels(samples["output"], self.eos, samples["output_length"])
         mask = tf.math.logical_not(tf.math.equal(labels, 0))
-        labels = apply_label_smoothing(
-            tf.one_hot(indices=labels, depth=self.num_classes), 
-            num_classes=self.num_classes, 
-            smoothing_rate=self.smoothing_rate)
+        labels = tf.one_hot(indices=labels, depth=self.num_classes)
+        if self.smoothing_rate != 0.0:
+            labels = apply_label_smoothing(labels, 
+                num_classes=self.num_classes, 
+                smoothing_rate=self.smoothing_rate)
         seq_len = tf.shape(labels)[1]
         logits = logits[:, :seq_len, :]
         loss = self.call(labels, logits)
