@@ -205,3 +205,13 @@ def tensor_shape(tensor):
         else shape_value[idx]
         for idx in range(len(shape_value))]
     return ret
+
+def apply_label_smoothing(inputs, num_classes, smoothing_rate=0.1):
+    '''Applies label smoothing. See https://arxiv.org/abs/1512.00567.
+    Args:
+      inputs: A 3d tensor with shape of [N, T, V], where V is the number of vocabulary.
+      num_classes: Number of classes.
+      smoothing_rate: Smoothing rate.
+    ```
+    '''
+    return ((1.0 - smoothing_rate) * inputs) + (smoothing_rate / num_classes)
