@@ -18,7 +18,7 @@
 """ some losses """
 import math
 import tensorflow as tf
-from .utils.misc import insert_eos_in_labels
+from .utils.misc import insert_eos_in_labels, apply_label_smoothing
 
 
 class CTCLoss(tf.keras.losses.Loss):
@@ -53,16 +53,21 @@ class Seq2SeqSparseCategoricalCrossentropy(tf.keras.losses.CategoricalCrossentro
 
     def __init__(self, num_classes, eos=-1, by_token=False, by_sequence=True,
                  from_logits=True, label_smoothing=0.0):
-        super().__init__(from_logits=from_logits, label_smoothing=label_smoothing, reduction="none")
+        super().__init__(from_logits=from_logits, reduction="none")
         self.by_token = by_token
         self.by_sequence = by_sequence
         self.num_classes = num_classes
         self.eos = num_classes + eos if eos < 0 else eos
+        self.smoothing_rate = label_smoothing
 
     def __call__(self, logits, samples, logit_length=None):
         labels = insert_eos_in_labels(samples["output"], self.eos, samples["output_length"])
         mask = tf.math.logical_not(tf.math.equal(labels, 0))
         labels = tf.one_hot(indices=labels, depth=self.num_classes)
+        if self.smoothing_rate != 0.0:
+            labels = apply_label_smoothing(labels, 
+                num_classes=self.num_classes, 
+                smoothing_rate=self.smoothing_rate)
         seq_len = tf.shape(labels)[1]
         logits = logits[:, :seq_len, :]
         loss = self.call(labels, logits)
