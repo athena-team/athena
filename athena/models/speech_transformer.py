@@ -47,7 +47,8 @@ class SpeechTransformer(BaseModel):
         "schedual_sampling_rate": 0.9,
         "label_smoothing_rate": 0.0,
         "unidirectional": False,
-        "look_ahead": 0
+        "look_ahead": 0,
+        "conv_module_kernel_size": 0
     }
 
     def __init__(self, data_descriptions, config=None):
@@ -121,7 +122,8 @@ class SpeechTransformer(BaseModel):
             self.hparams.dff,
             self.hparams.rate,
             unidirectional=self.hparams.unidirectional,
-            look_ahead=self.hparams.look_ahead
+            look_ahead=self.hparams.look_ahead,
+            conv_module_kernel_size=self.hparams.conv_module_kernel_size
         )
 
         # last layer for output

@@ -18,7 +18,7 @@
 """Utils for common layers."""
 
 import tensorflow as tf
-from athena.layers.functional import make_positional_encoding, collapse4d, gelu
+from athena.layers.functional import make_positional_encoding, collapse4d, gelu, glu
 from athena.layers.functional import splice
 from athena.utils.misc import gated_linear_layer
 
@@ -497,6 +497,7 @@ ACTIVATIONS = {
     "elu": tf.nn.elu,
     "selu": tf.nn.selu,
     "gelu": gelu,
+    "glu": glu,
     "leaky_relu": tf.nn.leaky_relu,
     "sigmoid": tf.nn.sigmoid,
     "softplus": tf.nn.softplus,

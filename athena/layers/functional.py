@@ -110,3 +110,18 @@ def gelu(x):
     """
     cdf = 0.5 * (1.0 + tf.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))))
     return x * cdf
+
+
+def glu(x, axis=-1):
+    """Gated Linear Unit.
+
+    Original paper: https://arxiv.org/abs/1612.08083
+
+    Args:
+      x: float Tensor to perform activation.
+    Returns:
+      `x` with the GLU activation applied.
+    """
+    a, b = tf.split(x, 2, axis=axis)
+    b = tf.nn.sigmoid(b)
+    return tf.multiply(a, b)
