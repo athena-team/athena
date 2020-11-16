@@ -20,6 +20,7 @@
 """ the transformer model """
 import tensorflow as tf
 from .attention import MultiHeadAttention
+from .conv_module import ConvModule
 from .commons import ACTIVATIONS
 
 
@@ -58,6 +59,7 @@ class Transformer(tf.keras.layers.Layer):
         look_ahead=0,
         custom_encoder=None,
         custom_decoder=None,
+        conv_module_kernel_size=0
     ):
         super().__init__()
         if custom_encoder is not None:
@@ -66,7 +68,8 @@ class Transformer(tf.keras.layers.Layer):
             encoder_layers = [
                 TransformerEncoderLayer(
                     d_model, nhead, dim_feedforward,
-                    dropout, activation, unidirectional, look_ahead
+                    dropout, activation, unidirectional, look_ahead,
+                    conv_module_kernel_size=conv_module_kernel_size
                 )
                 for _ in range(num_encoder_layers)
             ]
@@ -249,7 +252,7 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 
     def __init__(
         self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu",
-            unidirectional=False, look_ahead=0, ffn=None
+            unidirectional=False, look_ahead=0, ffn=None, conv_module_kernel_size=0
     ):
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
@@ -284,6 +287,12 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         self.norm2 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
         self.dropout = layers.Dropout(dropout, input_shape=(d_model,))
 
+        self.conv_module = None
+        self.norm3 = None
+        if conv_module_kernel_size > 0:
+            self.conv_module = ConvModule(d_model, kernel_size=conv_module_kernel_size, activation=activation)
+            self.norm3 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
+
     def call(self, src, src_mask=None, training=None):
         """Pass the input through the encoder layer.
 
@@ -294,6 +303,8 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
         """
         out = self.self_attn(src, src, src, mask=src_mask)[0]
         out = self.norm1(src + self.dropout(out, training=training))
+        if self.conv_module is not None:
+            out = self.norm3(out + self.conv_module(out, training=training))
         out = self.norm2(out + self.ffn(out, training=training))
 
         return out
