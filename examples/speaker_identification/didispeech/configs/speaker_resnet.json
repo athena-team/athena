@@ -30,8 +30,8 @@
     "optimizer_config":{
       "momentum": 0.9,
       "nesterov": false,
-      "lr_decay_boundaries": [20000, 50000, 100000],
-      "lr_decay_values": [0.1, 0.01, 0.001, 0.0005]
+      "lr_decay_boundaries": [20000, 50000],
+      "lr_decay_values": [0.1, 0.01, 0.001]
     },
   
     "inference_config":{
@@ -58,4 +58,3 @@
       "audio_config":{"type":"Fbank", "filterbank_channel_count":40}
     }
   }
-  
