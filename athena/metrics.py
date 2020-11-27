@@ -194,3 +194,27 @@ class EqualErrorRate:
         eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
         eer = eer * 100
         return eer
+
+class MeanAbsoluteError:
+    def __init__(self, max_val=100, name="MeanAbsoluteError"):
+        self.max_val = max_val
+        self.name = name
+        self.error_count = tf.keras.metrics.Sum(dtype=tf.float32)
+        self.total_count = tf.keras.metrics.Sum(dtype=tf.float32)
+
+    def __call__(self, predictions, samples):
+        return self.update_state(predictions, samples)
+
+    def update_state(self, predictions, samples):
+        labels = tf.squeeze(samples["output"], axis=-1)
+        num_labels = tf.shape(labels)[0]
+        self.total_count(num_labels)
+
+        mae = tf.reduce_sum(tf.keras.losses.MeanAbsoluteError(labels, predictions * self.max_val))
+        self.error_count(mae)
+
+        return mae, num_labels
+
+    def result(self):
+        mae = tf.cast(self.error_count.result() / self.total_count.result(), tf.float32)
+        return mae

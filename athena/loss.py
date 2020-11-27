@@ -363,6 +363,19 @@ class FastSpeechLoss(tf.keras.losses.Loss):
 
         return final_loss
 
+class MSELoss(tf.keras.losses.Loss):
+    """ mean squares errors Loss
+    """
+    def __init__(self, max_scale=100, name="MSELoss"):
+        super().__init__(name=name)
+        self.max_scale = max_scale
+        self.criterion = tf.keras.losses.MeanSquaredError()
+
+    def __call__(self, outputs, samples, logit_length=None):
+        labels = tf.squeeze(samples['output'])
+        labels_norm = labels / self.max_scale
+        loss = tf.reduce_mean(self.criterion(labels_norm, outputs))
+        return loss
 
 class SoftmaxLoss(tf.keras.losses.Loss):
     """ Softmax Loss
