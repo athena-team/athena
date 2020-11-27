@@ -1,0 +1,61 @@
+{
+    "batch_size":128,
+    "num_epochs":50,
+    "sorta_epoch":0,
+    "ckpt":"examples/speaker_identification/didispeech/ckpts/speaker_resnet/",
+    "summary_dir":"examples/speaker_identification/didispeech/ckpts/speaker_resnet/event",
+  
+    "solver_gpu":[],
+    "solver_type": "speaker_classification",
+    "solver_config":{
+      "clip_norm":100,
+      "log_interval":10,
+      "enable_tf_function":true
+    },
+  
+    "model":"speaker_resnet",
+    "num_classes":null,
+    "pretrained_model":null,
+    "model_config":{
+      "num_speakers":6000,
+      "hidden_size":128,
+      "num_filters":[16, 32, 64, 128],
+      "num_layers":[3, 4, 6, 3],
+      "loss":"softmax",
+      "margin":0.2,
+      "scale":30
+    },
+  
+    "optimizer":"piecewisedecay_sgd",
+    "optimizer_config":{
+      "momentum": 0.9,
+      "nesterov": false,
+      "lr_decay_boundaries": [20000, 50000, 100000],
+      "lr_decay_values": [0.1, 0.01, 0.001, 0.0005]
+    },
+  
+    "inference_config":{
+      "model_avg_num":1
+    },
+  
+    "dataset_builder":"speaker_recognition_dataset",
+    "num_data_threads":1,
+    "trainset_config":{
+        "data_csv":"examples/speaker_identification/didispeech/data/train.csv",
+        "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+        "cmvn_file": "examples/speaker_identification/didispeech/data/cmvn",
+        "cut_frame":[200, 1000],
+        "input_length_range":[10, 20000]
+    },
+    "devset_config":{
+      "data_csv":"examples/speaker_identification/didispeech/data/dev.csv",
+      "cmvn_file": "examples/speaker_identification/didispeech/data/cmvn",
+      "audio_config":{"type":"Fbank", "filterbank_channel_count":40}
+    },
+    "testset_config":{
+      "data_csv":"examples/speaker_identification/didispeech/data/test.csv",
+      "cmvn_file": "examples/speaker_identification/didispeech/data/cmvn",
+      "audio_config":{"type":"Fbank", "filterbank_channel_count":40}
+    }
+  }
+  

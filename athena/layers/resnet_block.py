@@ -17,55 +17,51 @@
 # Only support eager mode and TF>=2.0.0
 # pylint: disable=no-member, invalid-name, relative-beyond-top-level
 # pylint: disable=too-many-locals, too-many-statements, too-many-arguments, too-many-instance-attributes
-"""an implementation of resnet block"""
+""" an implementation of resnet block """
 
 import tensorflow as tf
+from tensorflow.keras.regularizers import l2
 
-class ResnetBasicBlock(tf.keras.layers.Layer):
-    """Basic block of resnet
-    Reference to paper "Deep residual learning for image recognition"
-    """
-    def __init__(self, num_filter, stride=1):
-        super().__init__()
-        layers = tf.keras.layers
-        self.conv1 = layers.Conv2D(filters=num_filter,
-                                   kernel_size=(3, 3),
-                                   strides=stride,
-                                   padding="same")
-        self.conv2 = layers.Conv2D(filters=num_filter,
-                                   kernel_size=(3, 3),
-                                   strides=1,
-                                   padding="same")
-        self.bn1 = layers.BatchNormalization()
-        self.bn2 = layers.BatchNormalization()
-        self.add = layers.add
-        self.relu = tf.nn.relu
-        self.downsample_layer = self.make_downsample_layer(
-            num_filter=num_filter, stride=stride
-        )
+def residual_block(inner, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
+    bn_axis = 3
+    weight_decay = 1e-4
+    layers = tf.keras.layers
 
-    def call(self, inputs):
-        """call model"""
-        output = self.conv1(inputs)
-        output = self.bn1(output)
-        output = self.relu(output)
+    if conv_shortcut:
+        shortcut = layers.Conv2D(
+            filters, 1, strides=stride,
+            use_bias=False,
+            kernel_initializer='orthogonal',
+            kernel_regularizer=l2(weight_decay),
+            name=name + '_0_conv'
+        )(inner)
+        shortcut = layers.BatchNormalization(
+            axis=bn_axis, epsilon=1.001e-5, name=name + '_0_bn')(shortcut)
+    else:
+        shortcut = inner
 
-        output = self.conv2(output)
-        output = self.bn2(output)
+    inner = layers.Conv2D(
+        filters, kernel_size,
+        strides=stride, padding='same',
+        use_bias=False,
+        kernel_initializer='orthogonal',
+        kernel_regularizer=l2(weight_decay),
+        name=name + '_1_conv'
+    )(inner)
+    inner = layers.BatchNormalization(
+        axis=bn_axis, epsilon=1.001e-5, name=name + '_1_bn')(inner)
+    inner = layers.Activation('relu', name=name + '_1_relu')(inner)
 
-        residual = self.downsample_layer(inputs)
-        output = self.add([residual, output])
-        output = self.relu(output)
-        return output
-
-    def make_downsample_layer(self, num_filter, stride):
-        """perform downsampling using conv layer with stride != 1"""
-        if stride != 1:
-            downsample = tf.keras.Sequential()
-            downsample.add(tf.keras.layers.Conv2D(filters=num_filter,
-                                                  kernel_size=(1, 1),
-                                                  strides=stride))
-            downsample.add(tf.keras.layers.BatchNormalization())
-        else:
-            downsample = lambda x: x
-        return downsample
+    inner = layers.Conv2D(
+        filters, kernel_size,
+        strides=1, padding='same',
+        use_bias=False,
+        kernel_initializer='orthogonal',
+        kernel_regularizer=l2(weight_decay),
+        name=name + '_2_conv'
+    )(inner)
+    inner = layers.BatchNormalization(
+        axis=bn_axis, epsilon=1.001e-5, name=name + '_2_bn')(inner)
+    inner = layers.Add(name=name + '_add')([shortcut, inner])
+    inner = layers.Activation('relu', name=name + '_out')(inner)
+    return inner

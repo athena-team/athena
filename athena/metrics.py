@@ -134,18 +134,18 @@ class CTCAccuracy(CharactorAccuracy):
 
 class ClassificationAccuracy(Accuracy):
     """ ClassificationAccuracy
-        Implements top-1 accuracy calculation for speaker classification
+        Implements top-k accuracy calculation for speaker classification
         (closed-set speaker recognition)
     """
-    def __init__(self, name="ClassificationAccuracy", rank_size=1):
+    def __init__(self, top_k=1, name="ClassificationAccuracy", rank_size=1):
         super().__init__(name=name, rank_size=rank_size)
+        self.top_k = top_k
 
     def update_state(self, predictions, samples, logit_length=None):
-        labels = tf.cast(tf.squeeze(samples["output"]), dtype=tf.int64)
+        labels = tf.squeeze(samples["output"], axis=-1)
         num_labels = tf.shape(labels)[0]
-        predictions = tf.argmax(predictions, axis=1)
         num_errs = num_labels - tf.reduce_sum(
-                        tf.cast(tf.math.equal(labels, predictions), dtype=tf.int32))
+                       tf.cast(tf.math.in_top_k(labels, predictions, self.top_k), dtype=tf.int32))
 
         if self.rank_size > 1:
             num_errs = hvd.allreduce(num_errs, average=False)
@@ -179,7 +179,7 @@ class EqualErrorRate:
 
     def update_state(self, predictions, samples, logit_length=None):
         """ append new predictions and labels """
-        labels = tf.squeeze(samples["output"])
+        labels = tf.squeeze(samples["output"], axis=-1)
         self.predictions.write(self.index, predictions)
         self.labels.write(self.index, labels)
         self.index += 1

@@ -32,7 +32,7 @@ import librosa
 from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
-from .metrics import CharactorAccuracy
+from .metrics import CharactorAccuracy, ClassificationAccuracy, EqualErrorRate
 from .tools.vocoder import GriffinLim
 from .tools.beam_search import BeamSearchDecoder
 
@@ -336,6 +336,91 @@ class SynthesisSolver(BaseSolver):
                      % (total_elapsed, total_seconds, float(total_elapsed / total_seconds)))
 
 
+class SpeakerClassificationSolver(BaseSolver):
+    """ SpeakerClassificationSolver
+    inference solver for speaker recognition (closed-set)
+    """
+    default_config = {
+        "model_avg_num": 1
+    }
+    def __init__(self, model, data_descriptions=None, config=None):
+        super().__init__(model, None, None)
+        self.model = model
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+
+    def inference(self, dataset, rank_size=1):
+        """ decode the model """
+        if dataset is None:
+            return
+        metric_top1 = ClassificationAccuracy(top_k=1, name="top1_acc", rank_size=rank_size)
+        metric_top5 = ClassificationAccuracy(top_k=5, name="top5_acc", rank_size=rank_size)
+        total_elapsed = 0
+        inference_step = tf.function(self.model.decode, input_signature=self.sample_signature)
+        for _, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            start = time.time()
+            predictions = inference_step(samples, self.hparams)
+            end = time.time() - start
+            total_elapsed += end
+            argmax = tf.argmax(predictions, axis=1)
+            _, _ = metric_top1.update_state(predictions, samples)
+            _, _ = metric_top5.update_state(predictions, samples)
+            reports = (
+                "predictions: %s\targmax:%s\tlabels: %s\t \
+                    top1_acc: %.4f\ttop5_acc: %.4f\tsec/iter: %.4f"
+                % (
+                    predictions,
+                    argmax,
+                    samples["output"].numpy(),
+                    metric_top1.result(),
+                    metric_top5.result(),
+                    end,
+                )
+            )
+            logging.info(reports)
+        logging.info("model computation elapsed: %s" % total_elapsed)
+
+
+class SpeakerVerificationSolver(BaseSolver):
+    """ SpeakerVerificationSolver
+    inference solver for speaker recognition (open-set)
+    """
+    default_config = {
+        "model_avg_num": 1
+    }
+    def __init__(self, model, data_descriptions=None, config=None):
+        super().__init__(model, None, None)
+        self.model = model
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+
+    def inference(self, dataset, rank_size=1):
+        """ decode the model """
+        if dataset is None:
+            return
+        metric = EqualErrorRate(name="eer")
+        total_elapsed = 0
+        inference_step = self.model.verification
+        for _, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            start = time.time()
+            predictions = inference_step(samples)
+            end = time.time() - start
+            total_elapsed += end
+            metric.update_state(predictions, samples)
+            reports = (
+                "predictions: %s\tlabels: %s\t \
+                    eer: %.4f\tsec/iter: %.4f"
+                % (
+                    predictions,
+                    samples["output"].numpy(),
+                    metric.result(),
+                    end,
+                )
+            )
+            logging.info(reports)
+        logging.info("model computation elapsed: %s" % total_elapsed)
+
+
 class GanSolver(BaseSolver):
     """ Gan Solver.
     """
@@ -518,4 +603,3 @@ class ConvertSolver(BaseSolver):
 
             librosa.output.write_wav(wavpath, synwav, sr=self.fs)
             print("generate wav:", wavpath)
-

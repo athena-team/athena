@@ -52,7 +52,9 @@ SUPPORTED_MODEL = {
 
 SUPPORTED_OPTIMIZER = {
     "warmup_adam": WarmUpAdam,
-    "expdecay_adam": ExponentialDecayAdam
+    "expdecay_adam": ExponentialDecayAdam,
+    "sgd": SGD,
+    "piecewisedecay_sgd": PiecewiseConstantDecaySGD
 }
 
 DEFAULT_CONFIGS = {
@@ -129,12 +131,14 @@ def build_model_from_jsonfile(jsonfile, pre_run=True):
 
 
 def train(jsonfile, Solver, rank_size=1, rank=0):
-    """ entry point for model training, implements train loop
-	:param jsonfile: json file to read configuration from
-	:param Solver: an abstract class that implements high-level logic of train, evaluate, decode, etc
-	:param rank_size: total number of workers, 1 if using single gpu
-	:param rank: rank of current worker, 0 if using single gpu
-	"""
+    """entry point for model training, implements train loop
+
+    Args:
+        jsonfile: json file to read configuration from
+        Solver: an abstract class that implements high-level logic of train, evaluate, decode, etc
+        rank_size (int, optional): total number of workers, 1 if using single gpu. Defaults to 1.
+        rank (int, optional): rank of current worker, 0 if using single gpu. Defaults to 0.
+    """
     p, model, optimizer, checkpointer = build_model_from_jsonfile(jsonfile)
     epoch = int(checkpointer.save_counter)
     if p.pretrained_model is not None and epoch == 0:

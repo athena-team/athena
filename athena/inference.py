@@ -27,7 +27,8 @@ from athena.main import (
     SUPPORTED_DATASET_BUILDER
 )
 from athena.stargan_main import build_model_from_jsonfile_stargan
-from athena import BaseSolver, DecoderSolver, SynthesisSolver, HorovodSolver, ConvertSolver
+from athena import BaseSolver, DecoderSolver, SynthesisSolver, HorovodSolver, \
+    ConvertSolver, SpeakerClassificationSolver, SpeakerVerificationSolver
 
 try:
     import horovod.tensorflow as hvd
@@ -39,6 +40,8 @@ SOLVERS = {
     "asr": DecoderSolver,
     "tts": SynthesisSolver,
     "vc": ConvertSolver,
+    "speaker_classification": SpeakerClassificationSolver,
+    "speaker_verification": SpeakerVerificationSolver
 }
 
 def inference(jsonfile, config, rank_size=1, rank=0):
@@ -63,7 +66,7 @@ def inference(jsonfile, config, rank_size=1, rank=0):
 if __name__ == "__main__":
     logging.use_absl_handler()
     flags.FLAGS.mark_as_parsed()
-    logging.get_absl_handler().python_handler.stream = open("inference.log", "w")
+    logging.get_absl_handler().python_handler.stream = open("inference.dev.log", "w")
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 2:
         logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))

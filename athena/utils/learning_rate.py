@@ -144,3 +144,57 @@ class ExponentialDecayAdam(tf.keras.optimizers.Adam):
             amsgrad=amsgrad,
             name=name,
         )
+
+
+class SGD(tf.keras.optimizers.SGD):
+    """Gradient descent (with momentum) optimizer.
+    """
+    default_config = {
+        "learning_rate": 0.01,
+        "momentum": 0.0,
+        "nesterov": False,
+    }
+
+    def __init__(self, config=None, name='SGD', **kwargs):
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        super().__init__(
+            learning_rate=self.hparams.learning_rate,
+            momentum=self.hparams.momentum,
+            nesterov=self.hparams.nesterov,
+            name=name
+        )
+
+
+class PiecewiseConstantDecaySchedule(tf.keras.optimizers.schedules.PiecewiseConstantDecay):
+    """A LearningRateSchedule that uses a piecewise constant decay schedule.
+    """
+    def __init__(self, lr_decay_boundaries=None, lr_decay_values=None,
+                 name="PiecewiseConstantDecaySchedule"):
+        super().__init__(
+            boundaries=lr_decay_boundaries,
+            values=lr_decay_values,
+            name=name
+        )
+
+
+class PiecewiseConstantDecaySGD(tf.keras.optimizers.SGD):
+    """ Gradient descent (with momentum) optimizer with piecewise constant learning rate decay
+    """
+    default_config = {
+        "momentum": 0.0,
+        "nesterov": False,
+        "lr_decay_boundaries": [1000, 10000],
+        "lr_decay_values": [0.01, 0.001, 0.0005]
+    }
+    def __init__(self, config=None, name="PiecewiseConstantDecaySGD", **kwargs):
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+        self.learning_rate_fn = PiecewiseConstantDecaySchedule(
+            self.hparams.lr_decay_boundaries,
+            self.hparams.lr_decay_values
+        )
+        super().__init__(
+            learning_rate=self.learning_rate_fn,
+            momentum=self.hparams.momentum,
+            nesterov=self.hparams.nesterov,
+            name=name
+        )

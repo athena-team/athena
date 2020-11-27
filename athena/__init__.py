@@ -45,7 +45,7 @@ from .layers.transformer import TransformerEncoder
 from .layers.transformer import TransformerDecoder
 from .layers.transformer import TransformerEncoderLayer
 from .layers.transformer import TransformerDecoderLayer
-from .layers.resnet_block import ResnetBasicBlock
+from .layers.resnet_block import residual_block
 
 # models
 from .models.base import BaseModel
@@ -68,6 +68,8 @@ from .solver import HorovodSolver
 from .solver import DecoderSolver
 from .solver import SynthesisSolver
 from .solver import ConvertSolver
+from .solver import SpeakerClassificationSolver
+from .solver import SpeakerVerificationSolver
 from .loss import CTCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy
 from .loss import StarganLoss
@@ -80,6 +82,8 @@ from .utils.learning_rate import WarmUpLearningSchedule, WarmUpAdam
 from .utils.learning_rate import (
     ExponentialDecayLearningRateSchedule,
     ExponentialDecayAdam,
+    SGD,
+    PiecewiseConstantDecaySGD
 )
 from .utils.hparam import HParams, register_and_parse_hparams
 from .utils.misc import generate_square_subsequent_mask

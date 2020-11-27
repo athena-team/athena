@@ -366,25 +366,17 @@ class FastSpeechLoss(tf.keras.losses.Loss):
 
 class SoftmaxLoss(tf.keras.losses.Loss):
     """ Softmax Loss
-        Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
-    def __init__(self, embedding_size, num_classes, name="SoftmaxLoss"):
+    def __init__(self, num_classes, name="SoftmaxLoss"):
         super().__init__(name=name)
-        self.embedding_size = embedding_size
         self.num_classes = num_classes
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
-        self.dense = tf.keras.layers.Dense(
-            num_classes,
-            kernel_initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02),
-            input_shape=(embedding_size,),
-        )
 
     def __call__(self, outputs, samples, logit_length=None):
         labels = tf.squeeze(samples['output'])
-        outputs = self.dense(outputs)
         label_onehot = tf.one_hot(labels, self.num_classes)
         loss = tf.reduce_mean(self.criterion(label_onehot, outputs))
-        return loss, outputs
+        return loss
 
 
 class AMSoftmaxLoss(tf.keras.losses.Loss):
@@ -393,31 +385,21 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
-    def __init__(self, embedding_size, num_classes, m=0.3, s=15, name="AMSoftmaxLoss"):
+    def __init__(self, num_classes, margin=0.3, scale=15, name="AMSoftmaxLoss"):
         super().__init__(name=name)
-        self.embedding_size = embedding_size
         self.num_classes = num_classes
-        self.m = m
-        self.s = s
-        initializer = tf.initializers.GlorotNormal()
-        self.weight = tf.Variable(initializer(
-                             shape=[embedding_size, num_classes], dtype=tf.float32),
-                             name="AMSoftmaxLoss_weight")
+        self.margin = margin
+        self.scale = scale
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
 
-    def __call__(self, outputs, samples, logit_length=None):
+    def __call__(self, cosine, samples, logit_length=None):
         labels = tf.squeeze(samples['output'])
-        outputs_norm = tf.math.l2_normalize(outputs, axis=1)
-        weight_norm = tf.math.l2_normalize(self.weight, axis=0)
-        costh = tf.matmul(outputs_norm, weight_norm)
-
         label_onehot = tf.one_hot(labels, self.num_classes)
-        delt_costh = self.m * label_onehot
-
-        costh_m = costh - delt_costh
-        costh_m_s = self.s * costh_m
+        delt_costh = self.margin * label_onehot
+        costh_m = cosine - delt_costh
+        costh_m_s = self.scale * costh_m
         loss = tf.reduce_mean(self.criterion(label_onehot, costh_m_s))
-        return loss, costh_m_s
+        return loss
 
 
 class AAMSoftmaxLoss(tf.keras.losses.Loss):
@@ -426,31 +408,23 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
-    def __init__(self, embedding_size, num_classes,
-                 m=0.3, s=15, easy_margin=False, name="AAMSoftmaxLoss"):
+    def __init__(self, num_classes, margin=0.3, scale=15,
+                 easy_margin=False, name="AAMSoftmaxLoss"):
         super().__init__(name=name)
-        self.embedding_size = embedding_size
         self.num_classes = num_classes
-        self.m = m
-        self.s = s
-        initializer = tf.initializers.GlorotNormal()
-        self.weight = tf.Variable(initializer(
-                             shape=[embedding_size, num_classes], dtype=tf.float32),
-                             name="AAMSoftmaxLoss_weight")
+        self.margin = margin
+        self.scale = scale
         self.criterion = tf.nn.softmax_cross_entropy_with_logits
         self.easy_margin = easy_margin
-        self.cos_m = math.cos(self.m)
-        self.sin_m = math.sin(self.m)
+        self.cos_m = math.cos(self.margin)
+        self.sin_m = math.sin(self.margin)
 
         # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
-        self.th = math.cos(math.pi - self.m)
-        self.mm = math.sin(math.pi - self.m) * self.m
+        self.th = math.cos(math.pi - self.margin)
+        self.mm = math.sin(math.pi - self.margin) * self.margin
 
-    def __call__(self, outputs, samples, logit_length=None):
+    def __call__(self, cosine, samples, logit_length=None):
         labels = tf.squeeze(samples['output'])
-        outputs_norm = tf.math.l2_normalize(outputs, axis=1)
-        weight_norm = tf.math.l2_normalize(self.weight, axis=0)
-        cosine = tf.matmul(outputs_norm, weight_norm)
         sine = tf.clip_by_value(tf.math.sqrt(1.0 - tf.math.pow(cosine, 2)), 0, 1)
         phi = cosine * self.cos_m - sine * self.sin_m
 
@@ -461,9 +435,9 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
 
         label_onehot = tf.one_hot(labels, self.num_classes)
         output = (label_onehot * phi) + ((1.0 - label_onehot) * cosine)
-        output = output * self.s
+        output = output * self.scale
         loss = tf.reduce_mean(self.criterion(label_onehot, output))
-        return loss, output
+        return loss
 
 
 class ProtoLoss(tf.keras.losses.Loss):

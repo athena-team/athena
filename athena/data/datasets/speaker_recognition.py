@@ -27,7 +27,7 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         "audio_config": {"type": "Fbank"},
         "num_cmvn_workers": 1,
         "cmvn_file": None,
-        "cut_frame": None,
+        "cut_frame": [None],
         "input_length_range": [20, 50000],
         "data_csv": None
     }
@@ -47,7 +47,8 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         lines = [line.split("\t", 3) for line in lines]
         lines.sort(key=lambda item: int(item[1]))
         self.entries = [tuple(line) for line in lines]
-        self.speakers = list(set(line[-1] for line in lines))
+        # for computing global cmvn
+        self.speakers = ['global']
 
         # apply input length filter
         self.entries = list(filter(lambda x: int(x[1]) in
@@ -58,7 +59,8 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
     def cut_features(self, feature):
         """cut acoustic featuers
         """
-        length = self.hparams.cut_frame
+        min_len, max_len = self.hparams.cut_frame
+        length = tf.random.uniform([], min_len, max_len, tf.int32)
         # randomly select a start frame
         max_start_frames = tf.shape(feature)[0] - length
         if max_start_frames <= 0:
@@ -67,25 +69,11 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         return feature[start_frames:start_frames + length, :, :]
 
     def __getitem__(self, index):
-        """get a sample
-
-        Args:
-            index (int): index of the entries
-
-        Returns:
-            dict: sample::
-
-            {
-                "input": feat,
-                "input_length": feat_length,
-                "output_length": 1,
-                "output": spkid
-            }
-        """
-        audio_data, _, spkid, spkname = self.entries[index]
+        audio_data = self.entries[index][0]
+        spkid = self.entries[index][2]
         feat = self.audio_featurizer(audio_data)
-        feat = self.feature_normalizer(feat, spkname)
-        if self.hparams.cut_frame is not None:
+        feat = self.feature_normalizer(feat, 'global')
+        if self.hparams.cut_frame != [None]:
             feat = self.cut_features(feat)
         feat_length = feat.shape[0]
         spkid = [spkid]
@@ -96,10 +84,9 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
             "output": spkid
         }
 
-    @property
-    def num_class(self):
-        ''' return the number of speakers '''
-        return len(self.speakers)
+    def __len__(self):
+        ''' return the number of data samples '''
+        return len(self.entries)
 
     @property
     def sample_type(self):
@@ -199,19 +186,19 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
             dict: sample::
 
             {
-                "input_a": feat_a,
-                "input_b": feat_b,
+                "input": feat_a,
+                "input2": feat_b,
                 "output": [label]
             }
         """
-        audio_data_a, speaker_a, audio_data_b, speaker_b, label = self.entries[index]
+        audio_data_a, _, audio_data_b, _, label = self.entries[index]
         feat_a = self.audio_featurizer(audio_data_a)
-        feat_a = self.feature_normalizer(feat_a, speaker_a)
+        feat_a = self.feature_normalizer(feat_a, "global")
         feat_b = self.audio_featurizer(audio_data_b)
-        feat_b = self.feature_normalizer(feat_b, speaker_b)
+        feat_b = self.feature_normalizer(feat_b, "global")
         return {
-            "input_a": feat_a,
-            "input_b": feat_b,
+            "input": feat_a,
+            "input2": feat_b,
             "output": [label]
         }
 
@@ -223,14 +210,14 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
             dict: sample_type of the dataset::
 
             {
-                "input_a": tf.float32,
-                "input_b": tf.float32,
+                "input": tf.float32,
+                "input2": tf.float32,
                 "output": tf.int32
             }
         """
         return {
-            "input_a": tf.float32,
-            "input_b": tf.float32,
+            "input": tf.float32,
+            "input2": tf.float32,
             "output": tf.int32
         }
 
@@ -242,16 +229,16 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
             dict: sample_shape of the dataset::
 
             {
-                "input_a": tf.TensorShape([None, dim, nc]),
-                "input_b": tf.TensorShape([None, dim, nc]),
+                "input": tf.TensorShape([None, dim, nc]),
+                "input2": tf.TensorShape([None, dim, nc]),
                 "output": tf.TensorShape([None])
             }
         """
         dim = self.audio_featurizer.dim
         nc = self.audio_featurizer.num_channels
         return {
-            "input_a": tf.TensorShape([None, dim, nc]),
-            "input_b": tf.TensorShape([None, dim, nc]),
+            "input": tf.TensorShape([None, dim, nc]),
+            "input2": tf.TensorShape([None, dim, nc]),
             "output": tf.TensorShape([None])
         }
 
@@ -263,8 +250,8 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
             dict: sample_signature of the dataset::
 
             {
-                "input_a": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
-                "input_b":tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input2":tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
                 "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
             }
         """
@@ -272,8 +259,8 @@ class SpeakerVerificationDatasetBuilder(SpeakerRecognitionDatasetBuilder):
         nc = self.audio_featurizer.num_channels
         return (
             {
-                "input_a": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
-                "input_b":tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input": tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
+                "input2":tf.TensorSpec(shape=(None, None, dim, nc), dtype=tf.float32),
                 "output": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
             },
         )
