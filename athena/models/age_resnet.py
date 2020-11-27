@@ -58,7 +58,7 @@ class AgeResnet(BaseModel):
         self.max_age = self.hparams.max_age
 
         self.loss_function = self.init_loss(self.hparams.loss)
-        self.metric = MeanAbsoluteError(max_val=100, is_norm=False, name="MAE")
+        self.metric = MeanAbsoluteError(max_val=100, name="MAE")
 
         num_filters = self.hparams.num_filters
         num_layers = self.hparams.num_layers
