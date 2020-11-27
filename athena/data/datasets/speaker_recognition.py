@@ -69,6 +69,21 @@ class SpeakerRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         return feature[start_frames:start_frames + length, :, :]
 
     def __getitem__(self, index):
+        """get a sample
+
+        Args:
+            index (int): index of the entries
+
+        Returns:
+            dict: sample::
+
+            {
+                "input": feat,
+                "input_length": feat_length,
+                "output_length": 1,
+                "output": spkid
+            }
+        """
         audio_data = self.entries[index][0]
         spkid = self.entries[index][2]
         feat = self.audio_featurizer(audio_data)

@@ -66,7 +66,7 @@ def inference(jsonfile, config, rank_size=1, rank=0):
 if __name__ == "__main__":
     logging.use_absl_handler()
     flags.FLAGS.mark_as_parsed()
-    logging.get_absl_handler().python_handler.stream = open("inference.dev.log", "w")
+    logging.get_absl_handler().python_handler.stream = open("inference.log", "w")
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 2:
         logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))
