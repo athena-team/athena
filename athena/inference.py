@@ -28,7 +28,7 @@ from athena.main import (
 )
 from athena.stargan_main import build_model_from_jsonfile_stargan
 from athena import BaseSolver, DecoderSolver, SynthesisSolver, HorovodSolver, \
-    ConvertSolver, SpeakerClassificationSolver, SpeakerVerificationSolver
+    ConvertSolver, GenderSolver, AgeSolver, SpeakerClassificationSolver, SpeakerVerificationSolver
 
 try:
     import horovod.tensorflow as hvd
@@ -40,6 +40,8 @@ SOLVERS = {
     "asr": DecoderSolver,
     "tts": SynthesisSolver,
     "vc": ConvertSolver,
+    "gender": GenderSolver,
+    "age": AgeSolver,
     "speaker_classification": SpeakerClassificationSolver,
     "speaker_verification": SpeakerVerificationSolver
 }
