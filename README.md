@@ -1,6 +1,3 @@
-
-
-
 # Athena
 
 *Athena* is an open-source implementation of end-to-end speech processing engine. Our vision is to empower both industrial application and academic research on end-to-end models for speech processing. To make speech processing available to everyone, we're also releasing example implementation and recipe on some opensource dataset for various tasks (Automatic Speech Recognition, Speech Synthesis, Voice Conversion, Speaker Recognition, etc).
@@ -32,9 +29,12 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [5.1) WFST graph creation](#51-wfst-graph-creation)
     - [5.2) WFST decoding](#52-wfst-decoding)
   - [6) Deployment](#6-deployment)
-  - [7) Results](#7-results)
-    - [7.1) ASR](#71-asr)
-  - [8) Directory Structure](#8-directory-structure)
+  - [7) Self-supervised speech representation learning](#7-self-supervised-speech-representation-learning)
+    - [7.1) MPC](#71-mpc)
+    - [7.2) Speech SimCLR](#72-speech-simclr)
+  - [8) Results](#8-results)
+    - [8.1) ASR](#81-asr)
+  - [9) Directory Structure](#9-directory-structure)
 
 ## 2) Key Features
 
@@ -132,14 +132,14 @@ python examples/asr/timit/local/prepare_data.py examples/asr/timit/data/TIMIT ex
 Below is an example csv we generated, it contains the absolute path of input audio, its length, its transcript and its speaker
 ```csv
 wav_filename	wav_length_ms	transcript	speaker
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SI1456.WAV	3065	sil dh iy z eh er er vcl g ae sh vcl b ah vcl b ax sh epi m ey cl k hh ay l ix f ah ng cl sh epi en el th er m el vcl b eh r ix er z sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX286.WAV	3283	sil ih n eh v r ih m ey vcl jh er cl k l ow v er l iy f cl t r ae f ix cl k s ah m cl t ay m z vcl g eh cl s vcl b ae cl t ah cl p sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX196.WAV	1740	sil hh aw vcl d uw ao r sh cl ch er zh epi m ey cl p er l vcl d z sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX106.WAV	2214	sil eh hh y uw vcl jh cl t ae cl p ix sh cl t r ix hh ah ng ix n er hh ah l w ey sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX16.WAV	1926	sil ey r ow l el v w ay er l ey n ih er dh ax w ao l sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SI2086.WAV	2745	sil ae vcl b s el uw sh en f ao r hh ix z l ay hh sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SX376.WAV	2464	sil w ih m ix n m ey n eh v er vcl b ix cl k ah ng cl k ax m cl p l iy cl l iy cl k w el cl t ax m eh n sil	MCLM0
-/workspace/athena/examples/asr/timit/data/wav/TRAIN/MCLM0-SI826.WAV	3596	sil k ao sh en cl k en cl t ih n y uw s ix vcl m ih n ax sh cl t r ey sh en ix z epi n aa vcl r eh cl k m eh n d ix f ax l ae cl t ey dx ng cl k aw z sil	MCLM0
+MCLM0-SI1456.WAV	3065	sil dh iy z eh er er vcl g ae sh vcl b ah vcl b ax sh epi m ey cl k hh ay l ix f ah ng cl sh epi en el th er m el vcl b eh r ix er z sil	MCLM0
+MCLM0-SX286.WAV	3283	sil ih n eh v r ih m ey vcl jh er cl k l ow v er l iy f cl t r ae f ix cl k s ah m cl t ay m z vcl g eh cl s vcl b ae cl t ah cl p sil	MCLM0
+MCLM0-SX196.WAV	1740	sil hh aw vcl d uw ao r sh cl ch er zh epi m ey cl p er l vcl d z sil	MCLM0
+MCLM0-SX106.WAV	2214	sil eh hh y uw vcl jh cl t ae cl p ix sh cl t r ix hh ah ng ix n er hh ah l w ey sil	MCLM0
+MCLM0-SX16.WAV	1926	sil ey r ow l el v w ay er l ey n ih er dh ax w ao l sil	MCLM0
+MCLM0-SI2086.WAV	2745	sil ae vcl b s el uw sh en f ao r hh ix z l ay hh sil	MCLM0
+MCLM0-SX376.WAV	2464	sil w ih m ix n m ey n eh v er vcl b ix cl k ah ng cl k ax m cl p l iy cl l iy cl k w el cl t ax m eh n sil	MCLM0
+MCLM0-SI826.WAV	3596	sil k ao sh en cl k en cl t ih n y uw s ix vcl m ih n ax sh cl t r ey sh en ix z epi n aa vcl r eh cl k m eh n d ix f ax l ae cl t ey dx ng cl k aw z sil	MCLM0
 ```
 
 ### 4.2) Setting the Configuration File
@@ -320,13 +320,31 @@ $ ./asr
 
 Detailed implementation is described [here](deploy/README.md).
 
-## 7) Results
+## 7) Self-supervised speech representation learning
 
-### 7.1) ASR
+### 7.1) MPC
+Masked Predictive Coding (MPC) uses masked reconstruction objective to perform predictive coding on transformer based models. It achieved significant improvements on various speech recognition datasets. For more information, please refer to following paper(s).
+
+[Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932.pdf)
+
+[A Further Study of Unsupervised Pre-training for Transformer Based Speech Recognition](https://arxiv.org/pdf/2005.09862.pdf)
+
+MPC models can be trained by running ```python athena/main.py examples/asr/*/configs/mpc.json```. To use pretrained MPC model in ASR training, simply set the "pretrained_model" section in ASR json config to the checkpoint dir of MPC model and proceed training.
+
+### 7.2) Speech SimCLR
+Speech SimCLR is a new self-supervised objective for speech representation learning. During training, Speech SimCLR applies augmentation on raw speech and its spectrogram. Its objective is the combination of contrastive loss that maximizes agreement between differently augmented samples in the latent space and reconstruction loss of input representation. For more information, please refer to following paper(s).
+
+[Speech SimCLR: Combining Contrastive and Reconstruction Objective for Self-supervised Speech Representation Learning](https://arxiv.org/abs/2010.13991.pdf)
+
+For now, pre-training with Speech SimCLR is only supported for Librispeech. You can run it with ```python athena/main.py examples/asr/librispeech/configs/speech_simclr.json```. For feature extraction, simply run ```python athena/inference.py examples/asr/librispeech/configs/speech_simclr.json```. The pre-trained Speech SimCLR models can be found [here](https://drive.google.com/file/d/1YYFmtB1RHRuw8s7lPWLxjihye9ssI5ax/view?usp=sharing).
+
+## 8) Results
+
+### 8.1) ASR
 
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
-English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h | 3.1%(WER)
+English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h | 3.1% (WER)
 English  | Transformer | [Switchboard Dataset](https://catalog.ldc.upenn.edu/LDC97S62) | 260h | 8.6% (WER) |
 English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 3 h | 16.8% (PER) |
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
@@ -334,7 +352,7 @@ Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h |
 
 To compare with other published results, see [wer_are_we.md](docs/tutorials/wer_are_we.md).
 
-## 8) Directory Structure
+## 9) Directory Structure
 
 Below is the basic directory structure for Athena
 
