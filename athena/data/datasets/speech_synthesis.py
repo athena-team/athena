@@ -115,6 +115,10 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         duration_index = []
         for index, duration in enumerate(durations):
             duration_index.extend(list([index]) * int(duration))
+        duration_index = duration_index[: audio_feat_length]
+        if 0 < len(duration_index) < audio_feat_length:
+            expanded_index = list([duration_index[-1]]) * int(audio_feat_length - len(duration_index))
+            duration_index.extend(expanded_index)
         return {
             "input": text,
             "input_length": text_length,
