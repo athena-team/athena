@@ -93,7 +93,7 @@ int Spectrum::proc_spc(const float* mic_buf, int input_size) {
   int n, k;
 
   if (input_size < i_WinLen)
-    std::cerr<<"Wraning: The length of input data is shorter than "<< window_length_sec_ << " s." <<std::endl;
+    std::cerr<<"Warning: The length of input data is shorter than "<< window_length_sec_ << " s." <<std::endl;
 
   //malloc
   pf_WINDOW = static_cast<float*>(malloc(sizeof(float) * i_WinLen));
