@@ -111,7 +111,7 @@ python athena/main.py examples/translate/spa-eng-example/transformer.json
 ```bash
 source tools/env.sh
 python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv
-horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/translate/spa-eng-example/transformer.json
+horovodrun -np 4 -H localhost:4 python athena/horovod_main.py examples/translate/spa-eng-example/transformer.json
 ```
 
 ### Notes
