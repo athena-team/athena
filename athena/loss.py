@@ -668,3 +668,26 @@ def ClassifyLoss(target_label_reshaped, domain_out_real):
     return domain_real_loss
 
 
+
+class ContrastiveLoss(tf.keras.losses.Loss):
+    """
+    Contrastive Loss for SimCLR Model
+    """
+    def __init__(self, temperature=1.0, normalization=True, name="ContrastiveLoss", ps=None):
+        super().__init__(name=name)
+
+        self.temperature = temperature
+        self.norm = normalization
+        self.cross_entropy = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.ps = ps
+
+    def gpu_cross_replica_concat(self, tensor):
+        num_replicas = self.ps.size()
+        ext_tensor = tf.scatter_nd(
+            indices=[[hvd.rank()]],
+            updates=[tensor],
+            shape=[num_replicas, tf.shape(tensor)[0], tf.shape(tensor)[1]])
+
+        ext_tensor = hvd.allreduce(ext_tensor, average=False)
+        return tf.reshape(ext_tensor, [-1, tf.shape(ext_tensor)[2]])
+

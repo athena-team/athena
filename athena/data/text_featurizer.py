@@ -20,8 +20,8 @@ import os
 import re
 import warnings
 from collections import defaultdict
-import sentencepiece as spm
 import tensorflow as tf
+import tensorflow_text as text
 from ..utils.hparam import register_and_parse_hparams
 
 
@@ -119,33 +119,31 @@ class EnglishVocabulary(Vocabulary):
         return [self.stoi[token] for token in sentence.strip().split(' ')]
 
 class SentencePieceFeaturizer:
-    """SentencePieceFeaturizer
+    """SentencePieceFeaturizer using tensorflow-text api
     """
 
     def __init__(self, spm_file):
         self.unk_index = 0
-        self.sp = spm.SentencePieceProcessor()
-        if spm_file is not None:
-            self.sp.Load(spm_file)
+        self.model = open(spm_file, "rb").read()
+        self.sp = text.SentencepieceTokenizer(model=self.model)
 
     def load_model(self, model_file):
         """load sentence piece model
         """
-        self.sp.Load(model_file)
+        self.sp = text.SentencepieceTokenizer(model=open(model_file, "rb").read())
 
     def __len__(self):
-        return self.sp.GetPieceSize()
+        return self.sp.vocab_size()
 
     def encode(self, sentence):
         """convert a sentence to a list of ids by sentence piece model
         """
-        sentence = sentence.upper()
-        return self.sp.EncodeAsIds(sentence)
+        return self.sp.tokenize(sentence)
 
     def decode(self, ids):
         """convert a list of ids to a sentence
         """
-        return self.sp.DecodeIds(ids)
+        return self.sp.detokenize(ids)
 
 class TextTokenizer:
     """TextTokenizer

@@ -144,7 +144,21 @@ class HorovodSolver(BaseSolver):
 
     @staticmethod
     def initialize_devices(solver_gpus=None):
-        """ initialize hvd devices, should be called firstly """
+        """initialize hvd devices, should be called firstly
+
+        For examples, if you have two machines and each of them contains 4 gpus:
+        1. run with command horovodrun -np 6 -H ip1:2,ip2:4 and set solver_gpus to be [0,3,0,1,2,3],
+           then the first gpu and the last gpu on machine1 and all gpus on machine2 will be used.
+        2. run with command horovodrun -np 6 -H ip1:2,ip2:4 and set solver_gpus to be [],
+           then the first 2 gpus on machine1 and all gpus on machine2 will be used.
+
+        Args:
+            solver_gpus ([list]): a list to specify gpus being used.
+
+        Raises:
+            ValueError: If the list of solver gpus is not empty,
+                        its size should not be smaller than that of horovod configuration.
+        """
         hvd.init()
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
@@ -157,7 +171,7 @@ class HorovodSolver(BaseSolver):
                 tf.config.experimental.set_visible_devices(gpus[solver_gpus[hvd.rank()]], "GPU")
             # If the list of solver gpus is empty, the first hvd.size() gpus will be used.
             else:
-                tf.config.experimental.set_visible_devices(gpus[hvd.rank()], "GPU")
+                tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], "GPU")
 
     def train_step(self, samples):
         """ train the model 1 step """

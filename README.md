@@ -1,6 +1,3 @@
-
-
-
 # Athena
 
 *Athena* is an open-source implementation of end-to-end speech processing engine. Our vision is to empower both industrial application and academic research on end-to-end models for speech processing. To make speech processing available to everyone, we're also releasing example implementation and recipe on some opensource dataset for various tasks (Automatic Speech Recognition, Speech Synthesis, Voice Conversion, Speaker Recognition, etc).
@@ -32,9 +29,12 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
     - [5.1) WFST graph creation](#51-wfst-graph-creation)
     - [5.2) WFST decoding](#52-wfst-decoding)
   - [6) Deployment](#6-deployment)
-  - [7) Results](#7-results)
-    - [7.1) ASR](#71-asr)
-  - [8) Directory Structure](#8-directory-structure)
+  - [7) Self-supervised speech representation learning](#7-self-supervised-speech-representation-learning)
+    - [7.1) MPC](#71-mpc)
+    - [7.2) Speech SimCLR](#72-speech-simclr)
+  - [8) Results](#8-results)
+    - [8.1) ASR](#81-asr)
+  - [9) Directory Structure](#9-directory-structure)
 
 ## 2) Key Features
 
@@ -111,7 +111,7 @@ python athena/main.py examples/translate/spa-eng-example/transformer.json
 ```bash
 source tools/env.sh
 python examples/translate/spa-eng-example/prepare_data.py examples/translate/spa-eng-example/data/train.csv
-horovodrun -np 4 -H localhost:4 athena/horovod_main.py examples/translate/spa-eng-example/transformer.json
+horovodrun -np 4 -H localhost:4 python athena/horovod_main.py examples/translate/spa-eng-example/transformer.json
 ```
 
 ### Notes
@@ -320,13 +320,31 @@ $ ./asr
 
 Detailed implementation is described [here](deploy/README.md).
 
-## 7) Results
+## 7) Self-supervised speech representation learning
 
-### 7.1) ASR
+### 7.1) MPC
+Masked Predictive Coding (MPC) uses masked reconstruction objective to perform predictive coding on transformer based models. It achieved significant improvements on various speech recognition datasets. For more information, please refer to following paper(s).
+
+[Improving Transformer-based Speech Recognition Using Unsupervised Pre-training](https://arxiv.org/abs/1910.09932.pdf)
+
+[A Further Study of Unsupervised Pre-training for Transformer Based Speech Recognition](https://arxiv.org/pdf/2005.09862.pdf)
+
+MPC models can be trained by running ```python athena/main.py examples/asr/*/configs/mpc.json```. To use pretrained MPC model in ASR training, simply set the "pretrained_model" section in ASR json config to the checkpoint dir of MPC model and proceed training.
+
+### 7.2) Speech SimCLR
+Speech SimCLR is a new self-supervised objective for speech representation learning. During training, Speech SimCLR applies augmentation on raw speech and its spectrogram. Its objective is the combination of contrastive loss that maximizes agreement between differently augmented samples in the latent space and reconstruction loss of input representation. For more information, please refer to following paper(s).
+
+[Speech SimCLR: Combining Contrastive and Reconstruction Objective for Self-supervised Speech Representation Learning](https://arxiv.org/abs/2010.13991.pdf)
+
+For now, pre-training with Speech SimCLR is only supported for Librispeech. You can run it with ```python athena/main.py examples/asr/librispeech/configs/speech_simclr.json```. For feature extraction, simply run ```python athena/inference.py examples/asr/librispeech/configs/speech_simclr.json```. The pre-trained Speech SimCLR models can be found [here](https://drive.google.com/file/d/1YYFmtB1RHRuw8s7lPWLxjihye9ssI5ax/view?usp=sharing).
+
+## 8) Results
+
+### 8.1) ASR
 
 Language  | Model Name | Training Data | Hours of Speech | Error Rate
 :-----------: | :------------: | :----------: |  -------: | -------:
-English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h | 3.1%(WER)
+English  | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h | 3.1% (WER)
 English  | Transformer | [Switchboard Dataset](https://catalog.ldc.upenn.edu/LDC97S62) | 260h | 8.6% (WER) |
 English  | Transformer | [TIMIT Dataset](https://catalog.ldc.upenn.edu/LDC93S1) | 3 h | 16.8% (PER) |
 Mandarin | Transformer | HKUST Dataset | 151 h | 22.75% (CER)
@@ -334,7 +352,7 @@ Mandarin | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h |
 
 To compare with other published results, see [wer_are_we.md](docs/tutorials/wer_are_we.md).
 
-## 8) Directory Structure
+## 9) Directory Structure
 
 Below is the basic directory structure for Athena
 
