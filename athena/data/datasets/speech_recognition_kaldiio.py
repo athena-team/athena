@@ -32,6 +32,7 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
         "text_config": {"type":"vocab", "model":"athena/utils/vocabs/ch-en.vocab"},
         "cmvn_file": None,
         "remove_unk": True,
+        "sort_and_filter": True,
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
@@ -42,7 +43,7 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
     def __init__(self, config=None):
         super().__init__(config=config)
         if self.hparams.data_scps_dir is not None:
-            self.preprocess_data(self.hparams.data_scps_dir)
+            self.preprocess_data(self.hparams.data_scps_dir, apply_sort_filter=self.hparams.sort_and_filter)
 
     def preprocess_data(self, file_dir, apply_sort_filter=True):
         """ Generate a list of tuples (feat_key, speaker). """
