@@ -22,7 +22,7 @@ from absl import logging
 import tensorflow as tf
 import kaldiio
 from .speech_recognition import SpeechRecognitionDatasetBuilder
-
+from .preprocess import SpecAugment
 
 class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
     """SpeechRecognitionDatasetKaldiIOBuilder
@@ -36,6 +36,7 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
+        "spectral_augmentation": None,
         "data_csv": None,
         "data_scps_dir": None
     }
@@ -44,6 +45,8 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
         super().__init__(config=config)
         if self.hparams.data_scps_dir is not None:
             self.preprocess_data(self.hparams.data_scps_dir, apply_sort_filter=self.hparams.sort_and_filter)
+        if self.hparams.spectral_augmentation is not None:
+            self.spectral_augmentation = SpecAugment(self.hparams.spectral_augmentation)
 
     def preprocess_data(self, file_dir, apply_sort_filter=True):
         """ Generate a list of tuples (feat_key, speaker). """
@@ -93,6 +96,8 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
         feat = self.kaldi_io_feats[key]
         feat = feat.reshape(feat.shape[0], feat.shape[1], 1)
         feat = tf.convert_to_tensor(feat)
+        if self.hparams.spectral_augmentation is not None:
+            feat = self.spectral_augmentation(feat)
         feat = self.feature_normalizer(feat, speaker)
         label = list(self.kaldi_io_labels[key])
 
