@@ -122,9 +122,9 @@ class SpeechRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         """
         audio_data, _, transcripts, speed, speaker = self.entries[index]
         feat = self.audio_featurizer(audio_data, speed=speed)
+        feat = self.feature_normalizer(feat, speaker)
         if self.hparams.spectral_augmentation is not None:
             feat = self.spectral_augmentation(feat)
-        feat = self.feature_normalizer(feat, speaker)
         feat_length = feat.shape[0]
 
         label = self.text_featurizer.encode(transcripts)

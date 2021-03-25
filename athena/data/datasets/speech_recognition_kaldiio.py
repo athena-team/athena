@@ -96,9 +96,9 @@ class SpeechRecognitionDatasetKaldiIOBuilder(SpeechRecognitionDatasetBuilder):
         feat = self.kaldi_io_feats[key]
         feat = feat.reshape(feat.shape[0], feat.shape[1], 1)
         feat = tf.convert_to_tensor(feat)
+        feat = self.feature_normalizer(feat, speaker)
         if self.hparams.spectral_augmentation is not None:
             feat = self.spectral_augmentation(feat)
-        feat = self.feature_normalizer(feat, speaker)
         label = list(self.kaldi_io_labels[key])
 
         feat_length = feat.shape[0]
