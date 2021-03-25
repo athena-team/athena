@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # coding=utf-8
 # Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Shuaijiang Zhao; Ne Luo
 #
