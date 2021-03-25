@@ -20,7 +20,7 @@ from absl import logging
 import tensorflow as tf
 from ..text_featurizer import TextFeaturizer
 from .base import SpeechBaseDatasetBuilder
-
+from .preprocess import SpecAugment
 
 class SpeechRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
     """SpeechRecognitionDatasetBuilder
@@ -34,6 +34,7 @@ class SpeechRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         "input_length_range": [20, 50000],
         "output_length_range": [1, 10000],
         "speed_permutation": [1.0],
+        "spectral_augmentation": None,
         "data_csv": None,
         "words": None
     }
@@ -41,6 +42,8 @@ class SpeechRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
     def __init__(self, config=None):
         super().__init__(config=config)
         self.text_featurizer = TextFeaturizer(self.hparams.text_config)
+        if self.hparams.spectral_augmentation is not None:
+            self.spectral_augmentation = SpecAugment(self.hparams.spectral_augmentation)
         if self.hparams.data_csv is not None:
             self.preprocess_data(self.hparams.data_csv)
 
@@ -119,6 +122,8 @@ class SpeechRecognitionDatasetBuilder(SpeechBaseDatasetBuilder):
         """
         audio_data, _, transcripts, speed, speaker = self.entries[index]
         feat = self.audio_featurizer(audio_data, speed=speed)
+        if self.hparams.spectral_augmentation is not None:
+            feat = self.spectral_augmentation(feat)
         feat = self.feature_normalizer(feat, speaker)
         feat_length = feat.shape[0]
 

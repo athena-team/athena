@@ -58,6 +58,7 @@
     "cmvn_file":"examples/asr/librispeech/data/cmvn",
     "text_config": {"type":"spm", "model":"examples/asr/librispeech/data/librispeech_unigram5000.model"},
     "speed_permutation": [0.9, 1.0, 1.1],
+    "spectral_augmentation": {"time_warping":5, "time_masking":30, "frequency_masking":15, "mask_cols":2},
     "input_length_range":[10, 30000]
   },
   "devset_config":{
