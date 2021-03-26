@@ -18,7 +18,6 @@
 
 from absl import logging
 import tensorflow as tf
-from athena.transform import AudioFeaturizer
 from ..text_featurizer import TextFeaturizer
 from .base import SpeechBaseDatasetBuilder
 import numpy as np
@@ -55,13 +54,8 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
     """SpeechSynthesisDatasetBuilder
     """
     default_config = {
-        "audio_config": {
-            "type": "Fbank"
-        },
-        "text_config": {
-            "type": "vocab",
-            "model": "athena/utils/vocabs/ch-en.vocab"
-        },
+        "audio_config": {"type": "Fbank"},
+        "text_config": {"type": "vocab","model": "athena/utils/vocabs/ch-en.vocab"},
         "num_cmvn_workers": 1,
         "cmvn_file": None,
         "remove_unk": True,
@@ -77,23 +71,6 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         params_func = self.audio_featurizer.feat.params
         params = params_func(self.hparams.audio_config)
 
-        '''energy_config = {
-            "type": "Framepow",
-            "window_length": params.window_length,
-            "frame_length": params.frame_length,
-            "remove_dc_offset": params.remove_dc_offset
-        }
-        self.energy_featurizer = AudioFeaturizer(energy_config)
-
-        pitch_config = {
-            "type": "Pitch",
-            "window_length": params.window_length,
-            "frame_length": params.frame_length,
-            "preEph_coeff": params.preEph_coeff,
-            "upper_frequency_limit": params.upper_frequency_limit
-        }
-        self.pitch_featurizer = AudioFeaturizer(pitch_config)
-        '''
         self.frame_length = params.frame_length
         self.speakers_dict = {}
         self.speakers_ids_dict = {}
@@ -107,8 +84,7 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         duration[-1] = total_frame - sum(duration[:-1])
         duration = tf.convert_to_tensor(duration)
         duration = tf.cast(tf.clip_by_value(tf.math.round(duration), 0.0,
-                                            tf.cast(10000, dtype=tf.float32)),
-                           dtype=tf.int32)
+                                            tf.cast(10000, dtype=tf.float32)),dtype=tf.int32)
 
         return duration
 
@@ -199,9 +175,7 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
             duration_index.extend(list([index]) * int(duration))
         duration_index = duration_index[:audio_feat_length]
         if 0 < len(duration_index) < audio_feat_length:
-            expanded_index = list([
-                duration_index[-1]
-            ]) * int(audio_feat_length - len(duration_index))
+            expanded_index = list([duration_index[-1]]) * int(audio_feat_length - len(duration_index))
             duration_index.extend(expanded_index)
         #ugly code: 243.02415466308594 and 50.29555130004883 is the f0's mean and std 
         f0 = tf.numpy_function(_norm_mean_std_tf, [tf.convert_to_tensor(f0), tf.convert_to_tensor(243.02415466308594), tf.convert_to_tensor(50.29555130004883)], tf.float32)
@@ -306,43 +280,30 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
             }
         """
         feature_dim = self.audio_featurizer.dim * self.audio_featurizer.num_channels
-        return ({
-            "input":
-            tf.TensorSpec(shape=(None, None), dtype=tf.int32),
-            "input_length":
-            tf.TensorSpec(shape=(None), dtype=tf.int32),
-            "output_length":
-            tf.TensorSpec(shape=(None), dtype=tf.int32),
-            "output":
-            tf.TensorSpec(shape=(None, None, feature_dim), dtype=tf.float32),
-            "speaker":
-            tf.TensorSpec(shape=(None), dtype=tf.int32),
-            "pitch":
-            tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-            "energy":
-            tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-            "duration":
-            tf.TensorSpec(shape=(None, None), dtype=tf.int32)
-        }, )
+        return (
+            {
+                "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+                "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output": tf.TensorSpec(shape=(None, None, feature_dim), dtype=tf.float32),
+                "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "pitch": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                "energy": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                "duration": tf.TensorSpec(shape=(None, None), dtype=tf.int32)
+            },
+        )
 
     @property
     def mpc_sample_signature(self):
-        return ({
-            "input":
-            tf.TensorSpec(shape=(None, None), dtype=tf.int32),
-            "input_length":
-            tf.TensorSpec(shape=(None), dtype=tf.int32),
-            "output_length":
-            tf.TensorSpec(shape=(None), dtype=tf.int32),
-            "output":
-            tf.TensorSpec(shape=(None, None, self.num_class),
-                          dtype=tf.float32),
-            "speaker":
-            tf.TensorSpec(shape=(None), dtype=tf.int32),
-            "pitch":
-            tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-            "energy":
-            tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-            "duration":
-            tf.TensorSpec(shape=(None, None), dtype=tf.int32)
-        }, )
+        return (
+            {
+                "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
+                "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "output": tf.TensorSpec(shape=(None, None, self.num_class), dtype=tf.float32),
+                "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32),
+                "pitch": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                "energy": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                "duration": tf.TensorSpec(shape=(None, None), dtype=tf.int32)
+            },
+        )
