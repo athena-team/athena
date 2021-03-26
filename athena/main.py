@@ -47,6 +47,7 @@ SUPPORTED_MODEL = {
     "stargan" : StarganModel,
     "tts_transformer": TTSTransformer,
     "fastspeech": FastSpeech,
+    "fastspeech2": FastSpeech2,
     "speaker_resnet": SpeakerResnet
 }
 
