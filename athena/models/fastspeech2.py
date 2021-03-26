@@ -3,7 +3,7 @@ from .fastspeech import FastSpeech
 from ..utils.hparam import register_and_parse_hparams
 from ..layers.commons import ScaledPositionalEncoding
 from ..utils.misc import create_multihead_mask
-from ..loss_fs2 import FastSpeechLoss
+from ..loss import FastSpeech2Loss
 
 
 class FastSpeech2(FastSpeech):
@@ -128,7 +128,7 @@ class FastSpeech2(FastSpeech):
             )
 
         # define loss function and metrics
-        self.loss_function = FastSpeechLoss(self.hparams.duration_predictor_loss_weight,
+        self.loss_function = FastSpeech2Loss(self.hparams.duration_predictor_loss_weight,
                                             teacher_guide=self.hparams.teacher_guide_loss,
                                             pitch_predictor_loss_weight=self.hparams.pitch_predictor_loss_weight,
                                             energy_predictor_loss_weight=self.hparams.energy_predictor_loss_weight)
