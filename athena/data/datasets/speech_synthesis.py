@@ -18,6 +18,7 @@
 
 from absl import logging
 import tensorflow as tf
+from athena.transform import AudioFeaturizer
 from ..text_featurizer import TextFeaturizer
 from .base import SpeechBaseDatasetBuilder
 import numpy as np
@@ -45,9 +46,7 @@ def _norm_mean_std(x, mean, std):
     return x
 
 def _norm_mean_std_tf(x, mean, std):
-    #print(x, mean, std)
     outs = _norm_mean_std(x, mean, std)
-    #outs = tf.numpy_function(_norm_mean_std, [x, mean, std], tf.float32)
     return outs
 
 class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
@@ -55,7 +54,7 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
     """
     default_config = {
         "audio_config": {"type": "Fbank"},
-        "text_config": {"type": "vocab","model": "athena/utils/vocabs/ch-en.vocab"},
+        "text_config": {"type":"vocab", "model":"athena/utils/vocabs/ch-en.vocab"},
         "num_cmvn_workers": 1,
         "cmvn_file": None,
         "remove_unk": True,
@@ -71,6 +70,23 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         params_func = self.audio_featurizer.feat.params
         params = params_func(self.hparams.audio_config)
 
+        energy_config = {
+            "type": "Framepow",
+            "window_length": params.window_length,
+            "frame_length": params.frame_length,
+            "remove_dc_offset": params.remove_dc_offset
+        }
+        self.energy_featurizer = AudioFeaturizer(energy_config)
+
+        pitch_config = {
+            "type": "Pitch",
+            "window_length": params.window_length,
+            "frame_length": params.frame_length,
+            "preEph_coeff": params.preEph_coeff,
+            "upper_frequency_limit": params.upper_frequency_limit
+        }
+        self.pitch_featurizer = AudioFeaturizer(pitch_config)
+
         self.frame_length = params.frame_length
         self.speakers_dict = {}
         self.speakers_ids_dict = {}
@@ -78,15 +94,13 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         if self.hparams.data_csv is not None:
             self.preprocess_data(self.hparams.data_csv)
 
-    def load_duration(self, duration, maxtime):
-        duration = [float(d) / self.frame_length for d in duration]
-        total_frame = round(int(maxtime) / 1000 / self.frame_length)
-        duration[-1] = total_frame - sum(duration[:-1])
-        duration = tf.convert_to_tensor(duration)
+    def load_duration(self, duration):
+        duration = tf.convert_to_tensor([float(d) for d in duration])
+        duration = duration / self.frame_length
         duration = tf.cast(tf.clip_by_value(tf.math.round(duration), 0.0,
-                                            tf.cast(10000, dtype=tf.float32)),dtype=tf.int32)
-
+                                            tf.cast(10000, dtype=tf.float32)), dtype=tf.int32)
         return duration
+
 
     def preprocess_data(self, file_path):
         """generate a list of tuples (wav_filename, wav_length_ms, transcript, speaker).
@@ -100,22 +114,13 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         self.speakers = []
         for line in lines:
             entry = line.split("\t")
-            header_list = headers.split("\t")
-            duration = [] if "duration" not in header_list \
-                else entry[header_list.index("duration")].split(" ")
+            duration = [] if "duration" not in headers.split("\t") else entry[3].split(' ')
             if len(duration) != 0:
-                duration = self.load_duration(duration, entry[1])
-            f0_file = None if "f0_file" not in header_list \
-                else entry[header_list.index("f0_file")]
-            energy_file = None if "energy_file" not in header_list \
-                else entry[header_list.index("energy_file")]
-            speaker = "global" if "speaker" not in header_list \
-                else entry[header_list.index("speaker")]
+                duration = self.load_duration(duration)
+            speaker = "global" if "speaker" not in headers.split("\t") else entry[-1]
             self.entries.append(
-                tuple([
-                    entry[0], entry[1], entry[2], duration, f0_file, energy_file,
-                    speaker
-                ]))
+                tuple([entry[0], entry[1], entry[2], duration, speaker])
+            )
             if speaker not in self.speakers:
                 self.speakers.append(speaker)
 
@@ -124,73 +129,61 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
         self.speakers_ids_dict = dict(zip(speakers_ids, self.speakers))
 
         # handling special case for text_featurizer
-        self.entries.sort(key=lambda item: len(item[2].split(' ')))
+        self.entries.sort(key=lambda item: len(item[2]))
         if self.text_featurizer.model_type == "text":
-            _, _, all_transcripts, _, _, _ = zip(*self.entries)
+            _, _, all_transcripts, _, _ = zip(*self.entries)
             self.text_featurizer.load_model(all_transcripts)
 
         # apply some filter
         unk = self.text_featurizer.unk_index
         if self.hparams.remove_unk and unk != -1:
-            self.entries = list(
-                filter(lambda x: unk not in self.text_featurizer.encode(x[2]),
-                       self.entries))
-        self.entries = list(
-            filter(
-                lambda x: len(x[2].split(' ')) in range(
-                    self.hparams.input_length_range[0], self.hparams.
-                    input_length_range[1]), self.entries))
-        self.entries = list(
-            filter(
-                lambda x: float(x[1]) in range(
-                    self.hparams.output_length_range[0], self.hparams.
-                    output_length_range[1]), self.entries))
+            self.entries = list(filter(lambda x: unk not in
+                                self.text_featurizer.encode(x[2]), self.entries))
+        self.entries = list(filter(lambda x: len(x[2]) in
+                            range(self.hparams.input_length_range[0],
+                            self.hparams.input_length_range[1]), self.entries))
+        self.entries = list(filter(lambda x: float(x[1]) in
+                            range(self.hparams.output_length_range[0],
+                            self.hparams.output_length_range[1]), self.entries))
         return self
 
     def __getitem__(self, index):
-        audio_data, maxtime, transcripts, durations, f0_file, energy_file, speaker = self.entries[index]
+        audio_data, _, transcripts, durations, speaker = self.entries[index]
         audio_feat = self.audio_featurizer(audio_data)
-        if '.ark' not in audio_data and '.npy' not in audio_data:
-            audio_feat = self.feature_normalizer(audio_feat, speaker)
-        energy = tf.zeros([1])
-        f0 = tf.zeros([1])
-        if f0_file is not None and energy_file is not None:
-            audio_feat_length = audio_feat.shape[0]
-            audio_feat = tf.reshape(audio_feat, [audio_feat_length, -1])
-            f0 = np.array(np.load(f0_file))
-            energy = np.array(np.load(energy_file))
+        audio_feat = self.feature_normalizer(audio_feat, speaker)
+        audio_feat_length = audio_feat.shape[0]
+        audio_feat = tf.reshape(audio_feat, [audio_feat_length, -1])
 
-            f0_len = tf.shape(f0)[0]
-            audio_feat_length = tf.shape(audio_feat)[0]
-            f0 = f0[:audio_feat_length]
-            energy = energy[:audio_feat_length]
-            audio_feat = audio_feat[:f0_len]
+        pitch = self.pitch_featurizer(audio_data)[:, 0]
+
+        energy = self.energy_featurizer(audio_data)
+        #energy = energy / 32768
+
+        pitch_len = tf.shape(pitch)[0]
         audio_feat_length = tf.shape(audio_feat)[0]
+        pitch = pitch[:audio_feat_length]
+        energy = energy[:audio_feat_length]
+        audio_feat = audio_feat[:pitch_len]
+
         text = self.text_featurizer.encode(transcripts)
-        #text.append(self.text_featurizer.model.eos_index)
         text_length = len(text)
 
         duration_index = []
         for index, duration in enumerate(durations):
             duration_index.extend(list([index]) * int(duration))
-        duration_index = duration_index[:audio_feat_length]
+        duration_index = duration_index[: audio_feat_length]
         if 0 < len(duration_index) < audio_feat_length:
             expanded_index = list([duration_index[-1]]) * int(audio_feat_length - len(duration_index))
             duration_index.extend(expanded_index)
-        #ugly code: 243.02415466308594 and 50.29555130004883 is the f0's mean and std 
-        f0 = tf.numpy_function(_norm_mean_std_tf, [tf.convert_to_tensor(f0), tf.convert_to_tensor(243.02415466308594), tf.convert_to_tensor(50.29555130004883)], tf.float32)
-        f0 = tf_average_by_duration(tf.convert_to_tensor(f0), tf.convert_to_tensor(durations))
-        #ugly code: same
-        energy = tf.numpy_function(_norm_mean_std_tf, [tf.convert_to_tensor(energy), tf.convert_to_tensor(20.519119262695312), tf.convert_to_tensor(19.576580047607422)], tf.float32)
+        pitch = tf_average_by_duration(tf.convert_to_tensor(pitch), tf.convert_to_tensor(durations))
         energy = tf_average_by_duration(tf.convert_to_tensor(energy), tf.convert_to_tensor(durations))
-
         return {
             "input": text,
             "input_length": text_length,
             "output_length": audio_feat_length,
             "output": audio_feat,
             "speaker": self.speakers_dict[speaker],
-            "pitch": f0,
+            "pitch": pitch,
             "energy": energy,
             "duration": duration_index
         }
@@ -286,21 +279,6 @@ class SpeechSynthesisDatasetBuilder(SpeechBaseDatasetBuilder):
                 "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "output": tf.TensorSpec(shape=(None, None, feature_dim), dtype=tf.float32),
-                "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32),
-                "pitch": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-                "energy": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-                "duration": tf.TensorSpec(shape=(None, None), dtype=tf.int32)
-            },
-        )
-
-    @property
-    def mpc_sample_signature(self):
-        return (
-            {
-                "input": tf.TensorSpec(shape=(None, None), dtype=tf.int32),
-                "input_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
-                "output_length": tf.TensorSpec(shape=(None), dtype=tf.int32),
-                "output": tf.TensorSpec(shape=(None, None, self.num_class), dtype=tf.float32),
                 "speaker": tf.TensorSpec(shape=(None), dtype=tf.int32),
                 "pitch": tf.TensorSpec(shape=(None, None), dtype=tf.float32),
                 "energy": tf.TensorSpec(shape=(None, None), dtype=tf.float32),

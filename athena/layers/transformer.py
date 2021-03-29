@@ -252,7 +252,7 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 
     def __init__(
         self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="gelu",
-            unidirectional=False, look_ahead=0, ffn=None, conv_module_kernel_size=0
+            unidirectional=False, look_ahead=0, ffn=None, conv_module_kernel_size=0, use_batch_norm=False
     ):
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, nhead, unidirectional, look_ahead=look_ahead)
@@ -282,9 +282,12 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
             )
         else:
             self.ffn = ffn
-
-        self.norm1 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
-        self.norm2 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
+        if use_batch_norm is True:
+            self.norm1 = layers.BatchNormalization(epsilon=1e-8, input_shape=(d_model,))
+            self.norm2 = layers.BatchNormalization(epsilon=1e-8, input_shape=(d_model,))
+        else:
+            self.norm1 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
+            self.norm2 = layers.LayerNormalization(epsilon=1e-8, input_shape=(d_model,))
         self.dropout = layers.Dropout(dropout, input_shape=(d_model,))
 
         self.conv_module = None
@@ -318,9 +321,9 @@ class TransformerEncoderLayer(tf.keras.layers.Layer):
 class TransformerDecoderLayer(tf.keras.layers.Layer):
     """TransformerDecoderLayer is made up of self-attn, multi-head-attn and feedforward network.
 
-    Reference: 
+    Reference:
         "Attention Is All You Need".
-        
+
     Args:
         d_model: the number of expected features in the input (required).
         nhead: the number of heads in the multiheadattention models (required).

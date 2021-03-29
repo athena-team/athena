@@ -207,10 +207,37 @@ class FastSpeech(BaseModel):
         metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
-    def _feedforward_decoder(self, encoder_output, duration_indexes, duration_sequences,
-                             output_length, training):
+    def _feedforward_decoder(self, expanded_array, expanded_length, training: bool = None):
         """feed-forward decoder
+        Args:
+            expanded_array: expanded encoder outputs after length regulation
+                shape: [batch, y_steps, d_model]
+            expanded_length: corresponding lengths, shape: [batch, y_steps]
+            training: if it is in the training stage
+        Returns:
+            before_outs: the outputs before postnet calculation
+            after_outs: the outputs after postnet calculation
+        """
 
+        expanded_mask, _ = create_multihead_mask(expanded_array, expanded_length, None)
+        expanded_output = self.y_net(expanded_array, training=training)
+        y_steps = tf.shape(expanded_output)[1]
+        # decoder_output, shape: [batch, expanded_length, d_model]
+        decoder_output = self.decoder(expanded_output, expanded_mask, training=training)
+        #if self.hparams.use_rnn_decoder:
+        #    decoder_output = self.rnn_decoder(decoder_output, training=training)
+        batch = tf.shape(decoder_output)[0]
+        decoder_output = self.feat_out(decoder_output, training=training)
+        before_outs = tf.reshape(decoder_output, [batch, -1, self.feat_dim])
+        before_outs = before_outs[:, :y_steps]
+        if self.hparams.postnet_layers > 0:
+            after_outs = before_outs + self.postnet(before_outs, training=training)
+            return before_outs, after_outs
+        return before_outs, None
+
+    def length_regulate(self, encoder_output, duration_indexes, duration_sequences,
+                        output_length, alpha=1.0, training: bool = None):
+        """
         Args:
             encoder_output: encoder outputs, shape: [batch, x_steps, d_model]
             duration_indexes: argmax weights calculated from duration_calculator.
@@ -218,31 +245,19 @@ class FastSpeech(BaseModel):
             duration_sequences: It contains duration information for each phoneme,
                 shape: [batch, x_steps]
             output_length: the real output length
+            alpha: speed rate
             training: if it is in the training stage
-        Returns::
-
-            before_outs: the outputs before postnet calculation
-            after_outs: the outputs after postnet calculation
         """
-        # when using real durations, duration_indexes would be None
         if training is True:
             expanded_array = self.length_regulator(encoder_output, duration_indexes,
                                                    output_length=output_length)
             expanded_length = output_length
         else:
             expanded_array = self.length_regulator.inference(encoder_output, duration_sequences,
-                                                             alpha=self.hparams.alpha)
+                                                             alpha=alpha)
             expanded_length = tf.reduce_sum(duration_sequences, axis=1) # [batch]
         expanded_array = tf.ensure_shape(expanded_array, [None, None, self.hparams.d_model])
-        expanded_mask, _ = create_multihead_mask(expanded_array, expanded_length, None)
-        expanded_output = self.y_net(expanded_array, training=training)
-        # decoder_output, shape: [batch, expanded_length, d_model]
-        decoder_output = self.decoder(expanded_output, expanded_mask, training=training)
-        batch = tf.shape(decoder_output)[0]
-        decoder_output = self.feat_out(decoder_output, training=training)
-        before_outs = tf.reshape(decoder_output, [batch, -1, self.feat_dim])
-        after_outs = before_outs + self.postnet(before_outs, training=training)
-        return before_outs, after_outs
+        return expanded_array, expanded_length
 
     def call(self, samples, training: bool = None):
         x0 = self.x_net(samples['input'], training=training)
