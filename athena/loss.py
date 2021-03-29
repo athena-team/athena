@@ -25,10 +25,7 @@ class CTCLoss(tf.keras.losses.Loss):
     """ CTC LOSS
 	CTC LOSS implemented with Tensorflow
     """
-    def __init__(self,
-                 logits_time_major=False,
-                 blank_index=-1,
-                 name="CTCLoss"):
+    def __init__(self, logits_time_major=False, blank_index=-1, name="CTCLoss"):
         super().__init__(name=name)
         self.logits_time_major = logits_time_major
         self.blank_index = blank_index
@@ -53,13 +50,8 @@ class Seq2SeqSparseCategoricalCrossentropy(
     """ Seq2SeqSparseCategoricalCrossentropy LOSS
     CategoricalCrossentropy calculated at each character for each sequence in a batch
     """
-    def __init__(self,
-                 num_classes,
-                 eos=-1,
-                 by_token=False,
-                 by_sequence=True,
-                 from_logits=True,
-                 label_smoothing=0.0):
+    def __init__(self, num_classes, eos=-1, by_token=False, by_sequence=True,
+                 from_logits=True, label_smoothing=0.0):
         super().__init__(from_logits=from_logits, reduction="none")
         self.by_token = by_token
         self.by_sequence = by_sequence
@@ -116,13 +108,8 @@ class MPCLoss(tf.keras.losses.Loss):
 class Tacotron2Loss(tf.keras.losses.Loss):
     """ Tacotron2 Loss
     """
-    def __init__(self,
-                 model,
-                 guided_attn_loss_function,
-                 regularization_weight=0.0,
-                 l1_loss_weight=0.0,
-                 mask_decoder=False,
-                 pos_weight=1.0,
+    def __init__(self, model, guided_attn_loss_function, regularization_weight=0.0,
+                 l1_loss_weight=0.0, mse_loss_weight=1.0, mask_decoder=False, pos_weight=1.0,
                  name="Tacotron2Loss"):
         super().__init__(name=name)
         self.model = model
@@ -199,10 +186,7 @@ class Tacotron2Loss(tf.keras.losses.Loss):
 class GuidedAttentionLoss(tf.keras.losses.Loss):
     """ GuidedAttention Loss to make attention alignments more monotonic
     """
-    def __init__(self,
-                 guided_attn_weight,
-                 reduction_factor,
-                 attn_sigma=0.4,
+    def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4,
                  name='GuidedAttentionLoss'):
         super().__init__(name=name)
         self.guided_attn_weight = guided_attn_weight
@@ -309,13 +293,8 @@ class GuidedAttentionLoss(tf.keras.losses.Loss):
 
 class GuidedMultiHeadAttentionLoss(GuidedAttentionLoss):
     """Guided multihead attention loss function module for multi head attention."""
-    def __init__(self,
-                 guided_attn_weight,
-                 reduction_factor,
-                 attn_sigma=0.4,
-                 num_heads=2,
-                 num_layers=2,
-                 name='GuidedMultiHeadAttentionLoss'):
+    def __init__(self, guided_attn_weight, reduction_factor, attn_sigma=0.4, num_heads=2,
+                 num_layers=2, name='GuidedMultiHeadAttentionLoss'):
         super().__init__(guided_attn_weight,
                          reduction_factor,
                          attn_sigma,
@@ -338,15 +317,8 @@ class GuidedMultiHeadAttentionLoss(GuidedAttentionLoss):
 
 class FastSpeechLoss(tf.keras.losses.Loss):
     """used for training of fastspeech1/2"""
-    def __init__(self,
-                 duration_predictor_loss_weight,
-                 pitch_predictor_loss_weight=0.0,
-                 energy_predictor_loss_weight=0.0,
-                 eps=1.0,
-                 use_mask=False,
-                 teacher_guide=False,
-                 mse_loss_weight=0.0,
-                 use_after_outs=True):
+    def __init__(self, duration_predictor_loss_weight, pitch_predictor_loss_weight=0.0, energy_predictor_loss_weight=0.0,
+                eps=1.0, use_mask=False, teacher_guide=False, mse_loss_weight=0.0, use_after_outs=True):
         super().__init__()
         self.eps = eps
         self.duration_predictor_loss_weight = duration_predictor_loss_weight
@@ -387,7 +359,6 @@ class FastSpeechLoss(tf.keras.losses.Loss):
         else:
             mask = tf.ones_like(output)
         total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
-
         if self.teacher_guide:
             true_outs = teacher_outs
         else:
@@ -395,22 +366,20 @@ class FastSpeechLoss(tf.keras.losses.Loss):
         l1_loss = tf.abs(after_outs - true_outs) + tf.abs(before_outs - true_outs)
         l1_loss *= mask
         final_loss['l1_loss'] = tf.reduce_sum(l1_loss) / total_size
-        
         if self.use_after_outs:
             mse_loss = tf.square(after_outs - true_outs) + tf.square(before_outs - true_outs)
         else:
             mse_loss = tf.square(before_outs - true_outs)
-
+        final_loss['_mse_loss'] = tf.reduce_sum(mse_loss) / total_size * self.mse_loss_weight
         mse_loss *= mask
         final_loss['mse_loss'] = tf.reduce_sum(mse_loss) / total_size * self.mse_loss_weight
 
-        teacher_duration = tf.math.log(
-            tf.cast(duration_sequences, dtype=tf.float32) + self.eps)
+        teacher_duration = tf.math.log(tf.cast(duration_sequences, dtype=tf.float32) + self.eps)
         if self.use_mask:
             mask = tf.sequence_mask(input_length, x_steps, dtype=tf.float32)
         else:
             mask = tf.ones_like(teacher_duration)
-        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+
         duration_loss = tf.square(teacher_duration - pred_duration_sequences)
         duration_loss *= mask
         final_loss['duration_loss'] = tf.reduce_sum(duration_loss) / total_size * \
@@ -433,7 +402,6 @@ class FastSpeechLoss(tf.keras.losses.Loss):
             final_loss['energy_loss'] = tf.reduce_sum(energy_loss) / total_size * \
                                           self.energy_predictor_loss_weight
         return final_loss
-
 
 class SoftmaxLoss(tf.keras.losses.Loss):
     """ Softmax Loss
@@ -465,12 +433,7 @@ class AMSoftmaxLoss(tf.keras.losses.Loss):
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
-    def __init__(self,
-                 embedding_size,
-                 num_classes,
-                 m=0.3,
-                 s=15,
-                 name="AMSoftmaxLoss"):
+    def __init__(self, embedding_size, num_classes, m=0.3, s=15, name="AMSoftmaxLoss"):
         super().__init__(name=name)
         self.embedding_size = embedding_size
         self.num_classes = num_classes
@@ -503,13 +466,8 @@ class AAMSoftmaxLoss(tf.keras.losses.Loss):
                             and "In defence of metric learning for speaker recognition"
         Similar to this implementation "https://github.com/clovaai/voxceleb_trainer"
     """
-    def __init__(self,
-                 embedding_size,
-                 num_classes,
-                 m=0.3,
-                 s=15,
-                 easy_margin=False,
-                 name="AAMSoftmaxLoss"):
+    def __init__(self, embedding_size, num_classes,
+                 m=0.3, s=15, easy_margin=False, name="AAMSoftmaxLoss"):
         super().__init__(name=name)
         self.embedding_size = embedding_size
         self.num_classes = num_classes
@@ -688,10 +646,7 @@ class StarganLoss(tf.keras.losses.Loss):
         discriminator_loss and classifier_loss. lambda_identity and lambda_classifier 
         is added to make loss values comparable
     """
-    def __init__(self,
-                 lambda_cycle,
-                 lambda_identity,
-                 lambda_classifier,
+    def __init__(self, lambda_cycle, lambda_identity, lambda_classifier,
                  name="StarganLoss"):
         super().__init__(name=name)
         self.lambda_cycle = lambda_cycle
@@ -785,11 +740,8 @@ class ContrastiveLoss(tf.keras.losses.Loss):
     """
     Contrastive Loss for SimCLR Model
     """
-    def __init__(self,
-                 temperature=1.0,
-                 normalization=True,
-                 name="ContrastiveLoss",
-                 ps=None):
+    def __init__(self, temperature=1.0, normalization=True,
+                 name="ContrastiveLoss", ps=None):
         super().__init__(name=name)
 
         self.temperature = temperature
