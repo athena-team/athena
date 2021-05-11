@@ -59,7 +59,7 @@
     "text_config": {"type":"spm", "model":"examples/asr/switchboard/data/switchboard_bpe2000.model"},
     "speed_permutation": [0.9, 1.0, 1.1],
     "input_length_range":[10, 16000],
-    "preprocess": {
+    "spectral_augmentation": {
       "time_warping": 5,
       "time_masking": 40,
       "frequency_masking": 15,
