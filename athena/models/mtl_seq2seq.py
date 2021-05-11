@@ -27,7 +27,7 @@ from ..loss import CTCLoss
 from ..metrics import CTCAccuracy
 from .speech_transformer import SpeechTransformer, SpeechTransformer2
 from ..utils.hparam import register_and_parse_hparams
-
+from absl import logging
 
 class MtlTransformerCtc(BaseModel):
     """ In speech recognition, adding CTC loss to Attention-based seq-to-seq model is known to
@@ -67,9 +67,10 @@ class MtlTransformerCtc(BaseModel):
 
         # for WFST
         self.vocab = {}
-        for line in io.open(data_descriptions.hparams.text_config["model"], 'r', encoding='utf-8').readlines():
-            char, idx = line.strip().split()[0], line.strip().split()[1]
-            self.vocab[char] = int(idx)
+        if data_descriptions.hparams.text_config["type"] == "vocab":
+            for line in io.open(data_descriptions.hparams.text_config["model"], 'r', encoding='utf-8').readlines():
+                char, idx = line.strip().split()[0], line.strip().split()[1]
+                self.vocab[char] = int(idx)
         # we need dict of words for WFST decoding
         if data_descriptions.hparams.words is not None:
             self.words = []
