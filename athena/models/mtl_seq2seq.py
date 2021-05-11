@@ -28,6 +28,7 @@ from ..metrics import CTCAccuracy
 from .speech_transformer import SpeechTransformer, SpeechTransformer2
 from ..utils.hparam import register_and_parse_hparams
 
+
 class MtlTransformerCtc(BaseModel):
     """ In speech recognition, adding CTC loss to Attention-based seq-to-seq model is known to
     help convergence. It usually gives better results than using attention alone.
