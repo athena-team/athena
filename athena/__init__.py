@@ -16,6 +16,7 @@
 """ module """
 # data
 from .data import SpeechRecognitionDatasetBuilder
+from .data import SpeechRecognitionDatasetBuilderGIGA
 from .data import SpeechRecognitionDatasetKaldiIOBuilder
 from .data import SpeechSynthesisDatasetBuilder
 from .data import SpeechDatasetBuilder

@@ -24,10 +24,7 @@ source tools/env.sh
 stage=0
 stop_stage=100
 
-WORKER_HOST=`cat /etc/volcano/worker.host | tr "\n" ","`
-mkdir -p /var/run/sshd; /usr/sbin/sshd -p 12345; sleep 3;
-echo ${WORKER_HOST}
-horovod_cmd="horovodrun -np 4 -H localhost:4"
+horovod_cmd="horovodrun -np 8 -H localhost:8"
 horovod_prefix="horovod_"
 dataset_dir=your/path/gigaspeech/
 
@@ -35,7 +32,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # prepare data
     echo "Creating csv"
     mkdir -p examples/asr/gigaspeech/data
-    python examples/asr/giga/local/prepare_data.py \
+    python examples/asr/gigaspeech/local/prepare_data.py \
         $dataset_dir examples/asr/gigaspeech/data || exit 1
 fi
 

@@ -39,7 +39,7 @@ def extract_json(json_file='', output_dir=''):
             with open(f'{output_dir}/utt2subsets', 'w') as utt2subsets, \
                     open(f'{output_dir}/text', 'w') as utt2text, \
                     open(f'{output_dir}/segments', 'w') as segments, \
-                    open(f'{output_dir}/wav.scp', 'w') as wavscp:
+                    open(f'{output_dir}/opus.scp', 'w') as wavscp:
                 for long_audio in json_data['audios']:
                     try:
                         long_audio_path = os.path.realpath(
@@ -75,12 +75,30 @@ def extract_json(json_file='', output_dir=''):
                                 utt2subsets.write(f'{sid}\t{segment_sub_names}\n')
 
 
+def convert_opus2wav(opus_scp='', wav_scp='', rm_opus=False):
+    '''
+    reference to https://github.com/SpeechColab/GigaSpeech/blob/main/utils/opus_to_wav.py
+    '''
+    with open(opus_scp, 'r') as oscp, open(wav_scp, 'w') as wscp:
+        for line in oscp:
+            line = line.strip()
+            utt, opus_path = re.split('\s+', line)
+            wav_path = opus_path.replace('.opus', '.wav')
+            cmd = f'ffmpeg -y -i {opus_path} -ac 1 -ar 16000 {wav_path}'
+            try:
+                os.system(cmd)
+                wscp.write(f'{utt}\t{wav_path}\n')
+            except:
+                sys.exit(f'Failed to run the cmd: {cmd}')
+
+            if rm_opus is True:
+                os.remove(opus_path)
+
 def prepare_data(data_dir='', subset='XL'):
     subset_file = os.path.join(data_dir, 'utt2subsets')
     text_file = os.path.join(data_dir, 'text')
     segment_file = os.path.join(data_dir, 'segments')
     wav_scp = os.path.join(data_dir, 'wav.scp')
-
     out_f = os.path.join(data_dir, subset + '.csv')
 
     subset_dict = {}
@@ -150,5 +168,11 @@ if __name__ == '__main__':
     OUTPUT_DIR = sys.argv[2]
     json_file = os.path.join(DATASET_DIR, "GigaSpeech.json")
     extract_json(json_file=json_file, output_dir=OUTPUT_DIR)
+
+    print(f'Converting opus to wave, please be patient')
+    opus_scp = os.path.join(OUTPUT_DIR, 'opus.scp')
+    wav_scp = os.path.join(OUTPUT_DIR, 'wav.scp')
+    convert_opus2wav(opus_scp, wav_scp, False)
+
     for subset in SUBSETS:
         prepare_data(data_dir=OUTPUT_DIR, subset=subset)

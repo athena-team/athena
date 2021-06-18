@@ -41,7 +41,7 @@
     "output_text_config":{"type":"spm", "model":"examples/asr/gigaspeech/data/giga_unigram5000.model"}
   },
   "devset_config":{
-    "data_csv":"examples/asr/gigaspeech/data/dev.trans.sort2.csv",
+    "data_csv":"examples/asr/gigaspeech/data/dev.trans.csv",
     "input_text_config":{"type": "spm", "model":"examples/asr/gigaspeech/data/giga_unigram5000.model"},
     "output_text_config":{"type":"spm", "model":"examples/asr/gigaspeech/data/giga_unigram5000.model"}
   }
