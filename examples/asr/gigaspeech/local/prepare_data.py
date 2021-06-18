@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+# reference https://github.com/SpeechColab/GigaSpeech/tree/main/utils
 
 import os
 import re
@@ -76,9 +77,6 @@ def extract_json(json_file='', output_dir=''):
 
 
 def convert_opus2wav(opus_scp='', wav_scp='', rm_opus=False):
-    '''
-    reference to https://github.com/SpeechColab/GigaSpeech/blob/main/utils/opus_to_wav.py
-    '''
     with open(opus_scp, 'r') as oscp, open(wav_scp, 'w') as wscp:
         for line in oscp:
             line = line.strip()
