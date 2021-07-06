@@ -16,6 +16,7 @@
 # ==============================================================================
 """ data """
 from .datasets.speech_recognition import SpeechRecognitionDatasetBuilder
+from .datasets.speech_recognition import SpeechRecognitionDatasetBuilderGIGA
 from .datasets.speech_recognition_kaldiio import SpeechRecognitionDatasetKaldiIOBuilder
 from .datasets.speech_synthesis import SpeechSynthesisDatasetBuilder
 from .datasets.speech_set import SpeechDatasetBuilder

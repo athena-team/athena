@@ -25,6 +25,7 @@ from athena import *
 
 SUPPORTED_DATASET_BUILDER = {
     "speech_recognition_dataset": SpeechRecognitionDatasetBuilder,
+    "speech_recognition_dataset_giga": SpeechRecognitionDatasetBuilderGIGA,
     "speech_recognition_dataset_kaldiio": SpeechRecognitionDatasetKaldiIOBuilder,
     "speech_synthesis_dataset": SpeechSynthesisDatasetBuilder,
     "speech_dataset": SpeechDatasetBuilder,
@@ -165,8 +166,7 @@ def train(jsonfile, Solver, rank_size=1, rank=0):
         eval_sample_signature=devset_builder.sample_signature,
         config=p.solver_config,
     )
-    loss = 0.0
-    metrics = {}
+
     while epoch < p.num_epochs:
         if rank == 0:
             logging.info(">>>>> start training in epoch %d" % epoch)
