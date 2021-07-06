@@ -129,14 +129,12 @@ class MtlTransformerCtc(BaseModel):
             predictions: the corresponding decoding results
         """
         encoder_output, input_mask = self.model.decode(samples, hparams, decoder, return_encoder=True)
+
         # init op
         last_predictions = tf.ones([1], dtype=tf.int32) * self.sos
-        history_predictions = tf.TensorArray(
-            tf.int32, size=1, dynamic_size=True, clear_after_read=False
-        )
-        history_predictions.write(0, last_predictions)
-        history_predictions = history_predictions.stack()
+        history_predictions = tf.reshape(last_predictions, [1, -1])
         init_cand_states = [history_predictions]
+
         step = 0
         if hparams.decoder_type == "beam_search_decoder" and hparams.ctc_weight != 0 and decoder.ctc_scorer is not None:
             ctc_logits = self.decoder(encoder_output, training=False)
