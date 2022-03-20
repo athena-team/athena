@@ -11,4 +11,11 @@ pandas<=0.25.1
 kaldiio
 rarfile
 inflect
+pandas
+sdist
+librosa
+pyworld
+Pillow
+kenlm
+
 https://github.com/kpu/kenlm/archive/master.zip
