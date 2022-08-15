@@ -34,6 +34,7 @@ import tensorflow as tf
 from sox import Transformer
 from athena import get_wave_file_length
 from athena import TextFeaturizer
+from athena import TextTokenizer
 
 SUBSETS = ["train", "dev"]
 
@@ -197,10 +198,18 @@ def processor(dataset_dir, subset, force_process, output_dir):
     return subset_csv
 
 
+def build_vocab(csv_file, vocab_file):
+    logging.info("Building the HKUST vocabulary {}".format(vocab_file))
+    text_tokenizer = TextTokenizer()
+    text_tokenizer.load_csv(csv_file)
+    text_tokenizer.save_vocab(vocab_file)
+    logging.info("Finished building the HKUST vocabulary {}".format(vocab_file))
+    return vocab_file
+
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 3:
-        print('Usage: python {} dataset_dir output_dir\n'
+        logging.info('Usage: python {} dataset_dir output_dir\n'
               '    dataset_dir : directory contains LDC2005S15 and LDC2005T32\n'
               '    output_dir  : Athena working directory'.format(sys.argv[0]))
         exit(1)
@@ -208,3 +217,7 @@ if __name__ == "__main__":
     OUTPUT_DIR = sys.argv[2]
     for SUBSET in SUBSETS:
         processor(DATASET_DIR, SUBSET, True, OUTPUT_DIR)
+
+    csv_file = os.path.join(OUTPUT_DIR, 'train.csv')
+    vocab_file = os.path.join(OUTPUT_DIR, 'vocab')
+    build_vocab(csv_file, vocab_file)

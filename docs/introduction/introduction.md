@@ -2,7 +2,7 @@
 
 *Athena* is an open-source implementation of end-to-end speech processing engine. Our vision is to empower both industrial application and academic research on end-to-end models for speech processing. To make speech processing available to everyone, we're also releasing example implementation and recipe on some opensource dataset for various tasks (ASR, TTS, Voice Conversion, Speaker Recognition, etc).
 
-All of our models are implemented in Tensorflow>=2.0.0. For ease of use, we provide Kaldi-free pythonic feature extractor with [Athena_transform](https://github.com/athena-team/athena-transform).
+All of our models are implemented in Tensorflow>=2.3.1. For ease of use, we provide Kaldi-free pythonic feature extractor with [Athena_transform](https://github.com/athena-team/athena-transform).
 
 ## Key Features
 
@@ -10,8 +10,6 @@ All of our models are implemented in Tensorflow>=2.0.0. For ease of use, we prov
 - Speech-Transformer
 - Unsupervised pre-training
 - Multi-GPU training on one machine or across multiple machines with Horovod
-- End-to-end Tacotron2 based TTS with support for multi-speaker and GST
-- Transformer based TTS and FastSpeech
 - WFST creation and WFST-based decoding
 - Deployment with Tensorflow C++
 
@@ -40,13 +38,5 @@ Below is the basic directory structure for Athena
 |   |   |-- aishell
 |   |   |-- hkust
 |   |   |-- librispeech
-|   |   |-- switchboard
-|   |   |-- timit
-|   |-- translate # examples for translate
-|   |   |-- spa-eng-example
-|   |-- tts # examples for tts
-|   |   |-- data_baker
-|   |   |-- libritts
-|   |   |-- ljspeech
 |-- tools  # need to source env.sh before training
 ```

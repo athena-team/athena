@@ -33,3 +33,4 @@ pitch = gen_x_ops.pitch
 mfcc = gen_x_ops.mfcc_dct
 frame_pow = gen_x_ops.frame_pow
 speed = gen_x_ops.speed
+add_rir_noise_aecres = gen_x_ops.add_rir_noise_aecres

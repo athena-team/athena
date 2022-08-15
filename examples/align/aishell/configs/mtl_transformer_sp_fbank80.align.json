@@ -1,0 +1,93 @@
+{
+  "batch_size":1,
+  "num_epochs":600,
+  "sorta_epoch":0,
+  "ckpt":"examples/align/aishell/ckpts/mtl_transformer_f80",
+  "summary_dir":"examples/align/aishell/ckpts/mtl_transformer_f80/event",
+  "use_dev_loss":true,
+
+  "solver_gpu":[],
+  "solver_config":{
+    "clip_norm":5,
+    "log_interval":10,
+    "ckpt_interval_train":2000,
+    "ckpt_interval_dev":4000,
+    "enable_tf_function":true
+  },
+
+  "model":"mtl_transformer_ctc",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "model":"speech_transformer",
+    "model_config":{
+      "return_encoder_output":true,
+      "num_filters":256,
+      "d_model":256,
+      "num_heads":4,
+      "num_encoder_layers":12,
+      "num_decoder_layers":6,
+      "dff":2048,
+      "dropout_rate":0.1,
+      "label_smoothing_rate":0.1,
+      "schedual_sampling_rate":0.9
+    },
+    "mtl_weight":0.7
+  },
+
+  "inference_config":{
+    "decoder_type":"attention_rescoring",
+    "model_avg_num":10,
+    "beam_size": 20,
+    "at_weight": 1.0,
+    "ctc_weight":1.2,
+    "lm_type": "rnn",
+    "lm_weight":0.5,
+    "lm_path": "examples/align/aishell_decode/configs/rnnlm.json",
+    "predict_path": "examples/align/aishell/result/ctc1_2_lm0_5.result",
+    "label_path": "examples/align/aishell/result/ctc1_2_lm0_5.label"
+  },
+  "alignment_config":{
+    "sampling_rate": 4,
+    "model_avg_num":1,
+    "align_out_file": "examples/align/aishell/ALIGN.txt"
+  },
+
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":256,
+    "warmup_steps":10000,
+    "k": 3
+  },
+
+  "dataset_builder": "speech_recognition_dataset",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/align/aishell/data/test.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/align/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/align/aishell/data/vocab"},
+    "input_length_range":[10, 100000],
+    "speed_permutation": [1.0],
+    "spectral_augmentation":{"warp_for_time": false, "num_t_mask": 2, "num_f_mask": 2, "max_t": 50, "max_f": 10, "max_w": 80}
+  },
+  "devset_config":{
+    "data_csv": "examples/align/aishell/data/test.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/align/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/align/aishell/data/vocab"},
+    "input_length_range":[10, 100000]
+  },
+  "testset_config":{
+    "data_csv": "examples/align/aishell/data/test.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/align/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/align/aishell/data/vocab"},
+    "input_length_range":[0, 1000000],
+    "ignore_unk": false
+  }
+}

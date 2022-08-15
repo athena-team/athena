@@ -3,11 +3,15 @@
   "num_epochs":70,
   "sorta_epoch":1,
   "ckpt":"examples/asr/aishell/ckpts/rnnlm",
+  "summary_dir":"examples/asr/aishell/ckpts/rnnlm/event",
+  "use_dev_loss":true,
 
   "solver_gpu":[],
   "solver_config":{
     "clip_norm":100,
     "log_interval":10,
+    "ckpt_interval_train":500,
+    "ckpt_interval_dev":1000,
     "enable_tf_function":true
   },
 

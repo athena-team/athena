@@ -55,21 +55,66 @@ def data_loader(dataset_builder, batch_size=16, num_threads=1):
                 yield data_queue.get()
 
     # make dataset using from_generator
-    dataset = tf.compat.v2.data.Dataset.from_generator(
-        _gen_data,
-        output_types=dataset_builder.sample_type,
-        output_shapes=dataset_builder.sample_shape,
-    )
+    from .kws.speech_wakeup_framewise_kaldiio import SpeechWakeupFramewiseDatasetKaldiIOBuilder
+    from .kws.speech_wakeup_kaldiio import SpeechWakeupDatasetKaldiIOBuilder
+    from .kws.speech_wakeup_kaldiio_av import SpeechWakeupDatasetKaldiIOBuilderAVCE
+    if isinstance(dataset_builder, SpeechWakeupFramewiseDatasetKaldiIOBuilder):
+        # make dataset using from_generator
+        dataset = tf.data.Dataset.from_generator(
+            _gen_data,
+            output_types=dataset_builder.sample_type,
+            output_shapes=dataset_builder.sent_sample_shape,
+        )
 
-    # Padding the features to its max length dimensions.
-    dataset = dataset.padded_batch(
-        batch_size=batch_size,
-        padded_shapes=dataset_builder.sample_shape,
-        drop_remainder=True,
-    )
+        # split one sentence to many frames to form framewise datasets
+        dataset = dataset.unbatch()
+
+        dataset = dataset.batch(
+            batch_size=batch_size,
+            drop_remainder=True,
+        )
+    elif isinstance(dataset_builder, SpeechWakeupDatasetKaldiIOBuilder):
+        # make dataset using from_generator
+        dataset = tf.data.Dataset.from_generator(
+            _gen_data,
+            output_types=dataset_builder.sample_type,
+            output_shapes=dataset_builder.sample_shape,
+        )
+        # Padding the features to its max length dimensions.
+        dataset = dataset.padded_batch(
+            batch_size=batch_size,
+            padded_shapes=dataset_builder.sample_shape,
+            drop_remainder=True,
+        )
+    elif isinstance(dataset_builder, SpeechWakeupDatasetKaldiIOBuilderAVCE):
+        # make dataset using from_generator
+        dataset = tf.data.Dataset.from_generator(
+            _gen_data,
+            output_types=dataset_builder.sample_type,
+            output_shapes=dataset_builder.sample_shape,
+        )
+        # Padding the features to its max length dimensions.
+        dataset = dataset.padded_batch(
+            batch_size=batch_size,
+            padded_shapes=dataset_builder.sample_shape,
+            drop_remainder=True,
+        )
+    else:
+        dataset = tf.compat.v2.data.Dataset.from_generator(
+            _gen_data,
+            output_types=dataset_builder.sample_type,
+            output_shapes=dataset_builder.sample_shape,
+        )
+
+        # Padding the features to its max length dimensions.
+        dataset = dataset.padded_batch(
+            batch_size=batch_size,
+            padded_shapes=dataset_builder.sample_shape,
+            drop_remainder=True,
+        )
 
     # Prefetch to improve speed of input pipeline.
-    dataset = dataset.prefetch(buffer_size=500)
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     return dataset
 
 
@@ -137,7 +182,7 @@ class BaseDatasetBuilder:
                 self.entries.append(original_entries[i])
         return self
 
-    def batch_wise_shuffle(self, batch_size=64):
+    def batch_wise_shuffle(self, batch_size=64, epoch=-1, seed=917):
         """Batch-wise shuffling of the data entries.
 
         Each data entry is in the format of (audio_file, file_size, transcript).
@@ -180,6 +225,8 @@ class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
         self.speakers = []
         self.audio_featurizer = AudioFeaturizer(self.hparams.audio_config)
         self.feature_normalizer = FeatureNormalizer(self.hparams.cmvn_file)
+        self.speech_shape_dict = {}
+        self.text_shape_dict = {}
 
     @property
     def num_class(self):
@@ -199,5 +246,6 @@ class SpeechBaseDatasetBuilder(BaseDatasetBuilder):
                 self.entries, self.speakers, self.audio_featurizer, feature_dim,
                 self.hparams.num_cmvn_workers
             )
+
         self.feature_normalizer.save_cmvn(["speaker", "mean", "var"])
         return self

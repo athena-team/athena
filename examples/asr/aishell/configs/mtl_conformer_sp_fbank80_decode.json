@@ -1,0 +1,71 @@
+{
+  "batch_size":16,
+  "num_epochs":600,
+  "sorta_epoch":1,
+  "ckpt":"examples/asr/aishell/ckpts/mtl_conformer_sp_fbank80/",
+  "solver_type": "asr_decode_solver",
+
+  "solver_gpu":[],
+  "solver_config":{
+    "clip_norm":5,
+    "log_interval":10,
+    "ckpt_interval_train":10000,
+    "ckpt_interval_dev":10000,
+    "enable_tf_function":true
+  },
+
+  "model":"mtl_transformer_ctc",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "model":"speech_conformer",
+    "model_config":{
+      "return_encoder_output":true,
+      "num_filters":256,
+      "d_model":256,
+      "num_heads":4,
+      "cnn_module_kernel": 32,
+      "num_encoder_layers":12,
+      "num_decoder_layers":6,
+      "dff":2048,
+      "max_position": 1000,
+      "dropout_rate":0.1,
+      "label_smoothing_rate":0.1,
+      "schedual_sampling_rate":0.9
+    },
+    "mtl_weight":0.7
+  },
+
+  "inference_config":{
+    "decoder_type":"attention_rescoring",
+    "model_avg_num":20,
+    "sort_by": "CTCAccuracy",
+    "beam_size": 20,
+    "at_weight": 1.0,
+    "ctc_weight":0.7,
+    "lm_type": null,
+    "lm_weight":0.0,
+    "lm_path": null,
+    "predict_path": "examples/asr/aishell/result/mtl_conformer_attention_rescoring_ctc0_7.result",
+    "label_path": "examples/asr/aishell/result/mtl_conformer_attention_rescoring_ctc0_7.label"
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":256,
+    "warmup_steps":40000,
+    "k":1
+  },
+
+  "dataset_builder": "speech_recognition_dataset",
+  "num_data_threads": 1,
+  "testset_config":{
+    "data_csv": "examples/asr/aishell/data/test.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "input_length_range":[0, 100000],
+    "ignore_unk": true
+  }
+}

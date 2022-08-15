@@ -1,0 +1,28 @@
+{
+  "dataset_builder":"speech_recognition_dataset",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/asr/aishell/data/train.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":80},
+    "num_cmvn_workers": 10,
+    "global_cmvn": true,
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "input_length_range":[10, 8000]
+  },
+  "devset_config":{
+    "data_csv": "examples/asr/aishell/data/train.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":80},
+    "num_cmvn_workers": 10,
+    "global_cmvn": true,
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "input_length_range":[10, 8000]
+  },
+  "testset_config":{
+    "data_csv": "examples/asr/aishell/data/test.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "num_cmvn_workers": 10,
+    "global_cmvn": true,
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"}
+    }
+  }

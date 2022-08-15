@@ -26,7 +26,7 @@ if [[ "$BASH_SOURCE" == "/"* ]]
 then
     export MAIN_ROOT=$(dirname $BASH_SOURCE)
 else
-    export MAIN_ROOT=$PWD/$(dirname $BASH_SOURCE)
+    export MAIN_ROOT=$PWD/
 fi
 
 # pip bins

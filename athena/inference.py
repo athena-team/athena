@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) ATHENA AUTHORS; Ruixiong Zhang
+# Copyright (C) ATHENA AUTHORS; Ruixiong Zhang; Jianwei Sun
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-# Only support tensorflow 2.0
 # pylint: disable=invalid-name, no-member, redefined-outer-name
 r""" entry point for inference of all kinds of models """
 import sys
@@ -26,44 +25,39 @@ from athena.main import (
     build_model_from_jsonfile,
     SUPPORTED_DATASET_BUILDER
 )
-from athena.stargan_main import build_model_from_jsonfile_stargan
-from athena import BaseSolver, DecoderSolver, SynthesisSolver, HorovodSolver, ConvertSolver
+from athena import BaseSolver, HorovodSolver
+from athena.main import SOLVERS
 
-try:
-    import horovod.tensorflow as hvd
-except ImportError:
-    print("There is some problem with your horovod installation. \
-           But it wouldn't affect single-gpu inference")
-
-SOLVERS = {
-    "asr": DecoderSolver,
-    "tts": SynthesisSolver,
-    "vc": ConvertSolver,
-}
 
 def inference(jsonfile, config, rank_size=1, rank=0):
     """ entry point for model inference, do some preparation work """
-    if config.solver_type == 'vc':
-        p, model, checkpointer = build_model_from_jsonfile_stargan(jsonfile, is_train=False)
-    else:
-        p, model, _, checkpointer = build_model_from_jsonfile(jsonfile)
-    avg_num = 1 if 'model_avg_num' not in p.inference_config else p.inference_config['model_avg_num']
-    if avg_num > 0:
-        checkpointer.compute_nbest_avg(avg_num)
+    p, checkpointer, train_dataset_builder = build_model_from_jsonfile(jsonfile)
+
     assert p.testset_config is not None
     dataset_builder = SUPPORTED_DATASET_BUILDER[p.dataset_builder](p.testset_config)
     dataset_builder.shard(rank_size, rank)
     logging.info("shard result: %d" % len(dataset_builder))
 
     inference_solver = SOLVERS[p.solver_type]
-    solver = inference_solver(model, dataset_builder, config=p.inference_config)
-    solver.inference(dataset_builder.as_dataset(batch_size=1), rank_size=rank_size)
+    # model average config
+    avg_num = p.inference_config.get("model_avg_num", inference_solver.default_config.get("model_avg_num", 1))
+    sort_by = p.inference_config.get("sort_by", inference_solver.default_config.get("sort_by", None))
+    sort_by_time = p.inference_config.get("sort_by_time", inference_solver.default_config.get("sort_by_time", False))
+    reverse = p.inference_config.get("sort_reverse", inference_solver.default_config.get("sort_reverse", True))
+    if avg_num > 0:
+        checkpointer.compute_nbest_avg(avg_num, sort_by=sort_by, sort_by_time=sort_by_time, reverse=reverse)
+    if p.saved_model_dir != None:
+        checkpointer.model = tf.keras.models.load_model(p.saved_model_dir)
+        solver = inference_solver(model=checkpointer.model, data_descriptions=dataset_builder, config=p.inference_config)
+        solver.inference_saved_model(dataset_builder, conf=p, rank_size=rank_size)
+    else:
+        solver = inference_solver(model=checkpointer.model, data_descriptions=dataset_builder, config=p.inference_config)
+        solver.inference(dataset_builder, conf=p, rank_size=rank_size)
 
 
 if __name__ == "__main__":
     logging.use_absl_handler()
     flags.FLAGS.mark_as_parsed()
-    logging.get_absl_handler().python_handler.stream = open("inference.log", "w")
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 2:
         logging.warning('Usage: python {} config_json_file'.format(sys.argv[0]))
@@ -74,10 +68,12 @@ if __name__ == "__main__":
     with open(jsonfile) as file:
         config = json.load(file)
     p = parse_config(config)
-
+    if p.log_dir != None:
+        logging.get_absl_handler().python_handler.stream = open(p.log_dir, "w")
     rank_size = 1
     rank_index = 0
     try:
+        import horovod.tensorflow as hvd
         hvd.init()
         rank_size = hvd.size()
         rank_index = hvd.rank()

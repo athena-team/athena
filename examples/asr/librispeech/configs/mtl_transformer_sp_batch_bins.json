@@ -1,0 +1,108 @@
+{
+  "batch_size": 1,
+  "num_epochs": 1000,
+  "sorta_epoch": 0,
+  "ckpt": "examples/asr/librispeech/ckpts/mtl_transformer_sp",
+  "summary_dir": "examples/asr/librispeech/ckpts/mtl_transformer_sp/event",
+  "solver_gpu": [],
+  "solver_config": {
+    "clip_norm": 5,
+    "log_interval": 10,
+    "enable_tf_function": true
+  },
+  "model": "mtl_transformer_ctc",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config": {
+    "model": "speech_transformer",
+    "model_config": {
+      "return_encoder_output": true,
+      "num_filters": 512,
+      "d_model": 512,
+      "num_heads": 8,
+      "num_encoder_layers": 12,
+      "num_decoder_layers": 6,
+      "dff": 2048,
+      "rate": 0.1,
+      "label_smoothing_rate": 0.0,
+      "schedual_sampling_rate": 0.9
+    },
+    "mtl_weight": 0.3
+  },
+  "inference_config": {
+    "decoder_type": "beam_search_decoder",
+    "model_avg_num": 10,
+    "beam_size": 10,
+    "ctc_weight": 0.5,
+    "lm_type": "rnn",
+    "lm_weight": 0.7,
+    "lm_path": "examples/asr/librispeech/configs/rnnlm.json"
+  },
+  "optimizer": "warmup_adam",
+  "optimizer_config": {
+    "d_model": 512,
+    "warmup_steps": 25000,
+    "k": 1.0
+  },
+  "dataset_builder": "speech_recognition_dataset_batch_bins",
+  "num_data_threads": 1,
+  "trainset_config": {
+    "batch_bins": 2000000,
+    "mini_batch_size": 16,
+    "data_csv": "examples/asr/librispeech/data/train-960.csv",
+    "audio_config": {
+      "type": "Fbank",
+      "filterbank_channel_count": 40
+    },
+    "cmvn_file": "examples/asr/librispeech/data/cmvn",
+    "text_config": {
+      "type": "spm",
+      "model": "examples/asr/librispeech/data/librispeech_unigram5000.model"
+    },
+    "speed_permutation": [
+      1.0
+    ],
+    "spectral_augmentation": {
+      "time_warping": 5,
+      "time_masking": 30,
+      "frequency_masking": 15,
+      "mask_cols": 2
+    },
+    "input_length_range": [
+      10,
+      30000
+    ]
+  },
+  "devset_config": {
+    "batch_bins": 2000000,
+    "mini_batch_size": 16,
+    "data_csv": "examples/asr/librispeech/data/dev-clean.csv",
+    "audio_config": {
+      "type": "Fbank",
+      "filterbank_channel_count": 40
+    },
+    "cmvn_file": "examples/asr/librispeech/data/cmvn",
+    "text_config": {
+      "type": "spm",
+      "model": "examples/asr/librispeech/data/librispeech_unigram5000.model"
+    },
+    "input_length_range": [
+      10,
+      30000
+    ]
+  },
+  "testset_config": {
+    "batch_bins": 2000000,
+    "mini_batch_size": 16,
+    "data_csv": "examples/asr/librispeech/data/test-clean.csv",
+    "audio_config": {
+      "type": "Fbank",
+      "filterbank_channel_count": 40
+    },
+    "cmvn_file": "examples/asr/librispeech/data/cmvn",
+    "text_config": {
+      "type": "spm",
+      "model": "examples/asr/librispeech/data/librispeech_unigram5000.model"
+    }
+  }
+}

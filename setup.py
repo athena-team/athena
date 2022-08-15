@@ -20,7 +20,7 @@ import shutil
 import setuptools
 import tensorflow as tf
 
-TF_INCLUDE, TF_CFLAG = tf.sysconfig.get_compile_flags()
+TF_INCLUDE, TF_CFLAGs = tf.sysconfig.get_compile_flags()[0], tf.sysconfig.get_compile_flags()[1:]
 TF_INCLUDE = TF_INCLUDE.split("-I")[1]
 
 TF_LIB_INC, TF_SO_LIB = tf.sysconfig.get_link_flags()
@@ -30,7 +30,7 @@ TF_SO_LIB = TF_SO_LIB.replace(
 TF_LIB_INC = TF_LIB_INC.split("-L")[1]
 TF_SO_LIB = TF_SO_LIB.split("-l")[1]
 
-complie_args = [TF_CFLAG, "-fPIC", "-shared", "-O2", "-std=c++11"]
+complie_args = [*TF_CFLAGs, "-fPIC", "-shared", "-O2", "-std=c++11"]
 if sys.platform == "darwin":  # Mac os X before Mavericks (10.9)
     complie_args.append("-stdlib=libc++")
 
@@ -50,13 +50,13 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
     setuptools.setup(
         name="athena",
-        version="0.1.0",
+        version="2.0",
         author="ATHENA AUTHORS",
         author_email="athena@gmail.com",
         description="for speech recognition",
         long_description=long_description,
         long_description_content_type="text/markdown",
-        url="https://github.com/didichuxing/athena",
+        url="https://github.com/LianjiaTech/athena",
         packages=setuptools.find_packages(),
         package_data={"": ["x_ops*.so", "*.vocab", "sph2pipe"]},
         exclude_package_data={"feats": ["*_test*"]},

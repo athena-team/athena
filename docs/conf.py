@@ -18,11 +18,11 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'Athena'
-copyright = '2020, Xiangang Li, Dongwei Jiang, Ruixiong Zhang, Ne Luo, Chengyun Deng, Xiaoning Lei, Wei Zou, Shuaijiang Zhao'
-author = 'Xiangang Li, Dongwei Jiang, Ruixiong Zhang, Ne Luo, Chengyun Deng, Xiaoning Lei, Wei Zou, Shuaijiang Zhao'
+copyright = '2020, Xiangang Li, JianweiSun, Xiaoning Lei, Wei Zou, Shuaijiang Zhao'
+author = 'Xiangang Li, JianweiSun, Xiaoning Lei, Wei Zou, Shuaijiang Zhao'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0'
+release = '0.1'
 
 
 # -- General configuration ---------------------------------------------------
