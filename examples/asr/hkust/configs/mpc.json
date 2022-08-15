@@ -4,6 +4,7 @@
   "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/mpc",
   "summary_dir":"examples/asr/hkust/ckpts/mpc/event",
+  "solver_type": "asr_base_solver",
   "solver_gpu":[],
   "solver_config":{
     "clip_norm":100,
@@ -20,7 +21,7 @@
     "num_heads":8,
     "num_encoder_layers":12,
     "dff":1280,
-    "rate":0.1,
+    "dropout_rate":0.1,
     "chunk_size":1,
     "keep_probability":0.8
   },

@@ -1,0 +1,90 @@
+{
+  "batch_size":32,
+  "num_epochs":500,
+  "sorta_epoch":1,
+  "ckpt":"examples/tts/data_baker/ckpts/tts_transformer/",
+  "summary_dir":"examples/tts/data_baker/ckpts/tts_transformer/event",
+
+  "solver_type":"tts_solver",
+  "solver_gpu":[0],
+  "solver_config":{
+    "clip_norm":1,
+    "log_interval":10,
+    "enable_tf_function":true
+  },
+
+  "model":"tts_transformer",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "d_model": 512,
+    "num_heads": 4,
+    "num_encoder_layers": 6,
+    "num_decoder_layers": 6,
+    "dff": 1280,
+    "rate": 0.1,
+
+    "dropout_rate": 0.5,
+    "prenet_layers": 2,
+    "prenet_units": 256,
+
+    "postnet_layers": 5,
+    "postnet_kernel": 5,
+    "postnet_filters": 512,
+
+    "att_dim": 128,
+    "att_chans": 32,
+    "att_filters": 15,
+
+    "guided_attn_weight": 0.4,
+    "regularization_weight": 0.0,
+    "l1_loss_weight": 1.0,
+    "batch_norm_position": "after",
+    "mask_decoder": false,
+
+    "reduction_factor": 1,
+    "clip_outputs": false,
+    "clip_lower_bound_decay": 0.1,
+    "clip_max_value": 4,
+
+    "max_output_length": 15,
+    "end_prob": 0.5
+  },
+
+  "inference_config":{
+    "model_avg_num": 0,
+    "gl_iters": 64,
+    "output_directory": "test_tts_transformer_wav",
+    "synthesize_from_true_fbank": true
+  },
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":512,
+    "warmup_steps":8000,
+    "k":0.3
+  },
+
+
+  "dataset_builder": "speech_synthesis_dataset",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/tts/data_baker/data/train.csv",
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"},
+    "num_cmvn_workers":2,
+    "cmvn_file": "examples/tts/data_baker/data/cmvn"
+  },
+  "devset_config":{
+    "data_csv": "examples/tts/data_baker/data/dev.csv",
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"},
+    "cmvn_file": "examples/tts/data_baker/data/cmvn"
+  },
+  "testset_config":{
+    "data_csv": "examples/tts/data_baker/data/test.csv",
+    "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length":0.05, "frame_length":0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
+    "cmvn_file": "examples/tts/data_baker/data/cmvn",
+    "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"}
+  }
+}

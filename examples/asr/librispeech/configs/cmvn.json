@@ -1,0 +1,15 @@
+{
+  "dataset_builder":"speech_recognition_dataset",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/asr/librispeech/data/train-960.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/librispeech/data/cmvn",
+    "input_length_range":[10, 30000]
+  },
+  "devset_config":{
+    "data_csv": "examples/asr/librispeech/data/dev-clean.csv",
+    "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/librispeech/data/cmvn"
+  }
+}

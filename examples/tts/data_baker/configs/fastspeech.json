@@ -5,7 +5,7 @@
   "ckpt":"examples/tts/data_baker/ckpts/fastspeech/",
   "summary_dir":"examples/tts/data_baker/ckpts/fastspeech/event",
 
-  "solver_type":"tts",
+  "solver_type":"tts_solver",
   "solver_gpu":[],
   "solver_config":{
     "clip_norm":1,
@@ -27,7 +27,7 @@
     "ffn_kernels": 3,
     "batch_norm_position": "before",
     "dropout_rate": 0.5,
-
+    "conv_module_kernel_size": 3,
     "duration_predictor_layers": 2,
     "duration_predictor_channels": 256,
     "duration_predictor_kernel": 3,
@@ -40,7 +40,8 @@
 
     "alpha": 1.0,
     "teacher_guide_loss": true,
-
+    "speaker_embedding_dim": 512,
+    "speaker_embedding_integration_type": "add",
     "duration_predictor_loss_weight": 1.0
   },
 
@@ -48,7 +49,7 @@
     "model_avg_num": 0,
     "gl_iters": 64,
     "output_directory": "test_fastspeech_wav",
-    "synthesize_from_true_fbank": false
+    "synthesize_from_true_fbank": true
   },
 
   "optimizer":"warmup_adam",
@@ -62,7 +63,7 @@
   "dataset_builder": "speech_synthesis_dataset",
   "num_data_threads": 1,
   "trainset_config":{
-    "data_csv": "examples/tts/data_baker/data/train.csv",
+    "data_csv": "examples/tts/data_baker/data/dev.csv",
     "cmvn_file": "examples/tts/data_baker/data/cmvn",
     "audio_config": {"type": "MelSpectrum", "window_type": "hann", "upper_frequency_limit": 12000, "filterbank_channel_count": 80, "lower_frequency_limit": 0, "dither": 0.0, "window_length": 0.05, "frame_length": 0.0125, "remove_dc_offset": false, "preEph_coeff": 0.0, "output_type": 3, "sample_rate": 24000},
     "text_config": {"type":"eng_vocab", "model":"examples/tts/data_baker/data/vocab"}

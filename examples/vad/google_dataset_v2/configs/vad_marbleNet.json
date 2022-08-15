@@ -1,0 +1,64 @@
+{
+  "batch_size":16,
+  "num_epochs":20,
+  "sorta_epoch":-1,
+  "ckpt":"examples/vad/google_dataset_v2/ckpts/marblenet_base",
+  "summary_dir":"examples/vad/google_dataset_v2/ckpts/marblenet_base/event",
+
+  "solver_gpu":[0],
+  "solver_type":"vad_solver",
+  "solver_config":{
+    "clip_norm":5,
+    "log_interval":100,
+    "enable_tf_function":true,
+    "ckpt_interval_train":3500,
+    "ckpt_interval_dev":3500
+  },
+
+  "model":"vad_marblenet",
+  "pretrained_model": null,
+  "model_config":{
+      "num_classes": 2,
+      "encoder_output_channel" : 128
+  },
+
+  "optimizer":"warmup_adam",
+    "optimizer_config":{
+    "d_model":256,
+    "warmup_steps":1000,
+    "k":0.1
+  },
+
+  "inference_config":{
+    "inference_type":"vad",
+    "model_avg_num":1
+  },
+
+  "dataset_builder": "voice_activity_detection_dataset_kaldiio",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_scps_dir": "examples/vad/google_dataset_v2/data/train",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "left_context": 31,
+    "right_context": 31,
+    "cmvn_file":"examples/vad/google_dataset_v2/data/cmvn",
+    "apply_cmvn": true,
+    "speed_permutation": [0.9, 1.0, 1.1]
+  },
+  "devset_config":{
+    "data_scps_dir": "examples/vad/google_dataset_v2/data/dev",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "left_context": 31,
+    "right_context": 31,
+    "cmvn_file":"examples/vad/google_dataset_v2/data/cmvn",
+    "apply_cmvn": true
+  },
+  "testset_config":{
+    "data_scps_dir": "examples/vad/google_dataset_v2/data/test",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "left_context": 31,
+    "right_context": 31,
+    "cmvn_file":"examples/vad/google_dataset_v2/data/cmvn",
+    "apply_cmvn": true
+  }
+}

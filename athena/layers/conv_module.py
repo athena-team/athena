@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) 2019 ATHENA AUTHORS; Lekai Huang
+# Copyright (C) ATHENA AUTHORS; Lekai Huang
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class ConvModule(tf.keras.layers.Layer):
             name="depthwise_conv"
         )
         self.bn = tf.keras.layers.BatchNormalization()
-        self.activation = ACTIVATIONS[activation] 
+        self.activation = ACTIVATIONS["swish"]
  
         self.pointwise_conv2 = tf.keras.layers.Conv1D(
             filters=d_model, 

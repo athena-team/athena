@@ -1,0 +1,38 @@
+{
+  "dataset_builder": "speech_recognition_dataset_kaldiio",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_scps_dir": "examples/asr/aishell/data/train",
+    "data_csv": "examples/asr/aishell/data/train.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "input_length_range":[10, 8000],
+    "speed_permutation": [0.9, 1.0, 1.1],
+    "spectral_augmentation":{"warp_for_time": false, "num_t_mask": 2, "num_f_mask": 2, "max_t": 50, "max_f": 10, "max_w": 80},
+    "apply_cmvn": true,
+    "global_cmvn": true,
+    "offline": true
+  },
+  "devset_config":{
+    "data_scps_dir": "examples/asr/aishell/data/dev",
+    "data_csv": "examples/asr/aishell/data/dev.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "input_length_range":[10, 8000],
+    "apply_cmvn": true,
+    "global_cmvn": true,
+    "offline": true
+  },
+  "testset_config":{
+    "data_scps_dir": "examples/asr/aishell/data/test",
+    "data_csv": "examples/asr/aishell/data/test.csv",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":40},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "apply_cmvn": true,
+    "global_cmvn": true,
+    "offline": true
+  }
+}

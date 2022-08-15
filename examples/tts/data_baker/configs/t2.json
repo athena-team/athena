@@ -5,12 +5,12 @@
   "ckpt":"examples/tts/data_baker/ckpts/t2/",
   "summary_dir":"examples/tts/data_baker/ckpts/t2/event",
 
-  "solver_type":"tts",
+  "solver_type":"tts_solver",
   "solver_gpu":[],
   "solver_config":{
     "clip_norm":1,
     "log_interval":10,
-    "enable_tf_function":true
+    "enable_tf_function": true
   },
 
   "model":"tacotron2",

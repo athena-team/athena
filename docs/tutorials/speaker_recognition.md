@@ -1,1 +1,0 @@
-../../examples/speaker_identification/README.md

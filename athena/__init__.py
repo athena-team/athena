@@ -14,20 +14,39 @@
 # limitations under the License.
 # ==============================================================================
 """ module """
-# data
-from .data import SpeechRecognitionDatasetBuilder
-from .data import SpeechRecognitionDatasetBuilderGIGA
-from .data import SpeechRecognitionDatasetKaldiIOBuilder
-from .data import SpeechSynthesisDatasetBuilder
+#Speech dataset
 from .data import SpeechDatasetBuilder
-from .data import SpeechDatasetKaldiIOBuilder
-from .data import SpeakerRecognitionDatasetBuilder
-from .data import SpeakerVerificationDatasetBuilder
 from .data import LanguageDatasetBuilder
-from .data import VoiceConversionDatasetBuilder
+
+#ASR dataset
+from .data import SpeechRecognitionDatasetBuilder
+from .data import SpeechRecognitionDatasetKaldiIOBuilder
+from .data import SpeechRecognitionDatasetBatchBinsBuilder
+from .data import SpeechRecognitionDatasetBatchBinsKaldiIOBuilder
+
+#AV-ASR dataset
+from .data import AudioVedioRecognitionDatasetBuilder
+from .data import AudioVedioRecognitionDatasetBatchBinsBuilder
+
+#MPC dataset
+from .data import MpcSpeechDatasetBuilder
+from .data import MpcSpeechDatasetKaldiIOBuilder
+
+#TTS dataset
+from .data import SpeechSynthesisDatasetBuilder
+from .data import SpeechFastspeech2DatasetBuilder
 from .data import FeatureNormalizer
-from .data import WorldFeatureNormalizer
+from .data import FS2FeatureNormalizer
+from .data import VoiceActivityDetectionDatasetKaldiIOBuilder
+
+#KWS dataset
+from .data import SpeechWakeupFramewiseDatasetKaldiIOBuilder
+from .data import SpeechWakeupDatasetKaldiIOBuilder
+from .data import SpeechWakeupDatasetKaldiIOBuilderAVCE
+
+#Text processing
 from .data.text_featurizer import TextFeaturizer
+from .data.text_featurizer import TextTokenizer
 
 # layers
 from .layers.functional import make_positional_encoding
@@ -47,45 +66,84 @@ from .layers.transformer import TransformerDecoder
 from .layers.transformer import TransformerEncoderLayer
 from .layers.transformer import TransformerDecoderLayer
 from .layers.resnet_block import ResnetBasicBlock
-
-# models
 from .models.base import BaseModel
-from .models.speech_transformer import SpeechTransformer, SpeechTransformer2
-from .models.tacotron2 import Tacotron2
-from .models.tts_transformer import TTSTransformer
-from .models.fastspeech import FastSpeech
 from .models.masked_pc import MaskedPredictCoding
-from .models.deep_speech import DeepSpeechModel
-from .models.mtl_seq2seq import MtlTransformerCtc
-from .models.rnn_lm import RNNLM
-from .models.translate_transformer import NeuralTranslateTransformer
-from .models.stargan_vc import StarganModel
-from .models.speaker_resnet import SpeakerResnet
+
+# ASR models
+from athena.models.asr.av_conformer import AudioVideoConformer
+from athena.models.asr.av_mtl_seq2seq import AV_MtlTransformer
+from athena.models.asr.speech_conformer import SpeechConformer
+from athena.models.asr.speech_conformer_ctc import SpeechConformerCTC
+from athena.models.asr.speech_transformer import SpeechTransformer
+from athena.models.asr.speech_u2 import SpeechTransformerU2, SpeechConformerU2
+from athena.models.asr.mtl_seq2seq import MtlTransformerCtc
+
+#AV ASR model
+from athena.models.asr.av_conformer import AudioVideoConformer
+
+#VAD model
+from athena.models.vad.vad_marblenet import VadMarbleNet
+from athena.models.vad.vad_dnn import VadDnn
+
+#LM model
+from athena.models.lm import RNNLM, TransformerLM
+
+#TTS model
+from athena.models.tts.fastspeech import FastSpeech
+from athena.models.tts.fastspeech2 import FastSpeech2
+from athena.models.tts.tacotron2 import Tacotron2
+from athena.models.tts.tts_transformer import TTSTransformer
+
+# kws model
+from .models.kws.cnn_wakeup import CnnModel
+from .models.kws.conformer_wakeup import KWSConformer
+from .models.kws.crnn_wakeup import CRnnModel
+from .models.kws.dnn_wakeup import DnnModel
+from .models.kws.misp_wakeup import MISPModel
+from .models.kws.transformer_wakeup_2dense import KWSTransformer_2Dense
+from .models.kws.transformer_wakeup import KWSTransformer
+from .models.kws.transformer_av_wakeup import KWSAVTransformer
+from .models.kws.transformer_wakeup_resnet import KWSTransformerRESNET
+from .models.kws.transformer_wakeup_focal_loss import KWSTransformer_FocalLoss
 
 # solver & loss & accuracy
+# Base solver
 from .solver import BaseSolver
-from .solver import GanSolver
 from .solver import HorovodSolver
 from .solver import DecoderSolver
+
+# AV sovloer for ASR
+from .solver import AVSolver
+from .solver import AVHorovodSolver
+from .solver import AVDecoderSolver
+
+# VAD solver
+from .solver import VadSolver
+
+# TTS solver
 from .solver import SynthesisSolver
-from .solver import ConvertSolver
+
+# loss
 from .loss import CTCLoss
 from .loss import Seq2SeqSparseCategoricalCrossentropy
-from .loss import StarganLoss
+
+# Accuracy calculation
 from .metrics import CTCAccuracy
 from .metrics import Seq2SeqSparseCategoricalAccuracy
 
 # utils
 from .utils.checkpoint import Checkpoint
-from .utils.learning_rate import WarmUpLearningSchedule, WarmUpAdam
+from .utils.learning_rate import WarmUpLearningSchedule, WarmUpAdam, WarmUpLearningSchedule1, WarmUpAdam1
 from .utils.learning_rate import (
     ExponentialDecayLearningRateSchedule,
     ExponentialDecayAdam,
 )
 from .utils.hparam import HParams, register_and_parse_hparams
-from .utils.misc import generate_square_subsequent_mask
+from .utils.misc import generate_square_subsequent_mask, generate_square_subsequent_mask_u2
 from .utils.misc import get_wave_file_length
 from .utils.misc import set_default_summary_writer
+from .utils.misc import get_dict_from_scp
+#from .utils.logger import LOG
+from .tools.ctc_scorer import CTCPrefixScoreTH
 
-# tools
-from .tools.beam_search import BeamSearchDecoder
+__version__ = "2.0"

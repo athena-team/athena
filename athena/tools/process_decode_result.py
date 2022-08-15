@@ -17,6 +17,7 @@
 # pylint: disable=invalid-name
 import sys
 import codecs
+import pdb
 
 def process_files(decode_log_file, vocab_file):
     """ process decode log, generate label file and results files
@@ -41,10 +42,9 @@ def process_files(decode_log_file, vocab_file):
                 total_line += line.strip() + " "
             if "avg_acc" in total_line and "Message" not in total_line:
                 predictions = [int(item) for item in
-                    total_line.split("[[")[1].split("]]")[0].split()][:-1]
+                    total_line.split("[[")[1].split("]]")[0].split() if int(item) != int(num)+1 and int(item) != 0]
                 labels = [int(item) for item in
-                    total_line.split("[[")[2].split("]]")[0].split()]
-
+                    total_line.split("[[")[2].split("]]")[0].split() if int(item) != int(num)+1 and int(item) != 0]
                 decode_result.write(" ".join(
                     " ".join(vocab[item] for item in predictions).split()) + "\n")
                 label_result.write(" ".join(

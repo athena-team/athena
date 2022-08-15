@@ -1,0 +1,82 @@
+{
+  "batch_size":16,
+  "num_epochs":500,
+  "sorta_epoch":1,
+  "ckpt":"examples/kws/misp/ckpts/kws_av_transformer",
+  "test_ckpt":"ckpt-10",
+  "summary_dir":"examples/kws/misp/ckpts/kws_av_transformer/events",
+  "solver_type": "av_base_solver",
+  "model": "kws_avtransformer",
+  "model_config":{
+      "num_filters":512,
+      "num_classes":1,
+      "d_model":512,
+      "num_heads":8,
+      "num_encoder_layers":4,
+      "rate":0.1
+  },
+
+
+  "optimizer": "warmup_adam",
+  "optimizer_config":{
+      "warmup_steps": 10000,
+      "k": 0.5,
+      "decay_steps": 60000,
+      "decay_rate": 1.0
+  },
+  "num_data_threads":1,
+  "solver_gpu":[0],
+  "solver_config":{
+      "clip_norm":100,
+      "enable_tf_function":true,
+      "log_interval":20,
+      "ckpt_interval_train":10000,
+      "ckpt_interval_dev":20000
+  },
+  "trainset_config":{
+      "data_dir":"examples/kws/misp/data/train_av",
+      "left_context":0,
+      "right_context":0,
+      "spectral_augmentation": {"warp_for_time": true, "num_t_mask": 2, "num_f_mask": 2, "max_t": 50, "max_f": 10, "max_w": 80},
+      "feat_dim":63
+  },
+  "devset_config":{
+      "data_dir":"examples/kws/misp/data/dev_av",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63
+  },
+  "testset_config":{
+      "data_dir":"examples/kws/misp/data/test_av",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63
+  },
+  "faset_config":{
+      "data_dir":"examples/kws/misp/data/fa_av",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63
+  },
+  "dataset_builder": "speech_wakeup_dataset_kaldiio_av",
+  "model_freeze":{
+      "from_ckpt":"examples/kws/misp/ckpts/kws_av_transformer/ckpt-2",
+      "to_dir":"examples/kws/misp/ckpts/kws_av_transformer/pbs",
+      "float16_quantization":false,
+      "dynamic_range_quantization":false,
+      "integer_quantization":false,
+      "integer_int16activations_quantization":false
+  },
+  "model_optimization":{
+      "weight_pruning":{
+          "from_ckpt":"examples/kws/misp/ckpts/kws_av_transformer/ckpt-15",
+          "to_dir":"examples/kws/misp/ckpts/kws_av_transformer/weight_pruning",
+          "log_dir":"examples/kws/misp/ckpts/kws_av_transformer/weight_pruning/event"
+      },
+      "weight_clustering":{
+          "from_ckpt":"examples/kws/misp/ckpts/kws_av_transformer/ckpt-15",
+          "to_dir":"examples/kws/misp/ckpts/kws_av_transformer/weight_clustering"
+      }
+  }
+
+}

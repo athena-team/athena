@@ -1,11 +1,12 @@
-Below we describe in detail the stages involved to get published results on HKUST
+Below we describe the major stages involved to get published results on AISHELL
 
-#### Pre-training
+#### Pre-training[Optional]
 
 For pre-training, we used Masked Predictive Coding objective (https://arxiv.org/pdf/1910.09932.pdf). Similar to the implementation in the paper, 15% of the frames in each sequence are chosen to be masked.
- L1 loss is computed between masked input FBANK features and encoder output at corresponding position.
+L1 loss is computed between masked input FBANK features and encoder output at corresponding position.
+If used, set pretrain option as true,you can use other pre-training methods to replace MPC.
 
-#### Fine-tuning
+#### Multi-task training
 
 The network structure we used is Transformer and the loss function we used is CTC-Attention multi-task loss.
 
@@ -24,5 +25,3 @@ Model|WER | Num parameters
 [Transformer (ESPNET)](https://arxiv.org/abs/1909.06317)|23.5 | 28.38M
 Transformer (Ours without pre-training) | 23.2 | 57.88M
 Transformer (Ours with self pre-training) | 22.75 | 57.88M
-Transformer (Ours with Didi Callcenter 5000h) | 21.7 | 57.88M
-Transformer (Ours with Didi Callcenter 10000h) | 21.2 | 57.88M

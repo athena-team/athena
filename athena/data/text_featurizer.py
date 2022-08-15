@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Shuaijiang Zhao
+# Copyright (C) ATHENA AUTHORS; Xiangang Li; Shuaijiang Zhao
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 import os
 import re
+import csv
+import json
 import warnings
 from collections import defaultdict
 import tensorflow as tf
@@ -87,6 +89,13 @@ class Vocabulary:
         """
         return "".join([self.itos[id] for id in ids])
 
+    def decode_to_list(self, ids, ignored_id=[]):
+        """convert a list of ids to a list of symbols
+        """
+        if len(ids) > 0 and type(ids[-1]) is list:
+            return [self.decode_to_list(i, ignored_id) for i in ids]
+        return [self.itos[id] for id in ids if id not in ignored_id]  # id != self.unk_index and
+
     def encode(self, sentence):
         """convert a sentence to a list of ids, with special tokens added.
         """
@@ -118,6 +127,11 @@ class EnglishVocabulary(Vocabulary):
         """
         return [self.stoi[token] for token in sentence.strip().split(' ')]
 
+    def decode_to_list(self, ids, ignored_id=[]):
+        # TODO complete the function
+        pass
+
+
 class SentencePieceFeaturizer:
     """SentencePieceFeaturizer using tensorflow-text api
     """
@@ -145,6 +159,14 @@ class SentencePieceFeaturizer:
         """
         return self.sp.detokenize(ids)
 
+    def decode_to_list(self, ids, ignored_id=[]):
+        if len(ids) > 0 and type(ids[-1]) is list:
+            return [self.decode_to_list(i, ignored_id) for i in ids]
+        ids_no_ignored = [id for id in ids if id not in ignored_id]
+        res = self.sp.detokenize(ids_no_ignored)
+        return [w.numpy().decode() for w in tf.strings.split(res)]  # id != self.unk_index and
+
+
 class TextTokenizer:
     """TextTokenizer
     """
@@ -159,6 +181,21 @@ class TextTokenizer:
         """
         self.tokenizer.fit_on_texts(text)
 
+    def save_vocab(self, vocab_file):
+        vocab_dict = json.loads(self.tokenizer.get_config()['word_index'])
+        with open(vocab_file, "w", encoding="utf-8") as VOCAB:
+            VOCAB.write('<unk> 0\n')
+            for word in vocab_dict:
+                VOCAB.write('{} {}\n'.format(word, vocab_dict[word]))
+
+    def load_csv(self, csv_file):
+        with open(csv_file, "r", encoding="utf-8") as CSV:
+            lines = list(csv.reader(CSV, delimiter='\t'))
+        lines = lines[1:] # remove csv header
+        trans = [row[2] for row in lines] # csv column: wav_filename, wav_len, transcripts
+        transcripts = ''.join(trans)
+        self.load_model(transcripts)
+
     def __len__(self):
         return len(self.tokenizer.word_index) + 1
 
@@ -171,6 +208,10 @@ class TextTokenizer:
         """conver a list of ids to a sentence
         """
         return self.tokenizer.sequences_to_texts(sequences[0])
+
+    def decode_to_list(self, ids, ignored_id=[]):
+        pass
+
 
 
 class TextFeaturizer:
@@ -225,6 +266,9 @@ class TextFeaturizer:
         """conver a list of ids to a sentence
         """
         return self.model.decode(sequences)
+
+    def decode_to_list(self, sequences, ignored_id=[]):
+        return self.model.decode_to_list(sequences, ignored_id=ignored_id)
 
     @property
     def unk_index(self):
