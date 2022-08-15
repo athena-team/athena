@@ -293,6 +293,6 @@ Below is the basic directory structure for Athena
 ```
 </div></details>
 
-#7) Acknowledgement
+## 7) Acknowledgement
 
 We want to thank [Espnet](https://github.com/espnet/espnet), [Wenet](https://github.com/wenet-e2e/wenet), [TensorFlowTTS](https://github.com/TensorSpeech/TensorFlowTTS/), [NeMo](https://github.com/NVIDIA/NeMo), etc. These great projects give us lots of references and inspirations!
