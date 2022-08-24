@@ -1,4 +1,4 @@
-# coding=utf-8
+#!/bin/bash
 # Copyright (C) ATHENA AUTHORS
 # All rights reserved.
 #
@@ -32,7 +32,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "Creating csv"
     mkdir -p $dataset_dir || exit 1
     python examples/tts/data_baker/local/prepare_data.py \
-        $dataset_dir || exit 1
+        examples/tts/data_baker/configs/t2.json $dataset_dir|| exit 1
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] ; then

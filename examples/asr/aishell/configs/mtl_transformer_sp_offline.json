@@ -1,0 +1,79 @@
+{
+  "batch_size":16,
+  "num_epochs":600,
+  "sorta_epoch":1,
+  "ckpt":"examples/asr/aishell/ckpts/mtl_transformer_f80",
+  "summary_dir":"examples/asr/aishell/ckpts/mtl_transformer_f80/event",
+  "use_dev_loss":true,
+  "solver_type": "asr_base_solver",
+  "solver_gpu":[],
+  "solver_config":{
+    "clip_norm":5,
+    "log_interval":10,
+    "ckpt_interval_train":5000,
+    "ckpt_interval_dev":10000,
+    "enable_tf_function":true
+  },
+
+  "model":"mtl_transformer_ctc",
+  "num_classes": null,
+  "pretrained_model": null,
+  "model_config":{
+    "model":"speech_transformer",
+    "model_config":{
+      "return_encoder_output":true,
+      "num_filters":256,
+      "d_model":256,
+      "num_heads":4,
+      "num_encoder_layers":12,
+      "num_decoder_layers":6,
+      "dff":2048,
+      "dropout_rate":0.1,
+      "label_smoothing_rate":0.1,
+      "schedual_sampling_rate":0.9
+    },
+    "mtl_weight":0.7
+  },
+
+
+
+  "optimizer":"warmup_adam",
+  "optimizer_config":{
+    "d_model":256,
+    "warmup_steps":8000,
+    "k":1.0
+  },
+
+  "dataset_builder": "speech_recognition_dataset_kaldiio",
+  "num_data_threads": 1,
+  "trainset_config":{
+    "data_csv": "examples/asr/aishell/data/train.csv",
+    "data_scps_dir": "examples/asr/aishell/data/train_sp",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "input_length_range":[10, 100000],
+    "speed_permutation": [0.9, 1.0, 1.1],
+    "spectral_augmentation":{"warp_for_time": false, "num_t_mask": 2, "num_f_mask": 2, "max_t": 50, "max_f": 10, "max_w": 80}
+  },
+  "devset_config":{
+    "data_csv": "examples/asr/aishell/data/dev.csv",
+    "data_scps_dir": "examples/asr/aishell/data/dev",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "input_length_range":[10, 100000]
+  },
+  "testset_config":{
+    "data_csv": "examples/asr/aishell/data/test.csv",
+    "data_scps_dir": "examples/asr/aishell/data/test",
+    "audio_config": {"type":"Fbank", "filterbank_channel_count":80},
+    "cmvn_file":"examples/asr/aishell/data/cmvn",
+    "global_cmvn": true,
+    "text_config": {"type":"vocab", "model":"examples/asr/aishell/data/vocab"},
+    "input_length_range":[0, 1000000],
+    "ignore_unk": true
+  }
+}

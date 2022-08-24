@@ -1,12 +1,12 @@
 {
   "batch_size":32,
-  "num_epochs":500,
+  "num_epochs":200,
   "sorta_epoch":1,
   "ckpt":"examples/tts/ljspeech/ckpts/t2/",
   "summary_dir":"examples/tts/ljspeech/ckpts/t2/event",
 
-  "solver_type":"tts",
-  "solver_gpu":[1,2],
+  "solver_type":"tts_solver",
+  "solver_gpu":[0],
   "solver_config":{
     "clip_norm":1,
     "log_interval":10,
@@ -47,7 +47,7 @@
     "step_monotonic": false,
     "sma_mode": "soft",
 
-    "reduction_factor": 3,
+    "reduction_factor": 1,
     "clip_outputs": false,
     "clip_lower_bound_decay": 0.1,
     "clip_max_value": 4,

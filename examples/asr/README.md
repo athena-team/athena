@@ -28,7 +28,18 @@ You can perform the unsupervised pretraining using the json file `examples/asr/$
 ### (6) Decoding
 Currently, we provide a simple but not so effective way for decoding mtl_transformer_ctc model. To use it, run
 ```
-$ python athena/decode_main.py examples/asr/$dataset_name/configs/mtl_transformer.json
+$ python athena/inference.py examples/asr/$dataset_name/configs/$model_name_deocde.json
 ```
+### (7) Computing score with sclite
+`bash examples/asr/aishell/local/run_score.sh inference.log score_aishell examples/asr/aishell/data/vocab`
 
-For more detailed results with MPC, please refer to README section of each dataset. Download link of MPC checkpoints can also be found there.
+Language |  Task  | Model Name | Training Data | Hours of Speech | Error Rate
+:-----------: | :------:  | :------------: | :----------: |  -------: | -------:
+English  | ASR | Transformer | [LibriSpeech Dataset](http://www.openslr.org/12/) | 960 h | 3.1% (WER)
+English  | ASR | Transformer | [GigaSpeech Dataset] | 10000 h | 11.7% (WER)
+Mandarin | ASR | Transformer | HKUST Dataset | 151 h | 21.64 (CER)
+Mandarin | ASR | Conformer | HKUST Dataset | 151 h | 21.33% (CER)
+Mandarin | ASR | Transformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 5.13% (CER)
+Mandarin | ASR | Conformer | [AISHELL Dataset](http://www.openslr.org/33/) | 178 h | 4.95% (CER)
+Mandarin | ASR | Conformer | MISP2021 Challenge Task2 | 120h | 49% (CER)
+Mandarin | AV-ASR | Conformer-AV | MISP2021 Challenge Task2 | 120h | 61% (CER)

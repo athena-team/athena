@@ -33,7 +33,7 @@
     "k":0.5
   },
 
-  "dataset_builder":"speech_dataset",
+  "dataset_builder":"mpc_speech_dataset",
   "num_data_threads": 1,
   "trainset_config":{
     "data_csv": "examples/asr/librispeech/data/train-960.csv",

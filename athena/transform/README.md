@@ -8,10 +8,10 @@ Read audio sample from wav file, return sample data and sample rate.
 
 #### 1.1.1 Usage
 ```python
-from athena.transform.feats.readwav import Readwav
+from athena.transform.feats.read_wav import ReadWav
 conf = {'audio_channels': 1}
 speed = 0.9
-readwav = Readwav.params(conf).instantiate()
+readwav = ReadWav.params(conf).instantiate()
 audio_data, sample_rate = readwav(filepath, speed)
 ```
     

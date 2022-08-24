@@ -109,7 +109,7 @@ def processor(dataset_dir, subset, force_process, output_dir):
 if __name__ == "__main__":
     logging.set_verbosity(logging.INFO)
     if len(sys.argv) < 3:
-        print('Usage: python {} dataset_dir output_dir\n'
+        logging.info('Usage: python {} dataset_dir output_dir\n'
               '    dataset_dir : directory contains AISHELL dataset\n'
               '    output_dir  : Athena working directory'.format(sys.argv[0]))
         exit(1)

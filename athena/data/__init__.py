@@ -15,16 +15,43 @@
 # limitations under the License.
 # ==============================================================================
 """ data """
-from .datasets.speech_recognition import SpeechRecognitionDatasetBuilder
-from .datasets.speech_recognition import SpeechRecognitionDatasetBuilderGIGA
-from .datasets.speech_recognition_kaldiio import SpeechRecognitionDatasetKaldiIOBuilder
-from .datasets.speech_synthesis import SpeechSynthesisDatasetBuilder
+# Speech dataset
 from .datasets.speech_set import SpeechDatasetBuilder
-from .datasets.speech_set_kaldiio import SpeechDatasetKaldiIOBuilder
-from .datasets.speaker_recognition import SpeakerRecognitionDatasetBuilder
-from .datasets.speaker_recognition import SpeakerVerificationDatasetBuilder
+
+#ASR dataset
+from athena.data.datasets.asr.speech_recognition import SpeechRecognitionDatasetBuilder
+from athena.data.datasets.asr.speech_recognition_batch_bins import SpeechRecognitionDatasetBatchBinsBuilder
+from athena.data.datasets.asr.speech_recognition_kaldiio import SpeechRecognitionDatasetKaldiIOBuilder
+from athena.data.datasets.asr.speech_recognition_batch_bins_kaldiio import SpeechRecognitionDatasetBatchBinsKaldiIOBuilder
+
+#AV-ASR dataset
+from athena.data.datasets.asr.audio_video_recognition import AudioVedioRecognitionDatasetBuilder
+from athena.data.datasets.asr.audio_video_recognition_batch_bins import AudioVedioRecognitionDatasetBatchBinsBuilder
+
+#TTS dataset
+from athena.data.datasets.tts.speech_synthesis import SpeechSynthesisDatasetBuilder
+from athena.data.datasets.tts.speech_fastspeech2 import SpeechFastspeech2DatasetBuilder
+from athena.data.datasets.tts.speech_synthesis_test import SpeechSynthesisTestDatasetBuilder
+
+#KWS dataset
+from .datasets.kws.speech_wakeup_framewise_kaldiio import SpeechWakeupFramewiseDatasetKaldiIOBuilder
+from .datasets.kws.speech_wakeup_kaldiio import SpeechWakeupDatasetKaldiIOBuilder
+from .datasets.kws.speech_wakeup_kaldiio_av import SpeechWakeupDatasetKaldiIOBuilderAVCE
+
+# LM dataset
 from .datasets.language_set import LanguageDatasetBuilder
-from .datasets.voice_conversion import VoiceConversionDatasetBuilder
+
+#MPC dataset
+from athena.data.datasets.mpc.mpc_speech_set import MpcSpeechDatasetBuilder
+from athena.data.datasets.mpc.mpc_speech_set_kaldiio import MpcSpeechDatasetKaldiIOBuilder
+
+#VAD dataset
+from athena.data.datasets.vad.vad_set_kaldiio import VoiceActivityDetectionDatasetKaldiIOBuilder
+
+#Feature normal
 from .feature_normalizer import FeatureNormalizer
-from .feature_normalizer import WorldFeatureNormalizer
-from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer
+from .feature_normalizer import FS2FeatureNormalizer
+
+#Text processing
+from .text_featurizer import TextFeaturizer, SentencePieceFeaturizer, TextTokenizer
+

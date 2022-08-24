@@ -1,9 +1,10 @@
 {
-  "batch_size":32,
-  "num_epochs":50,
+  "batch_size":16,
+  "num_epochs":1000,
   "sorta_epoch":1,
   "ckpt":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/",
   "summary_dir":"examples/asr/hkust/ckpts/mtl_transformer_ctc_sp/event",
+  "solver_type": "asr_base_solver",
 
   "solver_gpu":[],
   "solver_config":{
@@ -25,7 +26,7 @@
       "num_encoder_layers":12,
       "num_decoder_layers":6,
       "dff":1280,
-      "rate":0.1,
+      "dropout_rate":0.1,
       "label_smoothing_rate":0.0,
       "schedual_sampling_rate":0.9
     },
@@ -34,7 +35,7 @@
 
   "inference_config":{
     "decoder_type":"beam_search_decoder",
-    "model_avg_num":10,
+    "model_avg_num":5,
     "beam_size":10,
     "ctc_weight":0.5,
     "lm_type":"ngram",
@@ -56,8 +57,9 @@
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/hkust/data/cmvn",
     "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"},
-    "speed_permutation": [0.9, 1.0, 1.1],
-    "input_length_range":[10, 8000]
+    "speed_permutation": [1.0],
+    "input_length_range":[10, 8000],
+    "spectral_augmentation":{"warp_for_time": false, "num_t_mask": 2, "num_f_mask": 2, "max_t": 50, "max_f": 10, "max_w": 80}
   },
   "devset_config":{
     "data_csv": "examples/asr/hkust/data/dev.csv",
@@ -67,7 +69,7 @@
     "input_length_range":[10, 8000]
   },
   "testset_config":{
-    "data_csv": "examples/asr/hkust/data/dev.csv",
+    "data_csv": "examples/asr/hkust/data/test.csv",
     "audio_config":{"type":"Fbank", "filterbank_channel_count":40},
     "cmvn_file":"examples/asr/hkust/data/cmvn",
     "text_config": {"type":"vocab", "model":"examples/asr/hkust/data/vocab"}

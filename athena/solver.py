@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Jianwei Sun; Ruixiong Zhang; Dongwei Jiang; Chunxin Xiao
+# Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Jianwei Sun; Ruixiong Zhang; Dongwei Jiang; Chunxin Xiao; Chaoyang Mei
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 # pylint: disable=arguments-differ
 # pylint: disable=no-member
 """ high-level abstraction of different stages in speech processing """
-
 import warnings
 import time
 import os
@@ -26,29 +25,26 @@ try:
     import horovod.tensorflow as hvd
 except ImportError:
     print("There is some problem with your horovod installation. But it wouldn't affect single-gpu training")
-import pyworld
-import numpy as np
-import librosa
+
 from .utils.hparam import register_and_parse_hparams
 from .utils.metric_check import MetricChecker
 from .utils.misc import validate_seqs
 from .metrics import CharactorAccuracy
-from .tools.vocoder import GriffinLim
-from .tools.beam_search import BeamSearchDecoder
 
-try:
-    from pydecoders import WFSTDecoder
-except ImportError:
-    print("pydecoder is not installed, this will only affect WFST decoding")
+from .models.lm.kenlm import NgramLM
+from .tools.vocoder import GriffinLim
+import math
 
 
 class BaseSolver(tf.keras.Model):
-    """Base Solver.
+    """Base Training Solver.
     """
     default_config = {
         "clip_norm": 100.0,
         "log_interval": 10,
-        "enable_tf_function": True
+        "ckpt_interval_train": 10000,
+        "ckpt_interval_dev": 10000,
+        "enable_tf_function": True,
     }
     def __init__(self, model, optimizer, sample_signature, eval_sample_signature=None,
                  config=None, **kwargs):
@@ -98,19 +94,31 @@ class BaseSolver(tf.keras.Model):
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss, metrics
 
-    def train(self, dataset, total_batches=-1):
+    def train(self, trainset, devset, checkpointer, pbar, epoch, total_batches=-1):
         """ Update the model in 1 epoch """
         train_step = self.train_step
+        pbar.set_description('Training ')  # it=iterations
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
             train_step = tf.function(train_step, input_signature=self.sample_signature)
-        for batch, samples in enumerate(dataset.take(total_batches)):
+        for batch, samples in enumerate(trainset.take(total_batches)):
             # train 1 step
             samples = self.model.prepare_samples(samples)
             loss, metrics = train_step(samples)
-            if batch % self.hparams.log_interval == 0:
+            if (batch+1) % self.hparams.log_interval == 0:
+                pbar.update(self.hparams.log_interval)
                 logging.info(self.metric_checker(loss, metrics))
                 self.model.reset_metrics()
+            if (batch+1) % self.hparams.ckpt_interval_train == 0:
+                checkpointer(loss, metrics, training=True)
+            if (batch+1) % self.hparams.ckpt_interval_dev == 0:
+                dev_loss, dev_metrics = self.evaluate(devset, epoch)
+                checkpointer(dev_loss, dev_metrics, training=False)
+
+    def save_checkpointer(self, checkpointer, devset, epoch):
+        if self.hparams.do_dev_test_interval:
+            loss, metrics = self.evaluate(devset, epoch)
+        checkpointer(loss, metrics)
 
     def evaluate_step(self, samples):
         """ evaluate the model 1 step """
@@ -181,19 +189,23 @@ class HorovodSolver(BaseSolver):
             loss, metrics = self.model.get_loss(outputs, samples, training=True)
             total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
         # Horovod: add Horovod Distributed GradientTape.
-        tape = hvd.DistributedGradientTape(tape)
+        if os.getenv('HOROVOD_TRAIN_MODE', 'normal') == 'fast':
+            tape = hvd.DistributedGradientTape(tape, sparse_as_dense=True, op=hvd.Adasum)
+        else:
+            tape = hvd.DistributedGradientTape(tape)
         grads = tape.gradient(total_loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss, metrics
 
-    def train(self, dataset, total_batches=-1):
+    def train(self, trainset, devset, checkpointer, pbar, epoch, total_batches=-1):
         """ Update the model in 1 epoch """
         train_step = self.train_step
+        pbar.set_description('Processing ')  # it=iterations
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
             train_step = tf.function(train_step, input_signature=self.sample_signature)
-        for batch, samples in enumerate(dataset.take(total_batches)):
+        for batch, samples in enumerate(trainset.take(total_batches)):
             # train 1 step
             samples = self.model.prepare_samples(samples)
             loss, metrics = train_step(samples)
@@ -206,9 +218,17 @@ class HorovodSolver(BaseSolver):
             if batch == 0:
                 hvd.broadcast_variables(self.model.trainable_variables, root_rank=0)
                 hvd.broadcast_variables(self.optimizer.variables(), root_rank=0)
-            if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
-                logging.info(self.metric_checker(loss, metrics))
-                self.model.reset_metrics()
+            if hvd.rank() == 0:
+                if (batch+1) % self.hparams.log_interval == 0:
+                    pbar.update(self.hparams.log_interval)
+                    logging.info(self.metric_checker(loss, metrics))
+                    self.model.reset_metrics()
+
+                if (batch + 1) % self.hparams.ckpt_interval_train == 0:
+                    checkpointer(loss, metrics, training=True)
+                if (batch + 1) % self.hparams.ckpt_interval_dev == 0:
+                    dev_loss, dev_metrics = self.evaluate(devset, epoch)
+                    checkpointer(dev_loss, dev_metrics, training=False)
 
     def evaluate(self, dataset, epoch=0):
         """ evaluate the model """
@@ -233,17 +253,29 @@ class HorovodSolver(BaseSolver):
 
 
 class DecoderSolver(BaseSolver):
-    """ DecoderSolver
+    """ ASR DecoderSolver
     """
     default_config = {
         "inference_type": "asr",
         "decoder_type": "wfst_decoder",
+        "enable_tf_function": False,
         "model_avg_num": 1,
+        "sort_by": "CTCAccuracy",
+        "sort_by_time": False,  # ignore "sort_by", if sort_by_time is True.
+        "sort_reverse": True,
         "beam_size": 4,
+        "pre_beam_size": 30,
+        "at_weight": 1.0,
         "ctc_weight": 0.0,
+        "simulate_streaming": False,
+        "decoding_chunk_size": -1,
+        "num_decoding_left_chunks": -1,
         "lm_weight": 0.1,
-        "lm_type": "",
+        "lm_type": None,
         "lm_path": None,
+        "lm_nbest_avg": None,
+        "predict_path": None,
+        "label_path": None,
         "acoustic_scale": 10.0,
         "max_active": 80,
         "min_active": 0,
@@ -257,184 +289,510 @@ class DecoderSolver(BaseSolver):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        lm_model = None
-        if self.hparams.lm_type == "rnn":
-            from athena.main import build_model_from_jsonfile
-            _, lm_model, _, lm_checkpointer = build_model_from_jsonfile(self.hparams.lm_path)
-            lm_checkpointer.restore_from_best()
-        if self.hparams.decoder_type == "beam_search_decoder":
-            self.decoder = BeamSearchDecoder.build_decoder(self.hparams,
-                                                           self.model.num_class,
-                                                           self.model.sos,
-                                                           self.model.eos,
-                                                           self.model.time_propagate,
-                                                           lm_model=lm_model)
-        elif self.hparams.decoder_type == "wfst_decoder":
-            self.decoder = WFSTDecoder(self.hparams.wfst_graph, acoustic_scale=self.hparams.acoustic_scale,
-                                       max_active=self.hparams.max_active, min_active=self.hparams.min_active,
-                                       beam=self.hparams.wfst_beam, max_seq_len=self.hparams.max_seq_len,
-                                       sos=self.model.sos, eos=self.model.eos)
-        else:
-            raise ValueError("This decoder type is not supported")
+        self.lm_model = None
+        if self.hparams.lm_path is not None:
+            if self.hparams.lm_type is not None and self.hparams.lm_type in ["rnn", "transformer"]:
+                from athena.main import build_model_from_jsonfile
+                _, lm_checkpointer, _ = build_model_from_jsonfile(self.hparams.lm_path)
+                if self.hparams.lm_nbest_avg:
+                    lm_checkpointer.compute_nbest_avg(int(self.hparams.lm_nbest_avg), reverse=False)
+                else:
+                    lm_checkpointer.restore_from_best()
+                self.lm_model = lm_checkpointer.model
+            elif self.hparams.lm_type is not None and self.hparams.lm_type in ["ngram"]:
+                self.lm_model = NgramLM(self.hparams.lm_path)
+            else:
+                raise NotImplementedError("'lm_model' only support rnn, transformer and ngram, please appoint it!")
 
-    def inference(self, dataset, rank_size=1):
+    def inference(self, dataset_builder, rank_size=1, conf=None):
         """ decode the model """
-        if dataset is None:
+        if dataset_builder is None:
             return
+        dataset = dataset_builder.as_dataset(batch_size=conf.batch_size)
         metric = CharactorAccuracy(rank_size=rank_size)
-        for _, samples in enumerate(dataset):
-            begin = time.time()
-            samples = self.model.prepare_samples(samples)
-            predictions = self.model.decode(samples, self.hparams, self.decoder)
-            validated_preds = validate_seqs(predictions, self.model.eos)[0]
-            validated_preds = tf.cast(validated_preds, tf.int64)
-            num_errs, _ = metric.update_state(validated_preds, samples)
-            reports = (
-                "predictions: %s\tlabels: %s\terrs: %d\tavg_acc: %.4f\tsec/iter: %.4f"
-                % (
-                    predictions,
-                    samples["output"].numpy(),
-                    num_errs,
-                    metric.result(),
-                    time.time() - begin,
-                )
-            )
-            logging.info(reports)
-        logging.info("decoding finished")
+        st = time.time()
+        if self.hparams.predict_path is None or self.hparams.label_path is None:
+            logging.warning("Please set inference_config.predict_path and inference_config.label_path!")
+            self.hparams.predict_path = "inference.result"
+            self.hparams.label_path = "inference.label"
+        if self.lm_model is not None:
+            self.lm_model.text_featurizer = dataset_builder.text_featurizer
+        # self.lm_model.ignored_id = [self.model.model.eos, self.model.model.sos]
+        if not os.path.exists(os.path.dirname(self.hparams.predict_path)):
+            os.mkdir(os.path.dirname(self.hparams.predict_path))
 
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            self.model.enable_tf_funtion()
+
+        with open(self.hparams.predict_path, "w") as predict_file_out:
+            with open(self.hparams.label_path, "w") as label_file_out:
+                for _, samples in enumerate(dataset):
+                    begin = time.time()
+                    samples = self.model.prepare_samples(samples)
+                    predictions = self.model.decode(samples, self.hparams, self.lm_model)
+
+                    # transform (tensor of ids) to (list of char or symbol)
+                    predict_txt_list = dataset_builder.text_featurizer. \
+                        decode_to_list(predictions.numpy().tolist(), [self.model.model.eos, self.model.model.sos])
+                    for predict, utt_id in zip(predict_txt_list, samples["utt_id"]):
+                        predict_file_out.write(" ".join(predict) + "({utt_id})\n".format(utt_id=utt_id.numpy().decode()))
+
+                    label_txt_list = dataset_builder.text_featurizer. \
+                        decode_to_list(samples["output"].numpy().tolist(), [self.model.model.eos, self.model.model.sos])
+                    for label, utt_id in zip(label_txt_list, samples["utt_id"]):
+                        label_file_out.write(" ".join(label) + "({utt_id})\n".format(utt_id=utt_id.numpy().decode()))
+                    predict_file_out.flush(), label_file_out.flush()
+
+                    predictions = tf.cast(predictions, tf.int64)
+                    validated_preds, _ = validate_seqs(predictions, self.model.eos)
+                    validated_preds = tf.cast(validated_preds, tf.int64)
+                    num_errs, _ = metric.update_state(validated_preds, samples)
+
+                    reports = (
+                            "predictions: %s\tlabels: %s\terrs: %d\tavg_acc: %.4f\tsec/iter: %.4f"
+                            % (
+                                predictions,
+                                samples["output"].numpy(),
+                                num_errs,
+                                metric.result(),
+                                time.time() - begin,
+                            )
+                    )
+                    logging.info(reports)
+                ed = time.time()
+                logging.info("decoding finished, cost %.4f s" % (ed - st))
+
+    def inference_saved_model(self, dataset_builder, rank_size=1, conf=None):
+        """ decode the model """
+        if dataset_builder is None:
+            return
+        dataset = dataset_builder.as_dataset(batch_size=conf.batch_size)
+        metric = CharactorAccuracy(rank_size=rank_size)
+        st = time.time()
+        if self.hparams.predict_path is None or self.hparams.label_path is None:
+            logging.warning("Please set inference_config.predict_path and inference_config.label_path!")
+            self.hparams.predict_path = "inference.result"
+            self.hparams.label_path = "inference.label"
+        if self.lm_model is not None:
+            self.lm_model.text_featurizer = dataset_builder.text_featurizer
+        # self.lm_model.ignored_id = [self.model.model.eos, self.model.model.sos]
+        if not os.path.exists(os.path.dirname(self.hparams.predict_path)):
+            os.mkdir(os.path.dirname(self.hparams.predict_path))
+        with open(self.hparams.predict_path, "w") as predict_file_out:
+            with open(self.hparams.label_path, "w") as label_file_out:
+                for _, samples in enumerate(dataset):
+                    begin = time.time()
+                    #samples = self.model.prepare_samples(samples)
+                    predictions = self.model.deploy_function(samples['input'])
+
+                    # transform (tensor of ids) to (list of char or symbol)
+                    predict_txt_list = dataset_builder.text_featurizer. \
+                        decode_to_list(predictions.numpy().tolist(), [dataset_builder.num_class, dataset_builder.num_class])
+                    for predict, utt_id in zip(predict_txt_list, samples["utt_id"]):
+                        predict_file_out.write(" ".join(predict) + "({utt_id})\n".format(utt_id=utt_id.numpy().decode()))
+
+                    label_txt_list = dataset_builder.text_featurizer. \
+                        decode_to_list(samples["output"].numpy().tolist(), [dataset_builder.num_class, dataset_builder.num_class])
+                    for label, utt_id in zip(label_txt_list, samples["utt_id"]):
+                        label_file_out.write(" ".join(label) + "({utt_id})\n".format(utt_id=utt_id.numpy().decode()))
+                    predict_file_out.flush(), label_file_out.flush()
+
+                    predictions = tf.cast(predictions, tf.int64)
+                    validated_preds, _ = validate_seqs(predictions, dataset_builder.num_class)
+                    validated_preds = tf.cast(validated_preds, tf.int64)
+                    num_errs, _ = metric.update_state(validated_preds, samples)
+
+                    reports = (
+                            "predictions: %s\tlabels: %s\terrs: %d\tavg_acc: %.4f\tsec/iter: %.4f"
+                            % (
+                                predictions,
+                                samples["output"].numpy(),
+                                num_errs,
+                                metric.result(),
+                                time.time() - begin,
+                            )
+                    )
+                    logging.info(reports)
+                ed = time.time()
+                logging.info("decoding finished, cost %.4f s" % (ed - st))
 
 class SynthesisSolver(BaseSolver):
-    """ SynthesisSolver
+    """ SynthesisSolver (TTS Solver)
     """
     default_config = {
-        "inference_type": "tts",
+        "clip_norm": 100.0,
+        "log_interval": 10,
+        "ckpt_interval_train": 10000,
+        "ckpt_interval_dev": 10000,
+        "enable_tf_function": True,
         "model_avg_num": 1,
         "gl_iters": 64,
         "synthesize_from_true_fbank": True,
         "output_directory": None
     }
 
-    def __init__(self, model, data_descriptions=None, config=None):
-        super().__init__(model, None, None)
-        self.model = model
+    def __init__(self, model, optimizer=None, sample_signature=None, eval_sample_signature=None,
+                 config=None, **kwargs):
+        super().__init__(model, optimizer, sample_signature)
+        self.optimizer = optimizer
+        self.metric_checker = MetricChecker(self.optimizer)
+        self.eval_sample_signature = eval_sample_signature
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        self.feature_normalizer = data_descriptions.feature_normalizer
-        self.speakers_ids_dict = data_descriptions.speakers_ids_dict
-        self.vocoder = GriffinLim(data_descriptions)
-        self.sample_signature = data_descriptions.sample_signature
 
-    def inference(self, dataset, rank_size=1):
+    def inference(self, dataset_builder, rank_size=1, conf=None):
         """ synthesize using vocoder on dataset """
-        if dataset is None:
+        if dataset_builder is None:
             return
+        feature_normalizer = dataset_builder.feature_normalizer
+        speakers_ids_dict = dataset_builder.speakers_ids_dict
+        vocoder = GriffinLim(dataset_builder)
+        # dataset = dataset_builder.as_dataset(batch_size=conf.batch_size)
+        dataset = dataset_builder.as_dataset(batch_size=1)
+
         total_elapsed = 0
         total_seconds = 0
         synthesize_step = tf.function(self.model.synthesize, input_signature=self.sample_signature)
         for i, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
             speaker = samples['speaker']
-            speaker = self.speakers_ids_dict[int(speaker[0])]
+            speaker = speakers_ids_dict[int(speaker[0])]
             start = time.time()
             outputs = synthesize_step(samples)
             end = time.time() - start
             total_elapsed += end
             features, _ = outputs
+            utt_id = samples['utt_id'].numpy()[0].decode()
             if self.hparams.synthesize_from_true_fbank:
-                samples_outputs = self.feature_normalizer(samples['output'][0],
-                                                          speaker, reverse=True)
-                self.vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % str(i))
-            features = self.feature_normalizer(features[0], speaker, reverse=True)
-            seconds = self.vocoder(features.numpy(), self.hparams, name=i)
+                samples_outputs = feature_normalizer(samples['output'][0],
+                                                     speaker, reverse=True)
+                vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % utt_id)
+            features = feature_normalizer(features[0], speaker, reverse=True)
+            seconds = vocoder(features.numpy(), self.hparams, name=utt_id)
             total_seconds += seconds
         logging.info("model computation elapsed: %s\ttotal seconds: %s\tRTF: %.4f"
                      % (total_elapsed, total_seconds, float(total_elapsed / total_seconds)))
 
+    def inference_saved_model(self, dataset_builder, rank_size=1, conf=None):
+        """ synthesize using vocoder on dataset """
+        if dataset_builder is None:
+            return
+        feature_normalizer = dataset_builder.feature_normalizer
+        speakers_ids_dict = dataset_builder.speakers_ids_dict
+        vocoder = GriffinLim(dataset_builder)
+        dataset = dataset_builder.as_dataset(batch_size=1)
 
-class GanSolver(BaseSolver):
-    """ Gan Solver.
+        total_elapsed = 0
+        total_seconds = 0
+        synthesize_step = self.model.deploy_function
+
+        for i, samples in enumerate(dataset):
+            speaker = samples['speaker']
+            speaker = speakers_ids_dict[int(speaker[0])]
+            start = time.time()
+            outputs = synthesize_step(samples['input'])
+            end = time.time() - start
+            total_elapsed += end
+            features = outputs
+            utt_id = samples['utt_id'].numpy()[0].decode()
+            if self.hparams.synthesize_from_true_fbank:
+                samples_outputs = feature_normalizer(samples['output'][0],
+                                                     speaker, reverse=True)
+                vocoder(samples_outputs.numpy(), self.hparams, name='true_%s' % utt_id)
+            features = feature_normalizer(features[0], speaker, reverse=True)
+            seconds = vocoder(features.numpy(), self.hparams, name=utt_id)
+            total_seconds += seconds
+        logging.info("model computation elapsed: %s\ttotal seconds: %s\tRTF: %.4f"
+                     % (total_elapsed, total_seconds, float(total_elapsed / total_seconds)))
+
+class VadSolver(BaseSolver):
+    """ VadSolver
+    """
+    default_config = {
+        "inference_type": "vad",
+        "model_avg_num": 1,
+        "clip_norm": 100.0,
+        "log_interval": 10,
+        "ckpt_interval_train": 10000,
+        "ckpt_interval_dev": 10000,
+        "enable_tf_function": True,
+        "video_skip": 4
+    }
+
+    # pylint: disable=super-init-not-called
+    def __init__(self, model, optimizer=None, sample_signature=None, eval_sample_signature=None, data_descriptions=None, config=None):
+        super().__init__(model, None, None)
+        self.model = model
+        self.optimizer = optimizer
+        self.metric_checker = MetricChecker(self.optimizer)
+        self.sample_signature = sample_signature
+        self.eval_sample_signature = eval_sample_signature
+        self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+
+    def inference(self, dataset, rank_size=1, conf=None):
+        """ decode the model """
+        if dataset is None:
+            return
+        acc_metric = tf.keras.metrics.Accuracy(name="Accuracy")
+        recall_metric = tf.keras.metrics.Recall(name="Recall")
+        for _, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            outputs = self.model(samples, training=False)
+            outputs_argmax = tf.argmax(outputs, axis=2, output_type=tf.int32)
+            samples_outputs = tf.reshape(samples["output"], (1, -1))
+            outputs_argmax = tf.reshape(outputs_argmax, (1, -1))
+            print("utt:{}\tlabels:{}\tpredict:{}".format(samples["utt"], samples_outputs, outputs_argmax))
+            acc_metric.update_state(samples_outputs, outputs_argmax)
+            recall_metric.update_state(samples_outputs, outputs_argmax)
+        reports = (
+            "Accuracy: %.4f\tRecall: %.4f"
+            % (
+                acc_metric.result(),
+                recall_metric.result(),
+            )
+        )
+        logging.info(reports)
+        logging.info("vad test finished")
+
+
+"""
+Audio and video task solver
+"""
+
+class AVSolver(tf.keras.Model):
+    """Base Solver.
     """
     default_config = {
         "clip_norm": 100.0,
         "log_interval": 10,
-        "enable_tf_function": True
+        "ckpt_interval_train": 10000,
+        "ckpt_interval_dev": 10000,
+        "enable_tf_function": True,
+        "video_skip": 4
     }
-
-    def __init__(self, model, sample_signature, config=None):
-        super().__init__(model, None, sample_signature)
+    def __init__(self, model, optimizer, sample_signature, eval_sample_signature=None,
+                 config=None, **kwargs):
+        super().__init__(**kwargs)
         self.model = model
-        self.metric_checker = MetricChecker(self.model.get_stage_model("generator").optimizer)
+        self.optimizer = optimizer
+        self.metric_checker = MetricChecker(self.optimizer)
         self.sample_signature = sample_signature
+        self.eval_sample_signature = eval_sample_signature
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
+
+    @staticmethod
+    def initialize_devices(solver_gpus=None):
+        """ initialize hvd devices, should be called firstly """
+        gpus = tf.config.experimental.list_physical_devices("GPU")
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        # means we're running in GPU mode
+        if len(gpus) != 0:
+            # If the list of solver gpus is empty, the first gpu will be used.
+            if len(solver_gpus) == 0:
+                solver_gpus.append(0)
+            assert len(gpus) >= len(solver_gpus)
+            for idx in solver_gpus:
+                tf.config.experimental.set_visible_devices(gpus[idx], "GPU")
+
+    @staticmethod
+    def clip_by_norm(grads, norm):
+        """ clip norm using tf.clip_by_norm """
+        if norm <= 0:
+            return grads
+        grads = [
+            None if gradient is None else tf.clip_by_norm(gradient, norm)
+            for gradient in grads
+        ]
+        return grads
 
     def train_step(self, samples):
         """ train the model 1 step """
-        # classifier
         with tf.GradientTape() as tape:
             # outputs of a forward run of model, potentially contains more than one item
-            outputs = self.model(samples, training=True, stage="classifier")
-            loss_c, metrics_c = self.model.get_loss(outputs, samples, training=True, stage="classifier")
-            total_loss = sum(list(loss_c.values())) if isinstance(loss_c, dict) else loss_c
-        grads = tape.gradient(total_loss, self.model.get_stage_model("classifier").trainable_variables)
+            if self.model.name !='mtl_transformer_ctc':
+                outputs = self.model(samples, training=True)
+            else:
+                outputs = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(outputs, samples, training=True)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
         grads = self.clip_by_norm(grads, self.hparams.clip_norm)
-        self.model.get_stage_model("classifier").optimizer.apply_gradients\
-            (zip(grads, self.model.get_stage_model("classifier").trainable_variables))
+        self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+        return loss, metrics
 
-        # generator
-        with tf.GradientTape() as tape:
-            # outputs of a forward run of model, potentially contains more than one item
-            outputs = self.model(samples, training=True, stage="generator")
-            loss_g, metrics_g = self.model.get_loss(outputs, samples, training=True, stage="generator")
-            total_loss = sum(list(loss_g.values())) if isinstance(loss_g, dict) else loss_g
-        grads = tape.gradient(total_loss, self.model.get_stage_model("generator").trainable_variables)
-        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
-        self.model.get_stage_model("generator").optimizer.apply_gradients\
-            (zip(grads, self.model.get_stage_model("generator").trainable_variables))
-
-        # discriminator
-        with tf.GradientTape() as tape:
-            # outputs of a forward run of model, potentially contains more than one item
-            outputs = self.model(samples, training=True, stage="discriminator")
-            loss_d, metrics_d = self.model.get_loss(outputs, samples, training=True, stage="discriminator")
-            total_loss = sum(list(loss_d.values())) if isinstance(loss_d, dict) else loss_d
-        grads = tape.gradient(total_loss, self.model.get_stage_model("discriminator").trainable_variables)
-        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
-        self.model.get_stage_model("discriminator").optimizer.apply_gradients\
-            (zip(grads, self.model.get_stage_model("discriminator").trainable_variables))
-
-        # total loss is the same of classifier, generator and discriminator
-        total_loss = loss_c + loss_g + loss_d
-        metrics = {"metrics_c": metrics_c, "metrics_g": metrics_g, "metrics_d": metrics_d}
-        return total_loss, metrics
-
-    def train(self, dataset, total_batches=-1):
+    def train(self, trainset, devset, checkpointer, pbar, epoch, total_batches=-1):
         """ Update the model in 1 epoch """
         train_step = self.train_step
+        pbar.set_description('Training ')  # it=iterations
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
             train_step = tf.function(train_step, input_signature=self.sample_signature)
-        for batch, samples in enumerate(dataset.take(total_batches)):
+        for batch, samples in enumerate(trainset.take(total_batches)):
             # train 1 step
             samples = self.model.prepare_samples(samples)
-            total_loss, metrics = train_step(samples)
-            if batch % self.hparams.log_interval == 0:
-                logging.info(self.metric_checker(total_loss, metrics))
+            frame = math.ceil(samples["input"].shape[1] / self.hparams.video_skip)
+            if frame + 1 > samples["video"].shape[1]:
+                frame = samples["video"].shape[1]
+                audio_frame = frame * self.hparams.video_skip
+                audio_frames = tf.ones(samples["input_length"].shape,dtype=tf.dtypes.int32)*audio_frame
+                samples["input"] = samples["input"][:, :audio_frame, :]
+                samples["video"] = samples["video"][:, :frame, :]
+                samples["input_length"] = tf.where(samples["input_length"]>audio_frames,audio_frames,samples["input_length"])
+            else:
+                samples["video"] = samples["video"][:, 1:frame + 1, :]
+            loss, metrics = train_step(samples)
+            if (batch+1) % self.hparams.log_interval == 0:
+                pbar.update(self.hparams.log_interval)
+                logging.info(self.metric_checker(loss, metrics))
                 self.model.reset_metrics()
+            if (batch+1) % self.hparams.ckpt_interval_train == 0:
+                checkpointer(loss, metrics, training=True)
+            if (batch+1) % self.hparams.ckpt_interval_dev == 0:
+                dev_loss, dev_metrics = self.evaluate(devset, epoch)
+                checkpointer(dev_loss, dev_metrics, training=False)
+
+
 
     def evaluate_step(self, samples):
         """ evaluate the model 1 step """
         # outputs of a forward run of model, potentially contains more than one item
-        outputs = self.model(samples, training=False, stage="classifier")
-        loss_c, metrics_c = self.model.get_loss(outputs, samples, training=False, stage="classifier")
+        if self.model.name != 'mtl_transformer_ctc':
+            outputs = self.model(samples, training=False)
+        else:
+            outputs = self.model(samples, training=False)
+        loss, metrics = self.model.get_loss(outputs, samples, training=False)
+        return loss, metrics
 
-        outputs = self.model(samples, training=False, stage="generator")
-        loss_g, metrics_g = self.model.get_loss(outputs, samples, training=False, stage="generator")
+    def evaluate(self, dataset, epoch):
+        """ evaluate the model """
+        loss_metric = tf.keras.metrics.Mean(name="AverageLoss")
+        loss, metrics = None, None
+        evaluate_step = self.evaluate_step
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            evaluate_step = tf.function(evaluate_step, input_signature=self.eval_sample_signature)
+        self.model.reset_metrics()  # init metric.result() with 0
+        for batch, samples in enumerate(dataset):
+            samples = self.model.prepare_samples(samples)
+            frame = math.ceil(samples["input"].shape[1]/self.hparams.video_skip)
+            if frame + 1 > samples["video"].shape[1]:
+                frame = samples["video"].shape[1]
+                audio_frame = frame * self.hparams.video_skip
+                audio_frames = tf.ones(samples["input_length"].shape,dtype=tf.dtypes.int32)*audio_frame
+                samples["input"] = samples["input"][:, :audio_frame, :]
+                samples["video"] = samples["video"][:, :frame, :]
+                samples["input_length"] = tf.where(samples["input_length"]>audio_frames,audio_frames,samples["input_length"])
+            else:
+                samples["video"] = samples["video"][:, 1:frame + 1, :]
+            loss, metrics = evaluate_step(samples)
+            if batch % self.hparams.log_interval == 0:
+                logging.info(self.metric_checker(loss, metrics, -2))
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+            loss_metric.update_state(total_loss)
+        logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
+        self.model.reset_metrics()
+        return loss_metric.result(), metrics
 
-        outputs = self.model(samples, training=False, stage="discriminator")
-        loss_d, metrics_d = self.model.get_loss(outputs, samples, training=False, stage="discriminator")
 
-        total_loss = loss_c + loss_g + loss_d
-        metrics = {"metrics_c": metrics_c, "metrics_g": metrics_g, "metrics_d": metrics_d}
-        return total_loss, metrics
+class AVHorovodSolver(AVSolver):
+    """ A multi-processer solver based on Horovod """
+
+    @staticmethod
+    def initialize_devices(solver_gpus=None):
+        """initialize hvd devices, should be called firstly
+
+        For examples, if you have two machines and each of them contains 4 gpus:
+        1. run with command horovodrun -np 6 -H ip1:2,ip2:4 and set solver_gpus to be [0,3,0,1,2,3],
+           then the first gpu and the last gpu on machine1 and all gpus on machine2 will be used.
+        2. run with command horovodrun -np 6 -H ip1:2,ip2:4 and set solver_gpus to be [],
+           then the first 2 gpus on machine1 and all gpus on machine2 will be used.
+
+        Args:
+            solver_gpus ([list]): a list to specify gpus being used.
+
+        Raises:
+            ValueError: If the list of solver gpus is not empty,
+                        its size should not be smaller than that of horovod configuration.
+        """
+        hvd.init()
+        gpus = tf.config.experimental.list_physical_devices("GPU")
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        if len(gpus) != 0:
+            if len(solver_gpus) > 0:
+                if len(solver_gpus) < hvd.size():
+                    raise ValueError("If the list of solver gpus is not empty, its size should " +
+                                     "not be smaller than that of horovod configuration")
+                tf.config.experimental.set_visible_devices(gpus[solver_gpus[hvd.rank()]], "GPU")
+            # If the list of solver gpus is empty, the first hvd.size() gpus will be used.
+            else:
+                tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], "GPU")
+
+    def train_step(self, samples):
+        """ train the model 1 step """
+        with tf.GradientTape() as tape:
+            # outputs of a forward run of model, potentially contains more than one item
+            if self.model.name !='mtl_transformer_ctc':
+                outputs = self.model(samples, training=True)
+            else:
+                outputs = self.model(samples, training=True)
+            loss, metrics = self.model.get_loss(outputs, samples, training=True)
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
+        # Horovod: add Horovod Distributed GradientTape.
+        if os.getenv('HOROVOD_TRAIN_MODE', 'normal') == 'fast':
+            tape = hvd.DistributedGradientTape(tape, sparse_as_dense=True, op=hvd.Adasum)
+        else:
+            tape = hvd.DistributedGradientTape(tape)
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
+        grads = self.clip_by_norm(grads, self.hparams.clip_norm)
+        self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+        return loss, metrics
+
+
+    def train(self, trainset, devset, checkpointer, pbar, epoch, total_batches=-1):
+        """ Update the model in 1 epoch """
+        train_step = self.train_step
+        pbar.set_description('Processing ')  # it=iterations
+        if self.hparams.enable_tf_function:
+            logging.info("please be patient, enable tf.function, it takes time ...")
+            train_step = tf.function(train_step, input_signature=self.sample_signature)
+        for batch, samples in enumerate(trainset.take(total_batches)):
+            # train 1 step
+            samples = self.model.prepare_samples(samples)
+            frame = math.ceil(samples["input"].shape[1]/self.hparams.video_skip)
+            if frame + 1 > samples["video"].shape[1]:
+                print("video is shorter than audio")
+                frame = samples["video"].shape[1]
+                audio_frame = frame * self.hparams.video_skip
+                audio_frames = tf.ones(samples["input_length"].shape,dtype=tf.dtypes.int32)*audio_frame
+                samples["input"] = samples["input"][:, :audio_frame, :]
+                samples["video"] = samples["video"][:, :frame, :]
+                samples["input_length"] = tf.where(samples["input_length"]>audio_frames,audio_frames,samples["input_length"])
+            else:
+                samples["video"] = samples["video"][:, 1:frame + 1, :]
+            loss, metrics = train_step(samples)
+            # Horovod: broadcast initial variable states from rank 0 to all other processes.
+            # This is necessary to ensure consistent initialization of all workers when
+            # training is started with random weights or restored from a checkpoint.
+            #
+            # Note: broadcast should be done after the first gradient step to ensure optimizer
+            # initialization.
+            if batch == 0:
+                hvd.broadcast_variables(self.model.trainable_variables, root_rank=0)
+                hvd.broadcast_variables(self.optimizer.variables(), root_rank=0)
+            if hvd.rank() == 0:
+                if (batch+1) % self.hparams.log_interval == 0:
+                    pbar.update(self.hparams.log_interval)
+                    logging.info(self.metric_checker(loss, metrics))
+                    self.model.reset_metrics()
+
+                if (batch + 1) % self.hparams.ckpt_interval_train == 0:
+                    checkpointer(loss, metrics, training=True)
+                if (batch + 1) % self.hparams.ckpt_interval_dev == 0:
+                    dev_loss, dev_metrics = self.evaluate(devset, epoch)
+                    checkpointer(dev_loss, dev_metrics, training=False)
+
 
     def evaluate(self, dataset, epoch=0):
         """ evaluate the model """
@@ -444,92 +802,221 @@ class GanSolver(BaseSolver):
         if self.hparams.enable_tf_function:
             logging.info("please be patient, enable tf.function, it takes time ...")
             evaluate_step = tf.function(evaluate_step, input_signature=self.sample_signature)
-        self.model.reset_metrics()  # init metric.result() with 0
+        self.model.reset_metrics()
         for batch, samples in enumerate(dataset):
             samples = self.model.prepare_samples(samples)
-            total_loss, metrics = evaluate_step(samples)
-            if batch % self.hparams.log_interval == 0:
-                logging.info(self.metric_checker(total_loss, metrics, -2))
-            total_loss = sum(list(total_loss.values())) if isinstance(total_loss, dict) else total_loss
+            frame = math.ceil(samples["input"].shape[1]/self.hparams.video_skip)
+            if frame + 1 > samples["video"].shape[1]:
+                print("video is shorter than audio")
+                frame = samples["video"].shape[1]
+                audio_frame = frame * self.hparams.video_skip
+                audio_frames = tf.ones(samples["input_length"].shape,dtype=tf.dtypes.int32)*audio_frame
+                samples["input"] = samples["input"][:, :audio_frame, :]
+                samples["video"] = samples["video"][:, :frame, :]
+                samples["input_length"] = tf.where(samples["input_length"]>audio_frames,audio_frames,samples["input_length"])
+            else:
+                samples["video"] = samples["video"][:, 1:frame + 1, :]
+            loss, metrics = evaluate_step(samples)
+            if batch % self.hparams.log_interval == 0 and hvd.rank() == 0:
+                logging.info(self.metric_checker(loss, metrics, -2))
+            total_loss = sum(list(loss.values())) if isinstance(loss, dict) else loss
             loss_metric.update_state(total_loss)
-        logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
-        self.model.reset_metrics()
+        if hvd.rank() == 0:
+            logging.info(self.metric_checker(loss_metric.result(), metrics, evaluate_epoch=epoch))
+            self.model.reset_metrics()
         return loss_metric.result(), metrics
 
-
-class ConvertSolver(BaseSolver):
-    """ ConvertSolver
+class AVDecoderSolver(AVSolver):
+    """ DecoderSolver
     """
     default_config = {
-        "output_directory": "./gen_vcc2018/",
+        "inference_type": "asr",
+        "decoder_type": "wfst_decoder",
         "model_avg_num": 1,
-        "fs": 22050
+        "beam_size": 4,
+        "pre_beam_size": 30,
+        "at_weight": 1.0,
+        "ctc_weight": 0.0,
+        "lm_weight": 0.1,
+        "lm_type": "",
+        "lm_path": None,
+        "predict_path": None,
+        "label_path": None,
+        "acoustic_scale": 10.0,
+        "max_active": 80,
+        "min_active": 0,
+        "wfst_beam": 30.0,
+        "max_seq_len": 100,
+        "video_skip": 4,
+        "wfst_graph": None
     }
 
-    def __init__(self, model=None, data_descriptions=None, config=None):
+    # pylint: disable=super-init-not-called
+    def __init__(self, model, data_descriptions=None, config=None):
         super().__init__(model, None, None)
         self.model = model
         self.hparams = register_and_parse_hparams(self.default_config, config, cls=self.__class__)
-        self.feature_normalizer = data_descriptions.feature_normalizer
-        self.speakers_ids_dict = data_descriptions.speakers_ids_dict
-        self.fs, self.fft_size = data_descriptions.fs, data_descriptions.fft_size
+        self.lm_model = None
+        if self.hparams.lm_type == "rnn":
+            from athena.main import build_model_from_jsonfile
+            _, self.lm_model, _, lm_checkpointer, _ = build_model_from_jsonfile(self.hparams.lm_path)
+            lm_checkpointer.restore_from_best()
 
-    def inference(self, dataset, rank_size=1):
-        if dataset is None:
-            print("convert dataset error!")
+    def inference(self, dataset_builder, rank_size=1, conf=None):
+        """ decode the model """
+        if dataset_builder is None:
             return
-        for i, samples in enumerate(dataset):
-            samples = self.model.prepare_samples(samples)
-            src_coded_sp, src_speaker_onehot, src_f0, src_ap = samples["src_coded_sp"], \
-                 samples["src_speaker"], samples["src_f0"], samples["src_ap"]
-            tar_speaker_onehot = samples["tar_speaker"]
-            # Map the ids to the speakers name
-            src_id, tar_id = samples["src_id"], samples["tar_id"]
-            src_id, tar_id = int(src_id), int(tar_id)
-            src_speaker = self.speakers_ids_dict[src_id]
-            tar_speaker = self.speakers_ids_dict[tar_id]
+        dataset = dataset_builder.as_dataset(batch_size=conf.batch_size)
+        metric = CharactorAccuracy(rank_size=rank_size)
+        st = time.time()
+        with open(self.hparams.predict_path, "w") as predict_file_out:
+            with open(self.hparams.label_path, "w") as label_file_out:
+                for _, samples in enumerate(dataset):
+                    begin = time.time()
+                    samples = self.model.prepare_samples(samples)
+                    frame = math.ceil(samples["input"].shape[1] / self.hparams.video_skip)
+                    if frame + 1 > samples["video"].shape[1]:
+                        print("video is shorter than audio")
+                        frame = samples["video"].shape[1]
+                        audio_frame = frame * self.hparams.video_skip
+                        audio_frames = tf.ones(samples["input_length"].shape, dtype=tf.dtypes.int32) * audio_frame
+                        samples["input"] = samples["input"][:, :audio_frame, :]
+                        samples["video"] = samples["video"][:, :frame, :]
+                        samples["input_length"] = tf.where(samples["input_length"] > audio_frames, audio_frames,
+                                                           samples["input_length"])
+                    else:
+                        samples["video"] = samples["video"][:, 1:frame + 1, :]
 
-            src_wav_filename = samples["src_wav_filename"]
-            src_filename = src_wav_filename.numpy()[0].decode().replace(".npz","")
+                    if self.hparams.decoder_type != "argmax_decoder":
+                        output = self.model(samples,training=False)
+                        predictions = self.model.decode(samples, self.hparams, self.lm_model)
 
-            gen_coded_sp = self.model.convert(src_coded_sp, tar_speaker_onehot)
-            gen_coded_sp = tf.transpose(tf.squeeze(gen_coded_sp), [1, 0])
-            coded_sp = self.feature_normalizer(gen_coded_sp, str(tar_speaker), reverse=True)
+                        # transform (tensor of ids) to (list of char or symbol)
+                        predict_txt_list = dataset_builder.text_featurizer. \
+                            decode_to_list(predictions.numpy().tolist(), [self.model.model.eos, self.model.model.sos])
+                        for predict, utt in zip(predict_txt_list, samples["utt"]):
+                            predict_file_out.write(" ".join(predict) + "({utt})\n".format(utt=utt.numpy().decode()))
 
-            def apply_f0_cmvn(cmvn_dict, feat_data, src_speaker, tar_speaker):
-                if tar_speaker not in cmvn_dict:
-                    print("tar_speaker not in cmvn_dict!")
-                    return feat_data
-                f0 = feat_data.numpy()
-                src_mean = cmvn_dict[src_speaker][2]
-                src_var = cmvn_dict[src_speaker][3]
-                tar_mean = cmvn_dict[tar_speaker][2]
-                tar_var = cmvn_dict[tar_speaker][3]
-                f0_converted = np.exp((np.ma.log(f0) - src_mean) / np.sqrt(src_var) * np.sqrt(tar_var) + tar_mean)
-                return f0_converted
-            f0 = apply_f0_cmvn(self.feature_normalizer.cmvn_dict, src_f0, str(src_speaker), str(tar_speaker))
+                        label_txt_list = dataset_builder.text_featurizer. \
+                            decode_to_list(samples["output"].numpy().tolist(), [self.model.model.eos, self.model.model.sos])
+                        for label, utt in zip(label_txt_list, samples["utt"]):
+                            label_file_out.write(" ".join(label) + "({utt})\n".format(utt=utt.numpy().decode()))
+                        predict_file_out.flush(), label_file_out.flush()
 
-            # Restoration of sp characteristics
-            c = []
-            for one_slice in coded_sp:
-                one_slice = np.ascontiguousarray(one_slice, dtype=np.float64).reshape(1, -1)
-                decoded_sp = pyworld.decode_spectral_envelope(one_slice, self.fs, fft_size=self.fft_size)
-                c.append(decoded_sp)
-            sp = np.concatenate((c), axis=0)
-            f0 = np.squeeze(f0, axis=(0,)).astype(np.float64)
-            src_ap = np.squeeze(src_ap.numpy(), axis=(0,)).astype(np.float64)
+                        predictions = tf.cast(predictions, tf.int64)
+                        validated_preds, _ = validate_seqs(predictions, self.model.eos)
+                        validated_preds = tf.cast(validated_preds, tf.int64)
+                        num_errs, _ = metric.update_state(validated_preds, samples)
 
-            # Remove the extra padding at the end of the sp feature
-            sp = sp[:src_ap.shape[0], :]
-            # sp: T,fft_size//2+1   f0: T   ap: T,fft_size//2+1
-            synwav = pyworld.synthesize(f0, sp, src_ap, self.fs)
+                        reports = (
+                                "predictions: %s\tlabels: %s\terrs: %d\tavg_acc: %.4f\tsec/iter: %.4f\tkey: %s"
+                                % (
+                                    predictions,
+                                    samples["output"].numpy(),
+                                    num_errs,
+                                    metric.result(),
+                                    time.time() - begin,
+                                    samples["utt"],
+                                )
+                        )
+                        logging.info(reports)
+                    else:
+                        # predictions, score = self.model.decode(samples)
+                        output = self.model(samples, training=False)
+                        metrics = self.model.get_acc(output, samples, training=False)
+                        print(samples['utt'])
+                        print(metrics)
+                ed = time.time()
+                logging.info("decoding finished, cost %.4f s" % (ed - st))
 
-            wavname = src_speaker + "_" + tar_speaker + "_" + src_filename  + ".wav"
-            wavfolder = os.path.join(self.hparams.output_directory)
-            if not os.path.exists(wavfolder):
-                os.makedirs(wavfolder)
-            wavpath = os.path.join(wavfolder, wavname)
+    def inference_freeze(self, dataset_builder, rank_size=1, conf=None):
+        """ decode the model """
+        if dataset_builder is None:
+            return
+        dataset = dataset_builder.as_dataset(batch_size=conf.batch_size)
+        st = time.time()
+        with open(self.hparams.predict_path, "w") as predict_file_out:
+            with open(self.hparams.label_path, "w") as label_file_out:
+                for _, samples in enumerate(dataset):
+                    frame = math.ceil(samples["input"].shape[1] / self.hparams.video_skip)
+                    if frame + 1 > samples["video"].shape[1]:
+                        print("video is shorter than audio")
+                        frame = samples["video"].shape[1]
+                        audio_frame = frame * self.hparams.video_skip
+                        audio_frames = tf.ones(samples["input_length"].shape, dtype=tf.dtypes.int32) * audio_frame
+                        samples["input"] = samples["input"][:, :audio_frame, :]
+                        samples["video"] = samples["video"][:, :frame, :]
+                        samples["input_length"] = tf.where(samples["input_length"] > audio_frames, audio_frames,
+                                                           samples["input_length"])
+                    else:
+                        samples["video"] = samples["video"][:, 1:frame + 1, :]
+                    begin = time.time()
+                    softmax = tf.nn.softmax(self.model.deploy_function(samples['input']))
+                    predictions = tf.math.argmax(softmax, axis=2)
+                    label = samples["output"].numpy()[0].tolist()
+                    label = [str(i) for i in label]
+                    label = ' '.join(label)
+                    predictions=predictions.numpy()[0].tolist()
+                    predictions=[str(i) for i in predictions]
+                    predictions=' '.join(predictions)
+                    #metrics = self.model.get_acc(predictions, samples, training=False)
+                    reports = (
+                            "%s\t%s\t%s"
+                            % (
+                                samples["utt"].numpy()[0],
+                                label,
+                                predictions,
 
-            librosa.output.write_wav(wavpath, synwav, sr=self.fs)
-            print("generate wav:", wavpath)
+                            )
+                    )
+                    predict_file_out.write(str(samples["utt"].numpy()[0],'utf-8')+'\t' + predictions+'\n')
+                    label_file_out.write(str(samples["utt"].numpy()[0],'utf-8')+'\t' + label+'\n')
+                    logging.info(reports)
+                ed = time.time()
+                logging.info("decoding finished, cost %.4f s" % (ed - st))
 
+    def inference_argmax(self, dataset_builder, rank_size=1, conf=None):
+        """ decode the model """
+        if dataset_builder is None:
+            return
+        dataset = dataset_builder.as_dataset(batch_size=conf.batch_size)
+        st = time.time()
+        with open(self.hparams.predict_path, "w") as predict_file_out:
+            with open(self.hparams.label_path, "w") as label_file_out:
+                for _, samples in enumerate(dataset):
+                    frame = math.ceil(samples["input"].shape[1] / self.hparams.video_skip)
+                    if frame + 1 > samples["video"].shape[1]:
+                        print("video is shorter than audio")
+                        frame = samples["video"].shape[1]
+                        audio_frame = frame * self.hparams.video_skip
+                        audio_frames = tf.ones(samples["input_length"].shape, dtype=tf.dtypes.int32) * audio_frame
+                        samples["input"] = samples["input"][:, :audio_frame, :]
+                        samples["video"] = samples["video"][:, :frame, :]
+                        samples["input_length"] = tf.where(samples["input_length"] > audio_frames, audio_frames,
+                                                           samples["input_length"])
+                    else:
+                        samples["video"] = samples["video"][:, 1:frame + 1, :]
+                    begin = time.time()
+                    softmax = tf.nn.softmax(self.model.decode(samples))
+                    predictions = tf.math.argmax(softmax, axis=2)
+                    label = samples["output"].numpy()[0].tolist()
+                    label = [str(i) for i in label]
+                    label = ' '.join(label)
+                    predictions=predictions.numpy()[0].tolist()
+                    predictions=[str(i) for i in predictions]
+                    predictions=' '.join(predictions)
+                    #metrics = self.model.get_acc(predictions, samples, training=False)
+                    reports = (
+                            "%s\t%s\t%s"
+                            % (
+                                samples["utt"].numpy()[0],
+                                label,
+                                predictions,
+
+                            )
+                    )
+                    predict_file_out.write(str(samples["utt"].numpy()[0],'utf-8')+'\t' + predictions+'\n')
+                    label_file_out.write(str(samples["utt"].numpy()[0],'utf-8')+'\t' + label+'\n')
+                    logging.info(reports)
+                ed = time.time()
+                logging.info("decoding finished, cost %.4f s" % (ed - st))

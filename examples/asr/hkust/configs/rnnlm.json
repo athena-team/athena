@@ -1,13 +1,17 @@
 {
-  "batch_size":32,
+  "batch_size":64,
   "num_epochs":100,
   "sorta_epoch":0,
   "ckpt":"examples/asr/hkust/ckpts/rnnlm",
+  "summary_dir":"examples/asr/hkust/ckpts/rnnlm/event",
+  "solver_type": "asr_base_solver",
 
   "solver_gpu":[],
   "solver_config":{
     "clip_norm":100,
     "log_interval":10,
+    "ckpt_interval_train": 1000,
+    "ckpt_interval_dev": 1000,
     "enable_tf_function":true
   },
 

@@ -363,6 +363,56 @@ class FastSpeechLoss(tf.keras.losses.Loss):
 
         return final_loss
 
+class FastSpeech2Loss(tf.keras.losses.Loss):
+    """used for training of fastspeech2"""
+
+    def __init__(self, variant_predictor_loss_weight, eps=1.0, use_mask=True):
+        super().__init__()
+        self.eps = eps
+        self.variant_predictor_loss_weight = variant_predictor_loss_weight
+        self.use_mask = use_mask
+
+    def __call__(self, outputs, samples):
+        final_loss = {}
+        before_outs, teacher_outs, after_outs, duration_sequences, pred_duration_sequences, pred_f0, pred_energy = outputs
+        # perform masking for padded values
+        output_length = samples["output_length"]
+        output = samples["output"] # [batch, y_steps, feat_dim]
+        input_length = samples['input_length']
+        f0_gst = samples["f0"]
+        energy_gst = samples["energy"]
+        x_steps = tf.reduce_max(input_length)
+        y_steps = tf.shape(output)[1]
+        feat_dim = tf.shape(output)[2]
+        if self.use_mask:
+            mask = tf.sequence_mask(output_length, y_steps, dtype=tf.float32)
+            mask = tf.tile(tf.expand_dims(mask, axis=-1), [1, 1, feat_dim])
+        else:
+            mask = tf.ones_like(output)
+        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+
+        l1_loss = tf.abs(after_outs - output) + tf.abs(before_outs - output)
+        l1_loss *= mask
+        final_loss['l1_loss'] = tf.reduce_sum(l1_loss) / total_size
+
+        teacher_duration = tf.math.log(tf.cast(duration_sequences, dtype=tf.float32) + self.eps)
+        if self.use_mask:
+            mask = tf.sequence_mask(input_length, x_steps, dtype=tf.float32)
+        else:
+            mask = tf.ones_like(teacher_duration)
+        total_size = tf.cast(tf.reduce_sum(mask), dtype=tf.float32)
+        duration_loss = tf.square(teacher_duration - pred_duration_sequences)
+        duration_loss *= mask
+        final_loss['duration_loss'] = tf.reduce_sum(duration_loss) / total_size
+
+        f0_loss = tf.square(f0_gst - pred_f0)
+        f0_loss *= mask
+        final_loss['f0_loss'] = tf.reduce_sum(f0_loss) / total_size
+
+        energy_loss = tf.square(energy_gst - pred_energy)
+        energy_loss *= mask
+        final_loss['energy_loss'] = tf.reduce_sum(energy_loss) / total_size
+        return final_loss
 
 class SoftmaxLoss(tf.keras.losses.Loss):
     """ Softmax Loss
@@ -581,113 +631,5 @@ class GE2ELoss(tf.keras.losses.Loss):
         return loss
 
 
-class StarganLoss(tf.keras.losses.Loss):
-    """ Loss for stargan model, it consists of three parts, generator_loss,
-        discriminator_loss and classifier_loss. lambda_identity and lambda_classifier 
-        is added to make loss values comparable
-    """
-    def __init__(self, lambda_cycle, lambda_identity, lambda_classifier, name="StarganLoss"):
-        super().__init__(name=name)
-        self.lambda_cycle = lambda_cycle
-        self.lambda_identity = lambda_identity
-        self.lambda_classifier = lambda_classifier
 
-    def __call__(self, outputs, samples, logit_length=None, stage=None):
-        input_real, target_real, target_label, source_label = \
-            samples["src_coded_sp"], samples["tar_coded_sp"], \
-            samples["tar_speaker"], samples["src_speaker"]
-
-        target_label_reshaped = outputs["target_label_reshaped"]
-
-        if stage == "classifier":
-            domain_out_real = outputs["domain_out_real"]
-            loss = ClassifyLoss(target_label_reshaped, domain_out_real)
-        elif stage == "generator":
-            discirmination, generated_back, identity_map, domain_out_real = \
-            outputs["discirmination"], outputs["generated_back"], outputs["identity_map"], outputs["domain_out_real"]
-
-            loss = GeneratorLoss(discirmination, input_real, generated_back, identity_map,\
-                                           target_label_reshaped, domain_out_real, self.lambda_cycle,\
-                                           self.lambda_identity, self.lambda_classifier)
-        else:
-            discrimination_real, discirmination, domain_out_fake, gradient_penalty = outputs["discrimination_real"], \
-                outputs["discirmination"], outputs["domain_out_fake"], outputs["gradient_penalty"]
-            loss = DiscriminatorLoss(discrimination_real, discirmination,\
-                                             target_label_reshaped, domain_out_fake, gradient_penalty)
-        return loss
-
-
-def GeneratorLoss(discirmination, input_real, generated_back, identity_map, target_label_reshaped,\
-                  domain_out_real, lambda_cycle, lambda_identity, lambda_classifier):
-    """ Loss for generator part of stargan model, it consists of cycle_loss with unparallel data, 
-        identity loss for data coming from same class and another loss from tricking the discriminator
-    """
-    domain_real_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits \
-                                      (labels=target_label_reshaped, logits=domain_out_real))
-
-    # we need to trim input to have the same length as output because it might not be divisible with 4
-    length = tf.math.minimum(tf.shape(generated_back)[2], tf.shape(input_real)[2])
-    cycle_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - generated_back[:, :, 0: length, :]))
-    identity_loss = tf.reduce_mean(tf.abs(input_real[:, :, 0: length, :] - identity_map[:, :, 0: length, :]))
-
-    generator_loss = tf.reduce_mean(\
-    tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discirmination),\
-                                            logits=discirmination))
-
-    generator_loss_all = generator_loss + lambda_cycle * cycle_loss + \
-                         lambda_identity * identity_loss + lambda_classifier * domain_real_loss
-    return generator_loss_all
-
-
-def DiscriminatorLoss(discrimination_real, discirmination_fake, target_label_reshaped,\
-                                             domain_out_fake, gradient_penalty):
-    """ Loss for discriminator part of stargan model, it consists of discrimination loss from real and 
-        generated data and domain classification loss from generated data  
-    """
-    discrimination_real_loss = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(discrimination_real),\
-                                                logits=discrimination_real))
-
-    discrimination_fake_loss = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(discirmination_fake),\
-                                                logits=discirmination_fake))
-
-    domain_fake_loss = tf.reduce_mean(\
-        tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_fake))
-
-    discrimator_loss = discrimination_fake_loss + discrimination_real_loss + domain_fake_loss \
-                        + gradient_penalty
-    return discrimator_loss
-
-
-def ClassifyLoss(target_label_reshaped, domain_out_real):
-    """ Loss for classifier part of stargan model, it consists of classifier loss from real data 
-    """
-    domain_real_loss = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(labels=target_label_reshaped, logits=domain_out_real))
-    return domain_real_loss
-
-
-
-class ContrastiveLoss(tf.keras.losses.Loss):
-    """
-    Contrastive Loss for SimCLR Model
-    """
-    def __init__(self, temperature=1.0, normalization=True, name="ContrastiveLoss", ps=None):
-        super().__init__(name=name)
-
-        self.temperature = temperature
-        self.norm = normalization
-        self.cross_entropy = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-        self.ps = ps
-
-    def gpu_cross_replica_concat(self, tensor):
-        num_replicas = self.ps.size()
-        ext_tensor = tf.scatter_nd(
-            indices=[[hvd.rank()]],
-            updates=[tensor],
-            shape=[num_replicas, tf.shape(tensor)[0], tf.shape(tensor)[1]])
-
-        ext_tensor = hvd.allreduce(ext_tensor, average=False)
-        return tf.reshape(ext_tensor, [-1, tf.shape(ext_tensor)[2]])
 

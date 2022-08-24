@@ -44,7 +44,7 @@ class MetricChecker:
         Returns:
             logging_str: return average and best(if improved) loss if training is False
         """
-        if evaluate_epoch is -1:
+        if evaluate_epoch == -1:
             return self.summary_train(loss, metrics)
         return self.summary_evaluate(loss, metrics, evaluate_epoch)
 

@@ -9,6 +9,7 @@
   "solver_config":{
     "clip_norm":5,
     "log_interval":10,
+    "solver_type": "asr_base_solver",
     "enable_tf_function":false
   },
 

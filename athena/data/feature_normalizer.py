@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) 2019 ATHENA AUTHORS; Xiangang Li; Shuaijiang Zhao
+# Copyright (C) ATHENA AUTHORS; Xiangang Li; Shuaijiang Zhao
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ from absl import logging
 import tensorflow as tf
 import numpy as np
 import tqdm
+from sklearn.preprocessing import StandardScaler
 
 
 class FeatureNormalizer:
@@ -214,60 +215,78 @@ class FeatureNormalizer:
         df.to_csv(self.cmvn_file, index=False, sep="\t")
         logging.info("Successfully save cmvn file {}".format(self.cmvn_file))
 
-        
-class WorldFeatureNormalizer(FeatureNormalizer):
-    """World Feature Normalizer
-    """
 
-    def compute_world_cmvn(self, enable_load_from_disk, entries_person_wavs, sp_dim, fft_size, fs, speakers):
-        """compuate cmvn of f0 and sp using pyworld
-        """
+class FS2FeatureNormalizer(FeatureNormalizer):
+    """Fastspeech2 Feature Normalizer"""
+
+    def __init__(self, cmvn_file=None):
+        super().__init__()
+        self.cmvn_file = cmvn_file
+        self.cmvn_dict = {"mel":None, "f0":None, "energy":None}
+        if cmvn_file is not None:
+            self.load_cmvn()
+
+    def __call__(self, feat_data, speaker, feature_type ='mel', reverse=False):
+        return self.apply_cmvn(feat_data, speaker, feature_type, reverse=reverse)
+
+    def compute_fs2_cmvn(self, entries, speakers, num_cmvn_workers=1):
+        """compuate cmvn of mel-spec,f0 and energy"""
         start = time.time()
-        cmvns = []
-        for speaker in speakers:
-            coded_sps, f0s = [], []
-            for audio_file in entries_person_wavs[speaker]:
-                # World Vocoder parameterizes speech into three components:
-                #     Pitch (fundamental frequency, F0) contour
-                #     Harmonic spectral envelope(sp)
-                #     Aperiodic spectral envelope (relative to the harmonic spectral envelope,ap)
-                # Refer to the address：https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder
-                if enable_load_from_disk:
-                    samples = np.load(audio_file)
-                    f0, coded_sp, ap = samples["f0"], samples["coded_sp"], samples["ap"]
-                else:
-                    wav, _ = librosa.load(audio_file, sr=fs, mono=True, dtype=np.float64)
-                    f0, timeaxis = pyworld.harvest(wav, fs)
-                    # CheapTrick harmonic spectral envelope estimation algorithm.
-                    sp = pyworld.cheaptrick(wav, f0, timeaxis, fs, fft_size=fft_size)
-                    # feature reduction
-                    coded_sp = pyworld.code_spectral_envelope(sp, fs, sp_dim).T
-                coded_sps.append(coded_sp)
-                f0s.append(np.reshape(f0, [-1, 1]))
-            # Calculate the mean and standard deviation of the World features
-            coded_sps_concatenated = np.concatenate(coded_sps, axis=1)
-            coded_sps_mean = list(np.mean(coded_sps_concatenated, axis=1, keepdims=False))
-            coded_sps_var = list(np.var(coded_sps_concatenated, axis=1, keepdims=False))
-            log_f0s_concatenated = np.ma.log(np.concatenate(f0s))
-            log_f0s_mean = log_f0s_concatenated.mean()
-            log_f0s_var = log_f0s_concatenated.var()
-            cmvns.append((speaker, coded_sps_mean, coded_sps_var, log_f0s_mean, log_f0s_var))
-            self.cmvn_dict[speaker] = (coded_sps_mean, coded_sps_var, \
-                                       log_f0s_mean, log_f0s_var)
-
+        # init scaler for multiple features
+        scaler_mel = StandardScaler(copy=False)
+        scaler_energy = StandardScaler(copy=False)
+        scaler_f0 = StandardScaler(copy=False)
+        tq_entries = tqdm.tqdm(entries)
+        for item in tq_entries:
+            audio_feature = np.load(item[0])
+            mel, f0, energy = audio_feature['mel'], audio_feature['f0'], audio_feature['energy']
+            scaler_mel.partial_fit(mel)
+            scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))
+            scaler_f0.partial_fit(f0[f0 != 0].reshape(-1, 1))
+        self.cmvn_dict["mel"] = (list(scaler_mel.mean_), list(scaler_mel.var_))
+        self.cmvn_dict["f0"] = (list(scaler_f0.mean_), list(scaler_f0.var_))
+        self.cmvn_dict["energy"] = (list(scaler_energy.mean_), list(scaler_energy.var_))
         logging.info("finished compute cmvn, which cost %.4f s" % (time.time() - start))
 
+    def apply_cmvn(self, feat_data, speaker, feature_type='mel', reverse=False):
+        """transform original feature to normalized feature
+        """
+        if feature_type not in self.cmvn_dict:
+            return feat_data
+        mean = self.cmvn_dict[feature_type][0]
+        var = self.cmvn_dict[feature_type][1]
+        shape = feat_data.get_shape().as_list()[1:]
+        mean = tf.reshape(tf.convert_to_tensor(mean, dtype=tf.float32), shape)
+        var = tf.reshape(tf.convert_to_tensor(var, dtype=tf.float32), shape)
+        if reverse:
+            if feature_type in ("f0", "energy"):
+                zero_indices = tf.where(feat_data == 0.0)
+                feat_data_len = feat_data.get_shape().as_list()[0]
+                uptates = tf.ones(zero_indices.shape[0], dtype=tf.float32)
+                mask = 1.0- tf.scatter_nd(zero_indices, uptates,[feat_data_len])
+                feat_data = mask*(feat_data * tf.sqrt(var) + mean)
+            else:
+                feat_data = feat_data * tf.sqrt(var) + mean
+        else:
+            if feature_type in ("f0", "energy"):
+                zero_indices = tf.where(feat_data == 0.0)
+                feat_data_len = feat_data.get_shape().as_list()[0]
+                uptates = tf.ones(zero_indices.shape[0], dtype=tf.float32)
+                mask = 1.0- tf.scatter_nd(zero_indices, uptates,[feat_data_len])
+                feat_data = mask* (feat_data - mean) / tf.sqrt(var)
+            else:
+                feat_data = (feat_data - mean) / tf.sqrt(var)
+        return feat_data
+
     def load_cmvn(self):
-        """load codedsp_mean, codedsp_var, f0_mean, f0_var for vc dataset
+        """load mel_mean, mel_var, f0_mean, f0_var and energy_mean, energy_var
         """
         if not os.path.exists(self.cmvn_file):
             return
-        cmvns = pandas.read_csv(self.cmvn_file, sep="\t", index_col="speaker")
-        for speaker, cmvn in cmvns.iterrows():
-            self.cmvn_dict[speaker] = [
-                json.loads(cmvn["codedsp_mean"]),
-                json.loads(cmvn["codedsp_var"]),
+        cmvns = pandas.read_csv(self.cmvn_file, sep="\t", index_col="audio_feature")
+        for feature, cmvn in cmvns.iterrows():
+            self.cmvn_dict[feature] = [
+                json.loads(cmvn["mean"]),
+                json.loads(cmvn["var"]),
             ]
-            self.cmvn_dict[speaker].append(cmvn["f0_mean"])
-            self.cmvn_dict[speaker].append(cmvn["f0_var"])
         logging.info("Successfully load cmvn file {}".format(self.cmvn_file))

@@ -1,0 +1,79 @@
+{
+  "batch_size":32,
+  "num_epochs":15,
+  "sorta_epoch":30,
+  "ckpt":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer",
+  "test_ckpt":"ckpt-15",
+  "summary_dir":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/event",
+  "model": "transformer_focal_loss",
+  "model_config":{
+      "num_filters":512,
+      "num_classes":1,
+      "d_model":512,
+      "num_heads":8,
+      "num_encoder_layers":4,
+      "rate":0.1
+  },
+  "optimizer": "warmup_adam",
+  "optimizer_config":{
+      "warmup_steps": 800,
+      "k": 0.5,
+      "decay_steps": 60000,
+      "decay_rate": 1.0
+  },
+  "num_data_threads":1,
+  "solver_type": "base",
+  "solver_gpu":[0],
+  "solver_config":{
+      "clip_norm":100,
+      "enable_tf_function":true,
+      "log_interval":20,
+      "ckpt_interval":10000
+  },
+  "trainset_config":{
+      "data_dir":"examples/speech_commands/kws/yesno/data/train",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63,
+      "spectral_augmentation":{"warp_for_time": true, "num_t_mask": 2, "num_f_mask": 2, "max_t": 50, "max_f": 10, "max_w": 80}
+  },
+  "devset_config":{
+      "data_dir":"examples/speech_commands/kws/yesno/data/dev",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63
+  },
+  "testset_config":{
+      "data_dir":"examples/speech_commands/kws/yesno/data/test",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63
+  },
+  "faset_config":{
+      "data_dir":"examples/speech_commands/kws/yesno/data/fa",
+      "left_context":0,
+      "right_context":0,
+      "feat_dim":63
+  },
+  "dataset_builder": "speech_wakeup_dataset_kaldiio",
+  "model_freeze":{
+      "from_ckpt":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/ckpt-2",
+      "to_dir":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/pbs",
+      "float16_quantization":false,
+      "dynamic_range_quantization":false,
+      "integer_quantization":false,
+      "integer_int16activations_quantization":false
+  },
+  "model_optimization":{
+      "weight_pruning":{
+          "from_ckpt":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/ckpt-15",
+          "to_dir":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/weight_pruning",
+          "log_dir":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/weight_pruning/event"
+      },
+      "weight_clustering":{
+          "from_ckpt":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/ckpt-15",
+          "to_dir":"examples/speech_commands/kws/yesno/ckpts/kws_audio_transformer/weight_clustering"
+      }
+  }
+
+}

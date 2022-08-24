@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (C) ATHENA AUTHORS
+# Copyright (C) 2022 ATHENA AUTHORS
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,7 @@ class BaseModel(tf.keras.Model):
         if self.loss_function is None:
             loss = 0.0
         else:
-            logit_length = self.compute_logit_length(samples)
+            logit_length = self.compute_logit_length(samples["input_length"])
             loss = self.loss_function(outputs, samples, logit_length)
         if self.metric is None:
             metrics = {}
@@ -48,9 +48,9 @@ class BaseModel(tf.keras.Model):
             metrics = {self.metric.name: self.metric.result()}
         return loss, metrics
 
-    def compute_logit_length(self, samples):
+    def compute_logit_length(self, input_length):
         """ compute the logit length """
-        return samples["input_length"]
+        return input_length
 
     def reset_metrics(self):
         """ reset the metrics """

@@ -23,3 +23,4 @@ from athena.transform.feats.write_wav import WriteWav
 from athena.transform.feats.fbank import Fbank
 from athena.transform.feats.cmvn import CMVN, compute_cmvn
 from athena.transform.feats.fbank_pitch import FbankPitch
+from athena.transform.feats.add_rir_noise_aecres import Add_rir_noise_aecres
