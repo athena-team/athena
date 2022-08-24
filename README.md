@@ -17,7 +17,7 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
 - Deployment with Tensorflow C++(Local server)
 
 ## Versions
-- [Athena v2.0](https://github.com/athena-team/athena/tree/athena-v2.0)(latest)
+- [Athena v2.0](https://github.com/athena-team/athena/tree/athena-v2.0)(latest, current master version)
 - [Athena v1.0](https://github.com/athena-team/athena/tree/athena-v1.0)
 
 ## What's new
