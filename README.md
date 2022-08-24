@@ -18,7 +18,7 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
 
 ## What's new
 - 2022/06/01 The [Athena-model-zoo](https://github.com/LianjiaTech/athena-model-zoo.git) is built. 
-- 2022/05/13 The runtime supports [C++ decoding](runtime/core)(E2E, Streaming, WFST, PrefixBeamSearch etc) and [Deployment](runtime/server)
+- 2022/05/13 The runtime supports [C++ decoding](runtime/core)(E2E, Streaming, WFST, PrefixBeamSearch, etc) and [Deployment](runtime/server)
 - 2022/05/10 The functions about [adding noise and rir](athena/transform/feats/add_rir_noise_aecres_test.py) aecres to clean noise are added to the transform
 - 2022/04/25 The functions about [KWS](athena/models/kws) are added to Athena-v2.0
 - 2022/04/07 The [AV-Cransformer](athena/models/asr/av_conformer.py) for ASR and [MISP2021 task2 example](examples/asr/misp) are added to Athena-v2.0
@@ -28,13 +28,18 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
 - 2022/03/09 The [Fastspeech2](athena/models/tts/fastspeech2.py) is added to Athena-v2.0
 - 2022/03/02 Add [speaker embedding](athena/models/tts/fastspeech.py) to Athena-v2.0
 - 2021/11/27 The [Conformer-CTC](athena/models/asr/speech_conformer_ctc.py) is added to Athena-v2.0
-- 2021/10/31 ASR Performances updates of these [E2E ASR examples](examples/asr) (AISHELL-1, HKUST, GigaSpeech, LibriSpeech) 
+- 2021/10/31 ASR Performances updates of these [E2E ASR examples](examples/asr)(AISHELL-1, HKUST, GigaSpeech, LibriSpeech) 
 - 2021/09/01 The [Beamsearch and Attention rescoring](athena/models/asr/mtl_seq2seq.py) are updated
 - 2021/08/18 The [Batchbins function](athena/data/datasets/asr/speech_recognition_batch_bins.py) is added to Athena-v2.0
 - 2021/06/01 [Language model](athena/models/lm) updates and add Transformer model structure
 - 2021/05/19 The parameters of [Horovod](https://github.com/horovod/horovod.git) are adjusted to speed up the training
 - 2021/05/07 These training parameters of [E2E ASR](athena/models/asr/) models are adjusted
 - 2021/04/09 [SpecAugment](athena/data/datasets/preprocess.py) bug is fixed
+
+## Discussion & Communication
+We have set up a WeChat group for discussion. Please scan the QR and then the administrator will invite you to the group, if you want to join it.   
+
+<img src="https://github.com/JianweiSun007/athena/blob/athena-v0.2/docs/image/img1.png" width="250px">
 
 ## 1) Table of Contents
 
@@ -293,6 +298,6 @@ Below is the basic directory structure for Athena
 ```
 </div></details>
 
-## 7) Acknowledgement
+#7) Acknowledgement
 
 We want to thank [Espnet](https://github.com/espnet/espnet), [Wenet](https://github.com/wenet-e2e/wenet), [TensorFlowTTS](https://github.com/TensorSpeech/TensorFlowTTS/), [NeMo](https://github.com/NVIDIA/NeMo), etc. These great projects give us lots of references and inspirations!
