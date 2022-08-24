@@ -16,6 +16,10 @@ All of our models are implemented in Tensorflow>=2.0.1. For ease of use, we prov
 - WFST creation and WFST-based decoding with C++
 - Deployment with Tensorflow C++(Local server)
 
+## Versions
+- [Athena v2.0](https://github.com/athena-team/athena/tree/athena-v2.0)(latest, current master version)
+- [Athena v1.0](https://github.com/athena-team/athena/tree/athena-v1.0)
+
 ## What's new
 - 2022/06/01 The [Athena-model-zoo](https://github.com/LianjiaTech/athena-model-zoo.git) is built. 
 - 2022/05/13 The runtime supports [C++ decoding](runtime/core)(E2E, Streaming, WFST, PrefixBeamSearch, etc) and [Deployment](runtime/server)
